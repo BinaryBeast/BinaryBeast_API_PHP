@@ -13,13 +13,13 @@ Here's a quick tutorial:
 Copy `BinaryBeast.php` to your project directory, and require it
 
 
-require('BinaryBeast.php');
+	require('BinaryBeast.php');
 
 
 The next step is to instantiate it.. the constructor takes one paramater: your `api_key`
 
 
-$bb = new BinaryBeast('my_api_key_here');
+	$bb = new BinaryBeast('my_api_key_here');
 
 
 You can find your api_key from your user settings at binarybeast.com <http://binarybeast.com/user/settings/api>
@@ -33,23 +33,23 @@ Another useful page to note is the API History page in your user settings.  It l
 In this example.. we'll load a list of tournaments associated with our account, and iterate through them
 
 
-//null => filter
-//50 => limit the 50 latest tournaments
-//false	=> tell the service to IGNORE private tournaments, we only want events we've marked as public
-$tournaments = $bb->tournament_list(null, 50, false);
+	//null => filter
+	//50 => limit the 50 latest tournaments
+	//false	=> tell the service to IGNORE private tournaments, we only want events we've marked as public
+	$tournaments = $bb->tournament_list(null, 50, false);
 
-//OH NOES!
-if($tournaments->result != 200) {
-	die('Error ' . $tournaments->result);
-}
+	//OH NOES!
+	if($tournaments->result != 200) {
+		die('Error ' . $tournaments->result);
+	}
 
-foreach(array_keys($tournaments['list'] as $key)) {
-	$tournament = &$tournaments['list'][$key];
+	foreach(array_keys($tournaments['list'] as $key)) {
+		$tournament = &$tournaments['list'][$key];
 
-	//Prints a link to the event, whos label is the title + game name
-	//Try a var_dump on $tournament to see all of the available properties
-	echo '<a href="' . $tournament->url . '">' . $tournament->title . ' (' . $tournament->game . ')</a>';
-}
+		//Prints a link to the event, whos label is the title + game name
+		//Try a var_dump on $tournament to see all of the available properties
+		echo '<a href="' . $tournament->url . '">' . $tournament->title . ' (' . $tournament->game . ')</a>';
+	}
 
 
 Here's a list of wrapper methods currently available
