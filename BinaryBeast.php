@@ -3,7 +3,7 @@
 /**
  * This class contains the method for interaction with the BinaryBeast API
  *
- * By using thie API Class, you are agreeing to the Terms and Conditions
+ * By using this API Class, you are agreeing to the Terms and Conditions
  * The terms can be found in the file "Terms.txt" included with this file
  * visit http://wiki.binarybeast.com/?title=BinaryBeast_API for more information
  * 
@@ -608,7 +608,7 @@ class BinaryBeast
         return $this->call('Tourney.TourneyRound.BatchUpdate', array(
             'tourney_id'    => $tourney_id
             , 'bracket'     => $bracket
-            , 'best_of'     => $best_ofs
+            , 'best_ofs'    => $best_ofs
             , 'maps'        => $maps
             , 'dates'       => $dates
         ));
@@ -829,13 +829,25 @@ class BinaryBeast
      * Also, if the team has been eliminated, it will return an object 'Victor" with some information
      * about the winning team
      *
-     * @param int $TourneyTeamID		The team of which to determine the opponent
+     * @param int $tourney_team_id		The team of which to determine the opponent
      *
-     * @return object {int result, int o_tourney_team_id [, object victor]}
+     * @return object {int Result [, object TeamInfo, array Players]}
      */
     public function team_get_opponent($tourney_team_id)
     {
         return $this->call('Tourney.TourneyTeam.GetOTourneyTeamID', array('tourney_team_id' => $tourney_team_id));
+    }
+    
+    /**
+     * Returns as much information about a team as possible
+     * 
+     * @param int $tourney_team_id 
+     * 
+     * @return object {int result {
+     */
+    public function team_load($tourney_team_id)
+    {
+        return $this->call('Tourney.TourneyLoad.Team', array('tourney_team_id' => $tourney_team_id));
     }
 
 
