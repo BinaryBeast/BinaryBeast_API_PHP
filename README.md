@@ -16,7 +16,7 @@ Copy `BinaryBeast.php` to your project directory, and require it
 	require('BinaryBeast.php');
 
 
-The next step is to instantiate it.. the constructor takes one paramater: your `api_key`
+The next step is to instantiate it.. the constructor takes one parameter: your `api_key`
 
 
 	$bb = new BinaryBeast('my_api_key_here');
@@ -57,7 +57,7 @@ In this example.. we'll load a list of tournaments associated with our account, 
 	foreach(array_keys($tournaments['list'] as $key)) {
 		$tournament = &$tournaments['list'][$key];
 
-		//Prints a link to the event, whos label is the title + game name
+		//Prints a link to the event, who's label is the title + game name
 		//Try a var_dump on $tournament to see all of the available properties
 		echo '<a href="' . $tournament->url . '">' . $tournament->title . ' (' . $tournament->game . ')</a>';
 	}
@@ -82,7 +82,7 @@ Let's look at one more example... creating a tournament
 		'elimination' 	=> BinaryBeast::ELIMINATION_DOUBLE,
 
 		//Round Robin to Brackets
-		'type_id' 	=> TOURNEY_TYPE_CUP
+		'type_id' 	=> BinaryBeast::TOURNEY_TYPE_CUP
 	));
 
 	//If we got a successful 200 return
@@ -97,7 +97,7 @@ Let's look at one more example... creating a tournament
 
 Let's use the API to search for a game
 
-This is important for a one reason especially: the returne results includes a game_code, which you can use while creating tournaments to let BinaryBeast know which game you want to use
+This is important for a one reason especially: the returned results includes a game_code, which you can use while creating tournaments to let BinaryBeast know which game you want to use
 
 
 	$result = $bb->game_search('war');
@@ -148,7 +148,7 @@ date   `date_start`		YYYY-MM-DD HH:SS
 
 string `location`		Simple description of where players should meet to play their matches, or where the event takes place
 
-array  `teams`			You may automatically add players, with a simpl indexed array of player names
+array  `teams`			You may automatically add players, with a simple indexed array of player names
 
 int    `return_data`          	(0 = TourneyID and URL only, 1 = List of team id's inserted (from teams array), 2 = team id's and full tourney info dump)
 
@@ -156,7 +156,7 @@ int    `return_data`          	(0 = TourneyID and URL only, 1 = List of team id'
 
 ### tournament_update($tourney_id, $options)
 
-$tourney_id obviously... $options, you have the same options available as tourneament_create
+$tourney_id obviously... $options, you have the same options available as tournament_create
 
 
 
@@ -167,7 +167,7 @@ $tourney_id obviously... $options, you have the same options available as tourne
 
 $seeding can be 'random', 'traditional', 'balanced', or 'manual'
 
-If chooseing anything other than random, you pass in an indexed array of tourney_team_id's to $teams
+If choosing anything other than random, you pass in an indexed array of tourney_team_id's to $teams
 
 For manual, the $teams will be the exact order of teams in the brackets
 
