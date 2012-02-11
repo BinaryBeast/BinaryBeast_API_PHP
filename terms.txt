@@ -1,0 +1,7 @@
+View the legal stuff here: http://creativecommons.org/licenses/by/3.0/
+
+Basically, you're free to use and alter this php class as you need, 
+as long as full credit is given to BinaryBeast.com
+
+Most especially if you use the BinaryBeast API for a commercial service,
+you need to provide a link to http://binarybeast.com
