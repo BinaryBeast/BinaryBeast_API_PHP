@@ -28,7 +28,18 @@ Another useful page to note is the API History page in your user settings.  It l
 <http://binarybeast.com/user/settings/api_history>
 
 
-### Quick example
+One important thing to note about this class, it will always return an object
+
+	$result = $bb->wrapper(blah...);
+
+	//You should always check the result, if something goes wrong, you'll get something other than 200
+	if($result->result != 200) {
+		//We have an error!
+		var_dump($result);
+	}
+
+
+### Example: List your tournaments
 
 In this example.. we'll load a list of tournaments associated with our account, and iterate through them
 
@@ -50,6 +61,61 @@ In this example.. we'll load a list of tournaments associated with our account, 
 		//Try a var_dump on $tournament to see all of the available properties
 		echo '<a href="' . $tournament->url . '">' . $tournament->title . ' (' . $tournament->game . ')</a>';
 	}
+
+
+### Example: Create a Tournament
+
+Let's look at one more example... creating a tournament
+
+	//Kind of like you would expect from a jquery plugin... we pass in an associative array of options
+	//You can get away with no options at all technically, but you'll end up with a title-less generic event
+	$result = $bb->tournament_create(array(
+		//Obvious
+		'title' 	=> 'My PHP API Test!',
+
+		//We actually have another service you can use to search for games / game_codes
+		//It's $bb->game_search('game_title or game_abbreviation'), which returns an array 'games'
+		//I'll show an example after this one
+		'game_code'	=> 'QL',
+
+		//Double elimination
+		'elimination' 	=> BinaryBeast::ELIMINATION_DOUBLE,
+
+		//Round Robin to Brackets
+		'type_id' 	=> TOURNEY_TYPE_CUP
+	));
+
+	//If we got a successful 200 return
+	if($result->result == 200) {
+
+		//You should keep track of this, it uniquely identifies your new tournament
+		$tourney_id = $result->tourney_id;
+	}
+
+
+### Example: Search games
+
+Let's use the API to search for a game
+
+This is important for a one reason especially: the returne results includes a game_code, which you can use while creating tournaments to let BinaryBeast know which game you want to use
+
+
+	$result = $bb->game_search('war');
+
+	if($result->result == 200) {
+		foreach(array_keys($result['games']) as $key) {
+			$game = &$result['games'][$key];
+
+			//all sorts of useful info in here, most important though is game_code, which helps binarybeast identify a specific game
+			//You can also find links to game icons and banners too
+			var_dump($game);
+			echo '<hr />';
+		}
+	}
+
+
+
+
 
 
 Here's a list of wrapper methods currently available
