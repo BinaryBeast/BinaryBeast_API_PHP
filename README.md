@@ -12,11 +12,15 @@ Here's a quick tutorial:
 
 Copy `BinaryBeast.php` to your project directory, and require it
 
+
 require('BinaryBeast.php');
+
 
 The next step is to instantiate it.. the constructor takes one paramater: your `api_key`
 
+
 $bb = new BinaryBeast('my_api_key_here');
+
 
 You can find your api_key from your user settings at binarybeast.com <http://binarybeast.com/user/settings/api>
 
@@ -24,33 +28,74 @@ Another useful page to note is the API History page in your user settings.  It l
 <http://binarybeast.com/user/settings/api_history>
 
 
+### Quick example
+
+In this example.. we'll load a list of tournaments associated with our account, and iterate through them
+
+
+//null => filter
+//50 => limit the 50 latest tournaments
+//false	=> tell the service to IGNORE private tournaments, we only want events we've marked as public
+$tournaments = $bb->tournament_list(null, 50, false);
+
+//OH NOES!
+if($tournaments->result != 200) {
+	die('Error ' . $tournaments->result);
+}
+
+foreach(array_keys($tournaments['list'] as $key)) {
+	$tournament = &$tournaments['list'][$key];
+
+	//Prints a link to the event, whos label is the title + game name
+	//Try a var_dump on $tournament to see all of the available properties
+	echo '<a href="' . $tournament->url . '">' . $tournament->title . ' (' . $tournament->game . ')</a>';
+}
+
 
 Here's a list of wrapper methods currently available
 
 ### tournament_create($options)
 $options is an associate array, the available options are: 
 
-string title
-string description
-int    public
-string game_code            	(SC2, BW, QL examples, @see <http://wiki.binarybeast.com/index.php?title=API_PHP:_game_search>)
-int    type_id              	(0 = elimination brackets, 1 = group rounds to elimination brackets, also the BinaryBeast.php class has constants to help with this)
-int    elimination          	(1 = single, 2 = double
-int    max_teams
-int    team_mode            	(id est 1 = 1v1, 2 = 2v2)
-int    group_count
-int    teams_from_group
-date   date_start		YYYY-MM-DD HH:SS
-string location
-array  teams			You may automatically add players, with a simpl indexed array of player names
-int    return_data          	(0 = TourneyID and URL only, 1 = List of team id's inserted (from teams array), 2 = team id's and full tourney info dump)
+
+string `title`
+
+string `description`
+
+int    `public`
+
+string `game_code`            	(SC2, BW, QL examples, @see <http://wiki.binarybeast.com/index.php?title=API_PHP:_game_search>)
+
+int    `type_id`              	(0 = elimination brackets, 1 = group rounds to elimination brackets, also the BinaryBeast.php class has constants to help with this)
+
+int    `elimination`          	(1 = single, 2 = double
+
+int    `max_teams`
+
+int    `team_mode`            	(id est 1 = 1v1, 2 = 2v2)
+
+int    `group_count`
+
+int    `teams_from_group`
+
+date   `date_start`		YYYY-MM-DD HH:SS
+
+string `location`		Simple description of where players should meet to play their matches, or where the event takes place
+
+array  `teams`			You may automatically add players, with a simpl indexed array of player names
+
+int    `return_data`          	(0 = TourneyID and URL only, 1 = List of team id's inserted (from teams array), 2 = team id's and full tourney info dump)
+
+
 
 ### tournament_update($tourney_id, $options)
 
 $tourney_id obviously... $options, you have the same options available as tourneament_create
 
 
+
 ### tournament_delete($tourney_id)
+
 
 ### tournament_start($tourney_id, $seeding = 'random, $teams = null)
 
@@ -62,11 +107,13 @@ For manual, the $teams will be the exact order of teams in the brackets
 
 For traditional and balanced, $teams must be the list of teams in order of rank, index 0 being the top ranked player/team
 
+
+
 ### tournament_round_update($tourney_id, $bracket, $round = 0, $best_of = 1, $map = null, $date = null)
 
 Update the format of a single round in the tournament
 
-$bracket: ie 0 = groups, 1 = winners (there are class constants for these values
+`$bracket`: ie 0 = groups, 1 = winners (there are class constants for these values
 
 
 ### tournament_round_update_batch($tourney_id, $bracket, $best_ofs = array(), $maps = array(), $dates = array())
@@ -76,6 +123,7 @@ Just like tournament_round_update.. except it effects an entire bracket in one g
 the only difference is $best_ofs, $maps, and $dates are arrays
 
 for example... $best_ofs[0] = 3; $maps[0] = "Xel'naga Caverns', $dates[0] = '2012-12-31';, will tell binaryBeast that the first round of the bracket will be a Best of 7 on Xel'Naga Caverns at the end of the world
+
 
 
 ### tournament_list($filter, $limit = 30, $private = true)
