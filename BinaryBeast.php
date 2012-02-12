@@ -412,11 +412,52 @@ class BinaryBeast
      *
      * @return object {int result, ...}
      */
-    public function tournament_create($title, $description = null, $public = 1, $game_code = null, $type_id = 0, $elimination = 1, $max_teams = 16, $team_mode = 1, $teams_from_group = 2, $date_start = null, $location = null, array $teams = null, $return_data = 0)
+    public function tournament_create($options)
     {
-        //Use the new options array method
-        if(is_array($title)) return $this->tournament_create_options($title);
+        //Use the legacy parameter method
+        //@todo this method is deprecated and should be phased out eventually
+        if(!is_array($options) && !is_null($options))
+        {
+            $keys = array('title' => 'PHP Test!', 'description' => null, 'public' => true, 'game_code' => null, 'type_id' => 0, 'elimination' => 1
+                , 'max_teams' => 16, 'team_mode' => 1, 'teams_from_group' => 2, 'date_start' => null, 'location' => null, 'teams' => null, 'return_data' => 0);
+            $pos = 0;
+            foreach($keys as $key => $default)
+            {
+                ${$key} = func_get_arg($pos);
+                if(${$key} === false) ${$key} = $default;
+                ++$pos;
+            }
+            return $this->tournament_create_legacy($title, $description, $public, $game_code, $type_id, $elimination, $max_teams, $team_mode, $teams_from_group, $date_start, $location, $teams, $return_data);
+        }
 
+        //EZ
+        return $this->call('Tourney.TourneyCreate.Create', $options);
+    }
+    /**
+     * Created to preserve existing PHP applications that may decide to download the new class
+     * 
+     * The new method of calling complex services is to provide an associative array of options
+     * previously we had defined each option as a parameter - so in case they're still 
+     * using the old method, we'll make sure it still works
+     * 
+     * @param string $title
+     * @param string $description
+     * @param int $public
+     * @param string $game_code
+     * @param int $type_id
+     * @param int $elimination
+     * @param int $max_teams
+     * @param int $team_mode
+     * @param int $teams_from_group
+     * @param date $date_start YYYY-MM-DD HH:SS
+     * @param string $location
+     * @param array $teams
+     * @param type $return_data
+     * 
+     * @return {object} 
+     */
+    private function tournament_create_legacy($title, $description = null, $public = 1, $game_code = null, $type_id = 0, $elimination = 1, $max_teams = 16, $team_mode = 1, $teams_from_group = 2, $date_start = null, $location = null, array $teams = null, $return_data = 0)
+    {
         $args = array(
             'title' => $title
             , 'description'         => $description
@@ -433,26 +474,6 @@ class BinaryBeast
             , 'teams'               => $teas
             , 'return_data'         => $return_data
         );
-
-        return $this->call('Tourney.TourneyCreate.Create', $args);
-    }
-    private function tournament_create_options($options)
-    {
-        $args = array_merge(array('title' => 'API Test'
-            , 'description'         => null
-            , 'public'              => 1
-            , 'game_code'           => 'SC2'
-            , 'type_id'             => 0
-            , 'elimination'         => 1
-            , 'max_teams'           => 8
-            , 'team_mode'           => 1
-            , 'group_count'         => 1
-            , 'teams_from_group'    => 2
-            , 'date_start'          => gmdate('Y-m-d')
-            , 'location'            => null
-            , 'teams'               => null
-            , 'return_data'         => 1
-        ), $options);
 
         return $this->call('Tourney.TourneyCreate.Create', $args);
     }
@@ -483,12 +504,44 @@ class BinaryBeast
      *
      * @return object {int result}
      */
-    public function tournament_update($tourney_id, $title, $description = 'null', $public = 'null', $game_code = 'null', $type_id = 'null', $elimination = 'null', $max_teams = 'null', $team_mode = 'null', $teams_from_group = 'null', $date_start = 'null', $location = 'null')
+    public function tournament_update($tourney_id, $options = array())
     {
-        //Use the options method
-        if(is_array($title)) return $this->tournament_update_options($tourney_id, $title);
+        //Use the old legacy method of defining every parameter
+        if(!is_array($options) && !is_null($options))
+        {
+            $keys = array('title', 'description', 'public', 'game_code', 'type_id', 'elimination', 'max_teams', 'team_mode', 'teams_from_group', 'date_start', 'location');
+            foreach($keys as $x => $key)
+            {
+                ${$key} = func_get_arg($x + 1);
+                if(${$key} === false) ${$key} = 'null';
+            }
+            return $this->tournament_update_legacy($tourney_id, $title, $description, $public, $game_code, $type_id, $elimination, $max_teams, $team_mode, $teams_from_group, $date_start, $location);
+        }
 
-        //Use the old style
+        $args = array_merge(array('TourneyID'	=> $tourney_id), $options);
+        return $this->call('Tourney.TourneyUpdate.Settings', $args);
+    }
+    /**
+     * Created to allow existing applications to download this new class without breaking their application
+     * 
+     * The new method of calling complicated services is to pass in an associative array of arguments
+     * 
+     * @param type $tourney_id
+     * @param type $title
+     * @param type $description
+     * @param type $public
+     * @param type $game_code
+     * @param type $type_id
+     * @param type $elimination
+     * @param type $max_teams
+     * @param type $team_mode
+     * @param type $teams_from_group
+     * @param type $date_start
+     * @param type $location
+     * @return {object} 
+     */
+    private function tournament_update_legacy($tourney_id, $title, $description = 'null', $public = 'null', $game_code = 'null', $type_id = 'null', $elimination = 'null', $max_teams = 'null', $team_mode = 'null', $teams_from_group = 'null', $date_start = 'null', $location = 'null')
+    {
         $args = array(
             'TourneyID'                 => $tourney_id
             , 'title' 			=> $title
@@ -503,26 +556,6 @@ class BinaryBeast
             , 'date_start'		=> $date_start
             , 'location'      		=> $location
         );
-
-        return $this->call('Tourney.TourneyUpdate.Settings', $args);
-    }
-    private function tournament_update_options($tourney_id, $options)
-    {
-        $args = array_merge(array('TourneyID'	=> $tourney_id
-            , 'title' 			=> 'null'
-            , 'description'		=> 'null'
-            , 'public' 		 	=> 'null'
-            , 'game_code'	 	=> 'null'
-            , 'type_id'        		=> 'null'
-            , 'elimination'	 	=> 'null'
-            , 'max_teams'      		=> 'null'
-            , 'team_mode'      		=> 'null'
-            , 'group_count'    		=> 'null'
-            , 'teams_from_group'  	=> 'null'
-            , 'date_start'		=> 'null'
-            , 'location'      		=> 'null'
-        ), $options);
-
         return $this->call('Tourney.TourneyUpdate.Settings', $args);
     }
 
@@ -675,11 +708,6 @@ class BinaryBeast
     {
         $args = array_merge(array('tourney_id'   => $tourney_id
             , 'display_name'	     => $display_name
-            , 'country_code'	     => null
-            , 'status'               => 1
-            , 'notes'		     => null
-            , 'players'		     => null
-            , 'network_name'         => null
         ), $options);
 
         return $this->call('Tourney.TourneyTeam.Insert', $args);
@@ -704,15 +732,7 @@ class BinaryBeast
      */
     public function team_update($tourney_team_id, $options)
     {
-        $args = array_merge(array('tourney_team_id'   => $tourney_team_id
-            , 'display_name'	     => 'null'
-            , 'country_code'	     => 'null'
-            , 'status'               => 'null'
-            , 'notes'		     => 'null'
-            , 'players'		     => 'null'
-            , 'network_name'         => 'null'
-        ), $options);
-
+        $args = array_merge(array('tourney_team_id'   => $tourney_team_id), $options);
         return $this->call('Tourney.TourneyTeam.Update', $args);
     }
     
@@ -785,22 +805,56 @@ class BinaryBeast
 
     /**
      * This wrapper method will report a team's win (Tourney.TourneyTeam.ReportWin)
+     * 
+     * Available Options:
+     *  @param int     `score`				The score of the winner
+     *  @param int     `o_score`                        The score fo the opponent (loser)
+     *  @param bool    `draw`                           If this match was a draw, pass in true for this value
+     *  @param string  `replay`				A URL to download the replay (first match only, for more detailed replay per game within the match, see Tourney.TourneyGame services for b03+)
+     *  @param string  `map`				You may specify which map it took place on (applies to the first match only, for more, see the Tourney.TourneyGame services)
+     *  @param string  `notes`				An optional description of the match
+     *  @param boolean `force`				You can pass in true for this paramater, to force advancing the team even if he has no opponent (it would have thrown an error otherwise)
+     * 
      *
      * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_report_win
      *
-     * @param string  $tourney_id			Duh
-     * @param int     $tourney_team_id		The winner's team id
-     * @param int     $o_tourney_team_id    	Only used / necessary in group rounds, the TeamID of the loser
-     * @param int     $score				The score of the winner
-     * @param int     $o_score				The score fo the opponent (loser)
-     * @param string  $replay				A URL to download the replay (first match only, for more detailed replay per game within the match, see Tourney.TourneyGame services for b03+)
-     * @param string  $map					You may specify which map it took place on (applies to the first match only, for more, see the Tourney.TourneyGame services)
-     * @param string  $notes				An optional description of the match
-     * @param boolean $force				You can pass in true for this paramater, to force advancing the team even if he has no opponent (it would have thrown an error otherwise)
+     * @param string    $tourney_id                     Duh
+     * @param int       $winner_tourney_team_id         The winner's team id
+     * @param int       $loser_tourney_team_id          Only used / necessary in group rounds, the TeamID of the loser
+     * @param array     $options                        An associative array of additional options
      *
      * @return object {int result}
      */
-    public function team_report_win($tourney_id, $tourney_team_id, $o_tourney_team_id = null,
+    public function team_report_win($tourney_id, $winner_tourney_team_id, $loser_tourney_team_id = null, $options = array())
+    {
+        //The new way of processing this request allows an array of options, as opposed to 15,000 parameters
+        //But there are many sites already using the old method, so we make sure not to break their applications
+        if(!is_array($options) && !is_null($options))
+        {
+            $keys = array('score' => 1, 'o_score' => 0, 'replay' => null, 'map' => null, 'notes' => null, 'force' => 0);
+            $pos = 3;
+            foreach($keys as $key => $default)
+            {
+                ${$key} = func_get_arg($pos);
+                if(${$key} === false) ${$key} = $default;
+                ++$pos;
+            }
+            return $this->team_report_win_legacy($tourney_id, $winner_tourney_team_id, $loser_tourney_team_id, $score, $o_score, $replay, $map, $notes, $force);
+        }
+
+        $args = array_merge(array('tourney_id' => $tourney_id
+            , 'tourney_team_id'	   => $winner_tourney_team_id
+            , 'o_tourney_team_id'  => $loser_tourney_team_id
+        ), $options);
+        return $this->call('Tourney.TourneyTeam.ReportWin', $args);
+    }
+    /**
+     * Legacy method allowing defining each paramater as opposed to the new method of defining an array of options 
+     * Necessary since I upgraded team_report_win to use options instead of definint every single paramater
+     * Since there are many sites already using it the PHP API, we're setting up a fallback in case they 
+     * decide to grab the latest API class, it would be nice if it worked the same way
+     */
+    public function team_report_win_legacy($tourney_id, $tourney_team_id, $o_tourney_team_id = null,
             $score = 1, $o_score = 0, $replay = null, $map = null, $notes = null, $force = false)
     {
         $args = array('tourney_id' => $tourney_id
@@ -848,6 +902,67 @@ class BinaryBeast
     public function team_load($tourney_team_id)
     {
         return $this->call('Tourney.TourneyLoad.Team', array('tourney_team_id' => $tourney_team_id));
+    }
+    
+    
+    
+    
+    
+    
+    /**
+     *
+     * 
+     * 
+     * Match service wrappers
+     * 
+     * 
+     *  
+     */
+    
+    /**
+     * Save the individual game details for a reported match
+     * 
+     * Each array (winners, scores, o_scores, races, maps, and replays) must be indexed in order of game
+     * so winners[0] => is the tourney_team_id of the player that won the FIRST game in the match
+     * winners[1] => the tourney_team_id of the player that won the second game... et c
+     * 
+     * 
+     * It's important to note that scores refers to the score of the winner of that specific game
+     * 
+     * So if player 1 defeats player 2 30 to 17 in game one
+     * Then let's say game 2.. player 2 defeats player 1 13:7...
+     * 
+     * In such a scenario, here's how your arrays should look:
+     *  winners[0] => tourney_team_id of player 1
+     *  score[0]   => score of player 1
+     *  o_score[0] => score of player 2
+     *  --
+     *  winners[1] => tourney_team_id of player 2
+     *  score[1]   => score of player 2
+     *  o_score[1] => score of player 1
+     * 
+     * 
+     * @param int $tourney_match_id
+     * @param array $winners
+     * @param array $scores
+     * @param array $o_scores
+     * @param array $races
+     * @param array $maps
+     * @param array $replays 
+     * 
+     * @return {object}
+     */
+    public function match_report_games($tourney_match_id, array $winners, array $scores, array $o_scores, array $races, array $maps, array $replays)
+    {
+        $args = array(
+            'tourney_match_id'      => $tourney_match_id,
+            'winners'               => $winners,
+            'scores'                => $scores,
+            'o_scores'              => $o_scores,
+            'races'                 => $races,
+            'maps'                  => $maps,
+            'replays'               => $replays
+        );
     }
 
 
