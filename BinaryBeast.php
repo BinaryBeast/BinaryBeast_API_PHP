@@ -673,6 +673,20 @@ class BinaryBeast
     }
 
     /**
+     * Retrieves a list of matches that have are currently opened 
+     * This does not help you determine matches that are waiting on opponents, 
+     * it simply lets you know currently open matches
+     * 
+     * @param string $tourney_id
+     * 
+     * @return object[int Result [, array matches]]
+     */
+    public function tournament_get_open_matches($tourney_id)
+    {
+        return $this->call('Tourney.TourneyLoad.OpenMatches', array('tourney_id' => $tourney_id));
+    }
+
+    /**
      *
      * 
      * 
