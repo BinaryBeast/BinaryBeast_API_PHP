@@ -1,4 +1,4 @@
-# BinaryBeast.php v2.65
+# BinaryBeast.php v2.7.0
 ### <http://binarybeast.com/api/info>
 
 `BinaryBeast.php` is a PHP class written to ease development requirements for integrating the `binarybeast.com` API into your PHP application
@@ -199,3 +199,9 @@ List your touranments.. you can set a filter
 By default it loads all of your tournaments, even the private ones
 
 But for example if you want to draw a list of your tournaments on the home page of your website, but you don't want private tournaments to show up... instead of parsing through them manually and checking ->public == 1, you can simply pass $private => false when calling the service
+
+
+
+### tournament_load($tourney_id)
+
+Load details about a tournament
