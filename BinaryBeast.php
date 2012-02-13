@@ -59,19 +59,33 @@ class BinaryBeast
     /**
      * A few constants to make a few values a bit easier to read / use
      */
-    const API_VERSION = 2.65;
+    const API_VERSION                   = '2.7.0';
     //
-    const BRACKET_GROUPS  = 0;
-    const BRACKET_WINNERS = 1;
-    const BRACKET_LOSERS  = 2;
-    const BRACKET_FINALS  = 3;
-    const BRACKET_BRONZE  = 4;
+    const BRACKET_GROUPS    = 0;
+    const BRACKET_WINNERS   = 1;
+    const BRACKET_LOSERS    = 2;
+    const BRACKET_FINALS    = 3;
+    const BRACKET_BRONZE    = 4;
     //
-    const ELIMINATION_SINGLE = 1;
-    const ELIMINATION_DOUBLE = 2;
+    const ELIMINATION_SINGLE    = 1;
+    const ELIMINATION_DOUBLE    = 2;
     //
-    const TOURNEY_TYPE_BRACKETS = 0;
-    const TOURNEY_TYPE_CUP      = 1;
+    const TOURNEY_TYPE_BRACKETS  = 0;
+    const TOURNEY_TYPE_CUP       = 1;
+    //
+    const SEEDING_RANDOM        = 'random';
+    const SEEDING_SPORTS        = 'sports';
+    const SEEDING_BALANCED      = 'balanced';
+    const SEEDING_MANUAL        = 'manual';
+    //
+    const REPLAY_DOWNLOADS_DISABLED         = 0;
+    const REPLAY_DOWNLOADS_ENABLED          = 1;
+    const REPLAY_DOWNLOADS_POST_COMPLETE    = 2;
+    //
+    const REPLAY_UPLOADS_DISABLED           = 0;
+    const REPLAY_UPLOADS_OPTIONAL           = 1;
+    const REPLAY_UPLOADS_MANDATORY          = 2;
+
 
     /**
      * Constructor - sets up the local email and password
@@ -386,6 +400,33 @@ class BinaryBeast
      * 
      *
      */
+
+    /**
+     * Returns an object containing information about the given tournament
+     * 
+     * @param string $tourney_id 
+     * 
+     * @return {object}
+     */
+    public function tournament_load($tourney_id)
+    {
+        return $this->call('Tourney.TourneyLoad.Info', array('tourney_id' => $tourney_id));
+    }
+    
+    /**
+     * Retrieves round format
+     * 
+     * You can pass '*' for the bracket to retrieve for the entire tournament
+     * 
+     * @param int $bracket 
+     * 
+     * @return {object}
+     */
+    public function tournament_load_round_format($tourney_id, $bracket = '*')
+    {
+        return $this->call('Tourney.TourneyLoad.Rounds', array('tourney_id' => $tourney_id, 'bracket' => $bracket));
+    }
+
 
     /**
      * This wrapper method is a shortcut to create a tournament, it simply calls the Tourney.TourneyCreate.Create service
@@ -705,7 +746,7 @@ class BinaryBeast
      *
      * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_insert
      * 
-     * Available options, check the wiki for their meanings, and default / possible values: 
+     * Available options:
      *      string country_code
      *      int    status               (0 = unconfirmed, 1 = confirmed, -1 = banned)
      *      string notes                Notes on the team - this can also be used possibly to store a team's remote userid for your own website
@@ -721,7 +762,8 @@ class BinaryBeast
     public function team_insert($tourney_id, $display_name, $options = array())
     {
         $args = array_merge(array('tourney_id'   => $tourney_id
-            , 'display_name'	     => $display_name
+            , 'display_name'        => $display_name
+            , 'status'              => 1
         ), $options);
 
         return $this->call('Tourney.TourneyTeam.Insert', $args);
@@ -960,13 +1002,11 @@ class BinaryBeast
      * @param array $winners
      * @param array $scores
      * @param array $o_scores
-     * @param array $races
      * @param array $maps
-     * @param array $replays 
      * 
      * @return {object}
      */
-    public function match_report_games($tourney_match_id, array $winners, array $scores, array $o_scores, array $races, array $maps, array $replays)
+    public function match_report_games($tourney_match_id, array $winners, array $scores, array $o_scores, array $maps)
     {
         $args = array(
             'tourney_match_id'      => $tourney_match_id,
@@ -975,8 +1015,8 @@ class BinaryBeast
             'o_scores'              => $o_scores,
             'races'                 => $races,
             'maps'                  => $maps,
-            'replays'               => $replays
         );
+        return $this->call('Tourney.TourneyMatchGame.ReportBatch', $args);
     }
 
 
