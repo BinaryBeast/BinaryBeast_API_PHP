@@ -79,7 +79,7 @@ Let's look at one more example... creating a tournament
 		'game_code'	=> 'QL',
 
 		//Double elimination
-		'elimination' 	=> BinaryBeast::ELIMINATION_DOUBLE,
+		'elimination', 	=> BinaryBeast::ELIMINATION_DOUBLE,
 
 		//Round Robin to Brackets
 		'type_id' 	=> BinaryBeast::TOURNEY_TYPE_CUP
