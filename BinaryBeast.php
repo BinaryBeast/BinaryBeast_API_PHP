@@ -104,7 +104,7 @@ class BinaryBeast
         $this->init_return();
         $this->init_method();
     }
-    
+
     /**
      * Alternative method of authentication - allow them to use a simple email / password combination
      * 
@@ -118,7 +118,7 @@ class BinaryBeast
         $this->email    = $email;
         $this->password = $password;
     }
-    
+
     /**
      * If SSL Host verification causes any issues, call this method to disable it
      * @return void
@@ -127,7 +127,7 @@ class BinaryBeast
     {
         $this->verify_ssl = false;
     }
-    
+
     /**
      * Re-enable ssl verification
      * @return void
@@ -512,7 +512,7 @@ class BinaryBeast
             , 'teams_from_group'    => $teams_from_group
             , 'date_start'          => $date_start
             , 'location'            => $location
-            , 'teams'               => $teas
+            , 'teams'               => $teams
             , 'return_data'         => $return_data
         );
 
