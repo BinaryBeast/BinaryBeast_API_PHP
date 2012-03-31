@@ -18,7 +18,7 @@
  *
  * @author BinaryBeast.com
  *
- * @version 2.65 (2012-02-09)
+ * @version 2.7.1 (2012-03-31)
  * 
  * Warning: XML and CSV do not work yet, JSON only
  *
@@ -59,7 +59,7 @@ class BinaryBeast
     /**
      * A few constants to make a few values a bit easier to read / use
      */
-    const API_VERSION                   = '2.7.0';
+    const API_VERSION                   = '2.7.1';
     //
     const BRACKET_GROUPS    = 0;
     const BRACKET_WINNERS   = 1;
@@ -207,7 +207,7 @@ class BinaryBeast
         $method = 'get_' . $this->return;
 
         //Return a parsed value of call_raw
-        return $this->array_to_object($this->$method( $this->call_raw($svc, $args) ));
+        return $this->$method( $this->call_raw($svc, $args) );
     }
 
     /**
@@ -329,7 +329,7 @@ class BinaryBeast
      */
     private function get_json($result)
     {
-        return json_decode($result);
+        return (object)json_decode($result);
     }
 
     /**
@@ -726,6 +726,43 @@ class BinaryBeast
     {
         return $this->call('Tourney.TourneyLoad.OpenMatches', array('tourney_id' => $tourney_id));
     }
+
+    /**
+     * Reopen a tournament
+     * 
+     * Complete -> Active,Active-Brackets -> Active-Brackets -> Active-Groups, Active/Active-Groups -> Confirmation
+     * 
+     * @param string $tourney_id 
+     */
+    public function tournament_reopen($tourney_id)
+    {
+        return $this->call('Tourney.TourneyReopen.Reopen', array('tourney_id' => $tourney_id));
+    }
+
+    /**
+     * Wrapper method for Tourney.TourneySetStatus.Confirmation, allow players to confirm their positions
+     * 
+     * @param string $tourney_id
+     * 
+     * @return object {int result]
+     */
+    public function tournament_confirm($tourney_id)
+    {
+        return $this->call('Tourney.TourneySetStatus.Confirmation', array('tourney_id' => $tourney_id));
+    }
+
+    /**
+     * Wrapper method for Tourney.TourneySetStatus.Confirmation, allow players to confirm their positions
+     * 
+     * @param string $tourney_id
+     * 
+     * @return object {int result]
+     */
+    public function tournament_unconfirm($tourney_id)
+    {
+        return $this->call('Tourney.TourneySetStatus.Building', array('tourney_id' => $tourney_id));
+    }
+
 
     /**
      *
