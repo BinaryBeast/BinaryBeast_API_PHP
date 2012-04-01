@@ -18,7 +18,7 @@
  *
  * @author BinaryBeast.com
  *
- * @version 2.7.1 (2012-03-31)
+ * @version 2.7.2 (2012-04-01)
  * 
  * Warning: XML and CSV do not work yet, JSON only
  *
@@ -59,7 +59,7 @@ class BinaryBeast
     /**
      * A few constants to make a few values a bit easier to read / use
      */
-    const API_VERSION                   = '2.7.1';
+    const API_VERSION                   = '2.7.2';
     //
     const BRACKET_GROUPS    = 0;
     const BRACKET_WINNERS   = 1;
@@ -675,15 +675,17 @@ class BinaryBeast
      * @param <int>array    $best_ofs     - array of best_of values to update, IN ORDER ($best_ofs[0] = round 1, $best_ofs[1] = round 2)
      * @param <string>array $maps         - array of maps for this bracket
      * @param <string>array $dates        - array of dates for this bracket
+     * @param <int>array    $map_ids      - array of map_ids - official maps with stat tracking etc in our databased, opposed to simply trying to give us the name of the map - use map_list to get maps ids
      * 
      */
-    public function tournament_round_update_batch($tourney_id, $bracket, $best_ofs = array(), $maps = array(), $dates = array())
+    public function tournament_round_update_batch($tourney_id, $bracket, $best_ofs = array(), $maps = array(), $dates = array(), $map_ids = array())
     {
         return $this->call('Tourney.TourneyRound.BatchUpdate', array(
             'tourney_id'    => $tourney_id
             , 'bracket'     => $bracket
             , 'best_ofs'    => $best_ofs
             , 'maps'        => $maps
+            , 'map_ids'     => $map_ids
             , 'dates'       => $dates
         ));
     }
@@ -1057,6 +1059,33 @@ class BinaryBeast
     }
 
 
+    /**
+     *
+     * 
+     * 
+     * 
+     * Map wrapper methods
+     * 
+     * 
+     * 
+     *
+     */
+    
+    /**
+     * Load a list of maps for the given game_code
+     * 
+     * this is important to have in order for you to have the ability to 
+     * specify maps for the round format for each bracket, as you can 
+     * identify the maps by simply giving us the map_id
+     * 
+     * @param string $game_code
+     * 
+     * @return {object}
+     */
+    public function map_list($game_code)
+    {
+        return $this->call('Game.GameMap.LoadList', array('game_code' => $game_code));
+    }
 
 
 
