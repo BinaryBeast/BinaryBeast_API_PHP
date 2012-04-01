@@ -1,4 +1,4 @@
-# BinaryBeast.php v2.7.1
+# BinaryBeast.php v2.7.2
 ### <http://binarybeast.com/api/info>
 
 `BinaryBeast.php` is a PHP class written to ease development requirements for integrating the `binarybeast.com` API into your PHP application
