@@ -54,8 +54,8 @@ In this example.. we'll load a list of tournaments associated with our account, 
 		die('Error ' . $tournaments->result);
 	}
 
-	foreach(array_keys($tournaments['list'] as $key)) {
-		$tournament = &$tournaments['list'][$key];
+	foreach(array_keys($tournaments->list) as $key) {
+		$tournament = &$tournaments->list[$key];
 
 		//Prints a link to the event, who's label is the title + game name
 		//Try a var_dump on $tournament to see all of the available properties
