@@ -1,5 +1,10 @@
 <?php
 
+//The new API version is adopts a more OO approach, so we have a few data modal classes to import
+include_once('lib/BBModel.php');
+include_once('lib/BBTournament.php');
+
+
 /**
  * This class contains the method for interaction with the BinaryBeast API
  *
