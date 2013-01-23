@@ -23,27 +23,18 @@ include_once('lib/BBTournament.php');
  *
  * @package BinaryBeast
  *
- * @author BinaryBeast.com
- * @version 2.7.4
+ * @version 3.0.5
  * @date 2013-01-22
+ * @author Brandon Simmons <contact@binarybeast.com>
  * 
  * For a list of available services, please see http://wiki.binarybeast.com/?title=BinaryBeast_API#Packages
  */
 class BinaryBeast {
 
     /**
-     * Which method this server can use to call the BinaryBeast API
-     * @access private
-     * @var string: CURL|FOPEN
+     * URL to send API Requests
      */
-    private $method;
-
-    /**
-     * Which return type to request
-     * @access private
-     * @var string: JSON|XML|CSV
-     */
-    private $return = null;
+    private $url = 'https://api.binarybeast.com/';
 
     /**
      * BinaryBeast API Key
@@ -64,70 +55,86 @@ class BinaryBeast {
     private $verify_ssl = true;
 
     /**
+     * Constructor flags wether or not server is capable of requesting and processing the API requests
+     */
+    private $server_ready = false;
+
+    /**
      * A few constants to make a few values a bit easier to read / use
      */
 
-    const API_VERSION = '2.7.4';
+    const API_VERSION = '3.0.5';
     //
-    const BRACKET_GROUPS = 0;
-    const BRACKET_WINNERS = 1;
-    const BRACKET_LOSERS = 2;
-    const BRACKET_FINALS = 3;
-    const BRACKET_BRONZE = 4;
+    const BRACKET_GROUPS    = 0;
+    const BRACKET_WINNERS   = 1;
+    const BRACKET_LOSERS    = 2;
+    const BRACKET_FINALS    = 3;
+    const BRACKET_BRONZE    = 4;
     //
     const ELIMINATION_SINGLE = 1;
     const ELIMINATION_DOUBLE = 2;
     //
     const TOURNEY_TYPE_BRACKETS = 0;
-    const TOURNEY_TYPE_CUP = 1;
+    const TOURNEY_TYPE_CUP      = 1;
     //
-    const SEEDING_RANDOM = 'random';
-    const SEEDING_SPORTS = 'sports';
-    const SEEDING_BALANCED = 'balanced';
-    const SEEDING_MANUAL = 'manual';
+    const SEEDING_RANDOM        = 'random';
+    const SEEDING_SPORTS        = 'sports';
+    const SEEDING_BALANCED      = 'balanced';
+    const SEEDING_MANUAL        = 'manual';
     //
-    const REPLAY_DOWNLOADS_DISABLED = 0;
-    const REPLAY_DOWNLOADS_ENABLED = 1;
-    const REPLAY_DOWNLOADS_POST_COMPLETE = 2;
+    const REPLAY_DOWNLOADS_DISABLED         = 0;
+    const REPLAY_DOWNLOADS_ENABLED          = 1;
+    const REPLAY_DOWNLOADS_POST_COMPLETE    = 2;
     //
-    const REPLAY_UPLOADS_DISABLED = 0;
-    const REPLAY_UPLOADS_OPTIONAL = 1;
-    const REPLAY_UPLOADS_MANDATORY = 2;
+    const REPLAY_UPLOADS_DISABLED   = 0;
+    const REPLAY_UPLOADS_OPTIONAL   = 1;
+    const REPLAY_UPLOADS_MANDATORY  = 2;
     /**
      * Result code values
      */
-    const RESULT_SUCCESS = 200;
-    const RESULT_NOT_LOGGED_IN = 401;
-    const RESULT_AUTH = 403;
-    const RESULT_NOT_FOUND = 404;
-    const RESULT_API_NOT_ALLOWED = 405;
-    const RESULT_LOGIN_EMAIL_INVALID = 406;
-    const RESULT_EMAIL_UNAVAILABLE = 415;
-    const RESULT_INVALID_EMAIL_FORMAT = 416;
-    const RESULT_PENDING_ACTIVIATION = 418;
-    const RESULT_LOGIN_USER_BANNED = 425;
-    const RESULT_PASSWORD_INVALID = 450;
-    const RESULT_DUPLICATE_ENTRY = 470;
-    const RESULT_ERROR = 500;
-    const RESULT_INVALID_USER_ID = 604;
-    const RESULT_TOURNAMENT_NOT_FOUND = 704;
-    const RESULT_TOURNAMENT_STATUS = 715;
+    const RESULT_SUCCESS                    = 200;
+    const RESULT_NOT_LOGGED_IN              = 401;
+    const RESULT_AUTH                       = 403;
+    const RESULT_NOT_FOUND                  = 404;
+    const RESULT_API_NOT_ALLOWED            = 405;
+    const RESULT_LOGIN_EMAIL_INVALID        = 406;
+    const RESULT_EMAIL_UNAVAILABLE          = 415;
+    const RESULT_INVALID_EMAIL_FORMAT       = 416;
+    const RESULT_PENDING_ACTIVIATION        = 418;
+    const RESULT_LOGIN_USER_BANNED          = 425;
+    const RESULT_PASSWORD_INVALID           = 450;
+    const RESULT_DUPLICATE_ENTRY            = 470;
+    const RESULT_ERROR                      = 500;
+    const RESULT_INVALID_USER_ID            = 604;
+    const RESULT_TOURNAMENT_NOT_FOUND       = 704;
+    const RESULT_TOURNAMENT_STATUS          = 715;
 
     /**
-     * Constructor - sets up the local email and password
+     * Constructor - import the API Key
      *
      * @param string		your API Key - optional, you can also use $this->login for simple email / password authentication
-     *
-     * @return boolean		false if it was unable to determine a method for communication with the API (curl, fopen)
      */
-    function __construct($api_key) {
+    function __construct($api_key = null) {
         //Cache the api key
         $this->api_key = $api_key;
 
-        //Figure out which methods to use to get the data and to parse it
-        //then return false if something went wrong
-        $this->init_return();
-        $this->init_method();
+        //Make sure this server supports json and cURL
+        $this->server_ready = $this->check_server();
+        
+        $this->map = (object)array(
+            'something' => function($asdf) {
+            
+            }
+        );
+    }
+    
+    /**
+     * Checks to make sure this server supports json and cURL
+     * 
+     * @return boolean
+     */
+    private function check_server() {
+        return function_exists('json_decode') && function_exists('curl_version');
     }
 
     /**
@@ -139,7 +146,7 @@ class BinaryBeast {
      * @return void
      */
     public function login($email, $password) {
-        $this->email = $email;
+        $this->email    = $email;
         $this->password = $password;
     }
 
@@ -160,8 +167,7 @@ class BinaryBeast {
     }
 
     /**
-     * Unlike Call, this returns a raw un processed value, a return type can be specified
-     * - which overrides whatever setting was automatically determined by the constructor
+     * Executes an API service, and returns the raw unprocessed value
      *
      * It can be useful if your PHP can't handle JSON, but you want to use it
      * to feed json results to a local ajax request or something similiar
@@ -175,37 +181,37 @@ class BinaryBeast {
      * @return string
      */
     public function call_raw($svc, $args = null, $return_type = null) {
-        //This server does not support curl or fopen
-        if (!$this->method) {
-            return $this->get_method_error();
+        //This server isn't ready for processing API requests
+        if (!$this->server_ready) {
+            return $this->get_server_ready_error();
         }
 
         //Add the service to the arguments, and the return type
-        $args['api_return'] = is_null($return_type) ? $this->return : $return_type;
-        $args['api_service'] = $svc;
+        if(is_null($args)) $args = array();
+        $args['api_return']     = is_null($return_type) ? $this->return : $return_type;
+        $args['api_service']    = $svc;
 
-        //Use a more readable snake_case argument/variable format
-        //BinaryBeast uses CamelCase at its own back-end, and it's too late to change that now,
-        //but it's easy to translate between camelCase and snake_case
-        $args['api_use_underscores'] = 1;
+        /*
+         * Use a more readable snake_case argument/variable format
+         * BinaryBeast uses CamelCase at its own back-end, and it's too late to change that now,
+         */
+        $args['api_use_underscores'] = true;
 
         //Authenticate ourselves
         if (!is_null($this->api_key)) {
             $args['api_key'] = $this->api_key;
         }
 
-        //Though, it will always be supported back-end, the future releases of the api class wil not include this ability, and
-        //use of the api_key will be encouraged
-        if (!is_null($this->email)) {
-            $args['api_email'] = $this->email;
-            $args['api_password'] = $this->password;
+        /*
+         * User alternative authentication method of email + password
+         */
+        else if (!is_null($this->email)) {
+            $args['api_email']      = $this->email;
+            $args['api_password']   = $this->password;
         }
 
-        //Determine which function to call to retrieve the data
-        $method = 'call_' . $this->method;
-
         //Who you gonna call?
-        return $this->$method(http_build_query($args));
+        return $this->call_curl(http_build_query($args));
     }
 
     /**
@@ -220,40 +226,12 @@ class BinaryBeast {
      */
     public function call($svc, $args = null) {
         //This server does not support curl or fopen
-        if (!$this->method) {
-            return $this->get_method_error();
+        if (!$this->server_ready) {
+            return $this->get_server_ready_error();
         }
-
-        //Determine which method is needed to parse the returned value
-        $method = 'get_' . $this->return;
 
         //Return a parsed value of call_raw
-        return $this->$method($this->call_raw($svc, $args));
-    }
-
-    /**
-     * Determines which method to use for call BinaryBeast with
-     *
-     * @return boolean false if the server supports neither fopen nor curl
-     */
-    private function init_method() {
-        //cURL
-        if (function_exists('curl_version')) {
-            $this->method = 'curl';
-        }
-
-        //FOpen
-        else if (ini_get('allow_url_fopen')) {
-            $this->method = 'fopen';
-        }
-
-        //Failure!
-        else {
-            $this->method = false;
-        }
-
-        //Return true or false
-        return !($this->method == false);
+        return $this->decode($this->call_raw($svc, $args));
     }
 
     /**
@@ -261,9 +239,9 @@ class BinaryBeast {
      *
      * @return object {int result, string Message}
      */
-    private function get_method_error() {
+    private function get_server_ready_error() {
         return array('result' => false,
-            'message' => 'Neither cURL nor fopen is enabled on your server, the BinaryBeast API could not be contacted.  Get in touch with a BinaryBeast admin (contact@binarybeast.com) and they will be happy to help you'
+            'message' => 'Please verify that both cURL and json are enabled your server!'
         );
     }
 
@@ -292,14 +270,14 @@ class BinaryBeast {
      *
      * @param string URL encoded arguments
      *
-     * @return object[int result...]
+     * @return string
      */
     private function call_curl($args) {
         //Get a curl instance
         $curl = curl_init();
 
         //Set the standard curl options
-        curl_setopt($curl, CURLOPT_URL, 'https://binarybeast.com/api');
+        curl_setopt($curl, CURLOPT_URL, $this->url);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, $this->verify_ssl);
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, $this->verify_ssl ? 2 : 0);
         //
@@ -322,76 +300,25 @@ class BinaryBeast {
     }
 
     /**
-     * Make a service call to the BinaryBeast API via fopen
-     *
-     * @access private
-     *
-     * @param string $args URL encoded arguments
-     *
-     * @return object {int result}
-     */
-    private function call_fopen($args) {
-        //Easy enough eh?
-        return file_get_contents("https://binarybeast.com/api/?$args");
-    }
-
-    /**
-     * Converts a returned JSON value into an object
+     * Converts the returned string from the API, and decodes it into a native PHP object
      *
      * @param string BinaryBeast Result value
      *
      * @return object
      */
-    private function get_json($result) {
-        return (object) json_decode($result);
+    private function decode($result) {
+        return (object)json_decode($result);
     }
 
     /**
-     * Converts a returned XML value into an object
-     *
-     * @param string BinaryBeast Result value
-     *
-     * @return array
+     * Returns a new Tournament object
+     * 
+     * @param string $tourney_id        Optionally provide a tournament id to auto-load
+     * 
+     * @return BBTournament
      */
-    private function get_xml($result) {
-        /**
-         * @TODO figure this method out heh
-         */
-    }
-
-    /**
-     * Converts a returned CSV into an object
-     *
-     * @todo parsing CSV's... it's going to suck trying to have the return values be compatible with xml and json
-     *
-     * @param string BinaryBeast Result value
-     *
-     * @return object
-     */
-    private function get_csv($result) {
-        return explode(',', str_replace('\n', ',', $result));
-    }
-
-    /**
-     * This method is used to keep return types consistent
-     * if an object is returned, it will be converted into an array
-     *
-     * This is needed because CSV and XML will return arrays natively... While json_decode will likely return an object
-     *
-     * This is not recursive though, many returns will contain objcts
-     * For instance, a list of tournaments is an array of objects
-     *
-     * @param array $array Object to convert into an array
-     *
-     * @return object
-     */
-    private function array_to_object($array) {
-        //No need to continue
-        if (!is_array($array))
-            return $array;
-
-        //EZ
-        return (object) $array;
+    public static function tournament($tourney_id = null) {
+        return new BBTournament($this, $tourney_id);
     }
 
     /**
@@ -456,67 +383,7 @@ class BinaryBeast {
      * @return object {int result, ...}
      */
     public function tournament_create($options) {
-        //Use the legacy parameter method
-        //@todo this method is deprecated and should be phased out eventually
-        if (!is_array($options) && !is_null($options)) {
-            $keys = array('title' => 'PHP Test!', 'description' => null, 'public' => true, 'game_code' => null, 'type_id' => 0, 'elimination' => 1
-                , 'max_teams' => 16, 'team_mode' => 1, 'teams_from_group' => 2, 'date_start' => null, 'location' => null, 'teams' => null, 'return_data' => 0);
-            $pos = 0;
-            foreach ($keys as $key => $default) {
-                ${$key} = func_get_arg($pos);
-                if (${$key} === false)
-                    ${$key} = $default;
-                ++$pos;
-            }
-            return $this->tournament_create_legacy($title, $description, $public, $game_code, $type_id, $elimination, $max_teams, $team_mode, $teams_from_group, $date_start, $location, $teams, $return_data);
-        }
-
-        //EZ
         return $this->call('Tourney.TourneyCreate.Create', $options);
-    }
-
-    /**
-     * Created to preserve existing PHP applications that may decide to download the new class
-     * 
-     * The new method of calling complex services is to provide an associative array of options
-     * previously we had defined each option as a parameter - so in case they're still 
-     * using the old method, we'll make sure it still works
-     * 
-     * @param string $title
-     * @param string $description
-     * @param int $public
-     * @param string $game_code
-     * @param int $type_id
-     * @param int $elimination
-     * @param int $max_teams
-     * @param int $team_mode
-     * @param int $teams_from_group
-     * @param date $date_start YYYY-MM-DD HH:SS
-     * @param string $location
-     * @param array $teams
-     * @param type $return_data
-     * 
-     * @return {object} 
-     */
-    private function tournament_create_legacy($title, $description = null, $public = 1, $game_code = null, $type_id = 0, $elimination = 1, $max_teams = 16, $team_mode = 1, $teams_from_group = 2, $date_start = null, $location = null, array $teams = null, $return_data = 0) {
-        $args = array(
-            'title' => $title
-            , 'description' => $description
-            , 'public' => $public
-            , 'game_code' => $game_code
-            , 'type_id' => $type_id
-            , 'elimination' => $elimination
-            , 'max_teams' => $max_teams
-            , 'team_mode' => $team_mode
-            , 'group_count' => $group_count
-            , 'teams_from_group' => $teams_from_group
-            , 'date_start' => $date_start
-            , 'location' => $location
-            , 'teams' => $teams
-            , 'return_data' => $return_data
-        );
-
-        return $this->call('Tourney.TourneyCreate.Create', $args);
     }
 
     /**
@@ -546,56 +413,10 @@ class BinaryBeast {
      * @return object {int result}
      */
     public function tournament_update($tourney_id, $options = array()) {
-        //Use the old legacy method of defining every parameter
-        if (!is_array($options) && !is_null($options)) {
-            $keys = array('title', 'description', 'public', 'game_code', 'type_id', 'elimination', 'max_teams', 'team_mode', 'teams_from_group', 'date_start', 'location');
-            foreach ($keys as $x => $key) {
-                ${$key} = func_get_arg($x + 1);
-                if (${$key} === false)
-                    ${$key} = 'null';
-            }
-            return $this->tournament_update_legacy($tourney_id, $title, $description, $public, $game_code, $type_id, $elimination, $max_teams, $team_mode, $teams_from_group, $date_start, $location);
-        }
-
-        $args = array_merge(array('TourneyID' => $tourney_id), $options);
-        return $this->call('Tourney.TourneyUpdate.Settings', $args);
-    }
-
-    /**
-     * Created to allow existing applications to download this new class without breaking their application
-     * 
-     * The new method of calling complicated services is to pass in an associative array of arguments
-     * 
-     * @param type $tourney_id
-     * @param type $title
-     * @param type $description
-     * @param type $public
-     * @param type $game_code
-     * @param type $type_id
-     * @param type $elimination
-     * @param type $max_teams
-     * @param type $team_mode
-     * @param type $teams_from_group
-     * @param type $date_start
-     * @param type $location
-     * @return {object} 
-     */
-    private function tournament_update_legacy($tourney_id, $title, $description = 'null', $public = 'null', $game_code = 'null', $type_id = 'null', $elimination = 'null', $max_teams = 'null', $team_mode = 'null', $teams_from_group = 'null', $date_start = 'null', $location = 'null') {
-        $args = array(
-            'TourneyID' => $tourney_id
-            , 'title' => $title
-            , 'description' => $description
-            , 'public' => $public
-            , 'game_code' => $game_code
-            , 'type_id' => $type_id
-            , 'elimination' => $elimination
-            , 'max_teams' => $max_teams
-            , 'team_mode' => $team_mode
-            , 'teams_from_group' => $teams_from_group
-            , 'date_start' => $date_start
-            , 'location' => $location
+        return $this->call('Tourney.TourneyUpdate.Settings', array_merge( array(
+                'tourney_id' => $tourney_id
+            ), $options )
         );
-        return $this->call('Tourney.TourneyUpdate.Settings', $args);
     }
 
     /**
@@ -624,12 +445,11 @@ class BinaryBeast {
      * @return object {int result}
      */
     public function tournament_start($tourney_id, $seeding = 'random', $teams = null) {
-        $args = array('tourney_id' => $tourney_id
-            , 'Seeding' => $seeding
-            , 'Teams' => $teams
-        );
-
-        return $this->call('Tourney.TourneyStart.Start', $args);
+        return $this->call('Tourney.TourneyStart.Start', array(
+            'tourney_id'    => $tourney_id,
+            'seeding'       => $seeding,
+            'teams'         => $teams,
+        ));
     }
 
     /**
@@ -650,13 +470,13 @@ class BinaryBeast {
      */
     public function tournament_round_update($tourney_id, $bracket, $round = 0, $best_of = 1, $map = null, $date = null) {
         return $this->call('Tourney.TourneyRound.Update', array(
-                    'tourney_id' => $tourney_id
-                    , 'bracket' => $bracket
-                    , 'round' => $round
-                    , 'best_of' => $best_of
-                    , 'map' => $map
-                    , 'date' => $date
-                ));
+            'tourney_id'    => $tourney_id,
+            'bracket'       => $bracket,
+            'round'         => $round,
+            'best_of'       => $best_of,
+            'map'           => $map,
+            'date'          => $date,
+        ));
     }
 
     /**
@@ -665,7 +485,7 @@ class BinaryBeast {
      * 
      * @see link http://wiki.binarybeast.com/index.php?title=API_PHP:_tournament_round_update_batch
      * 
-     * @param string         $tourney_id
+     * @param string        $tourney_id
      * @param int           $bracket      - which bracket the round effects - ie 0 = groups, 1 = winners (there are class constants for these values
      * @param <int>array    $best_ofs     - array of best_of values to update, IN ORDER ($best_ofs[0] = round 1, $best_ofs[1] = round 2)
      * @param <string>array $maps         - array of maps for this bracket
@@ -675,20 +495,13 @@ class BinaryBeast {
      */
     public function tournament_round_update_batch($tourney_id, $bracket, $best_ofs = array(), $maps = array(), $dates = array(), $map_ids = array()) {
         return $this->call('Tourney.TourneyRound.BatchUpdate', array(
-                    'tourney_id' => $tourney_id
-                    , 'bracket' => $bracket
-                    , 'best_ofs' => $best_ofs
-                    , 'maps' => $maps
-                    , 'map_ids' => $map_ids
-                    , 'dates' => $dates
-                ));
-    }
-
-    /**
-     * Old method, left for legacy API users 
-     */
-    public function tournament_list($filter = null, $limit = 30, $private = true) {
-        return $this->tournament_list_my($filter, $limit, $private);
+            'tourney_id'    => $tourney_id,
+            'bracket'       => $bracket,
+            'best_ofs'      => $best_ofs,
+            'maps'          => $maps,
+            'map_ids'       => $map_ids,
+            'dates'         => $dates,
+        ));
     }
 
     /**
@@ -696,15 +509,16 @@ class BinaryBeast {
      * 
      * @param string $filter        Optionally, you may filter by title
      * @param int    $limit         Limit the number of results - defaults to 30
+     * @param bool   $private       true by default, returns ALL of your touranments, even if marked private - pass false to skip your private tournaments
      * 
      * @return object
      */
     public function tournament_list_my($filter = null, $limit = 30, $private = true) {
         return $this->call('Tourney.TourneyList.Creator', array(
-                    'filter' => $filter,
-                    'page_size' => $limit,
-                    'private' => $private
-                ));
+            'filter'    => $filter,
+            'page_size' => $limit,
+            'private'   => $private,
+        ));
     }
 
     /**
@@ -785,10 +599,11 @@ class BinaryBeast {
      * @return array [int result [, int tourney_team_id]]
      */
     public function team_insert($tourney_id, $display_name, $options = array()) {
-        $args = array_merge(array('tourney_id' => $tourney_id
-            , 'display_name' => $display_name
-            , 'status' => 1
-                ), $options);
+        $args = array_merge(array(
+            'tourney_id'    => $tourney_id,
+            'display_name'  => $display_name,
+            'status'        => 1,
+        ), $options);
 
         return $this->call('Tourney.TourneyTeam.Insert', $args);
     }
@@ -901,45 +716,11 @@ class BinaryBeast {
      * @return object {int result}
      */
     public function team_report_win($tourney_id, $winner_tourney_team_id, $loser_tourney_team_id = null, $options = array()) {
-        //The new way of processing this request allows an array of options, as opposed to 15,000 parameters
-        //But there are many sites already using the old method, so we make sure not to break their applications
-        if (!is_array($options) && !is_null($options)) {
-            $keys = array('score' => 1, 'o_score' => 0, 'replay' => null, 'map' => null, 'notes' => null, 'force' => 0);
-            $pos = 3;
-            foreach ($keys as $key => $default) {
-                ${$key} = func_get_arg($pos);
-                if (${$key} === false)
-                    ${$key} = $default;
-                ++$pos;
-            }
-            return $this->team_report_win_legacy($tourney_id, $winner_tourney_team_id, $loser_tourney_team_id, $score, $o_score, $replay, $map, $notes, $force);
-        }
-
-        $args = array_merge(array('tourney_id' => $tourney_id
-            , 'tourney_team_id' => $winner_tourney_team_id
-            , 'o_tourney_team_id' => $loser_tourney_team_id
-                ), $options);
-        return $this->call('Tourney.TourneyTeam.ReportWin', $args);
-    }
-
-    /**
-     * Legacy method allowing defining each paramater as opposed to the new method of defining an array of options 
-     * Necessary since I upgraded team_report_win to use options instead of definint every single paramater
-     * Since there are many sites already using it the PHP API, we're setting up a fallback in case they 
-     * decide to grab the latest API class, it would be nice if it worked the same way
-     */
-    public function team_report_win_legacy($tourney_id, $tourney_team_id, $o_tourney_team_id = null, $score = 1, $o_score = 0, $replay = null, $map = null, $notes = null, $force = false) {
-        $args = array('tourney_id' => $tourney_id
-            , 'tourney_team_id' => $tourney_team_id
-            , 'o_tourney_team_id' => $o_tourney_team_id
-            , 'score' => $score
-            , 'o_score' => $o_score
-            , 'replay' => $replay
-            , 'map' => $map
-            , 'notes' => $notes
-            , 'force' => $force
-        );
-
+        $args = array_merge(array(
+            'tourney_id'        => $tourney_id,
+            'tourney_team_id'   => $winner_tourney_team_id,
+            'o_tourney_team_id' => $loser_tourney_team_id,
+        ), $options);
         return $this->call('Tourney.TourneyTeam.ReportWin', $args);
     }
 
@@ -1121,7 +902,7 @@ class BinaryBeast {
     public function country_search($country) {
         return $this->Call('Country.CountrySearch.Search', array('country' => $country));
     }
-
+    
 }
 
 ?>
