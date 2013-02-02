@@ -66,20 +66,38 @@ class BBTournament extends BBModel {
      * @param object
      */
     protected function import_values($result) {
-        parent::import_values($result->tourney_data);
+        /*
+         * If called from BBModel, we may have been passed this value directly as a result of wrapping
+         * a list of objects, in which case ->tourney_data wouldn't exist, make sure we pass it
+         * back up to BBModel's import_values as was
+         */
+        parent::import_values(isset($result->tourney_data) ? $result->tourney_data : $result);
     }
 
     /**
      * Load a list of tournaments created by the user of the current api_key
      * 
+     * Note: each tournament is actually instantiated as a new BBTournament class, so you 
+     * can update / delete them in iterations etc etc
+     * 
      * @param 
      */
     public function list_my($filter = null, $limit = 30, $private = true) {
-        return $this->bb->call('Tourney.TourneyList.Creator', array(
+        $result = $this->bb->call('Tourney.TourneyList.Creator', array(
             'filter'    => $filter,
             'page_size' => $limit,
             'private'   => $private,
         ));
+
+        //OH NOES!
+        if($result->result != BinaryBeast::RESULT_SUCCESS) {
+            $this->result = $result;
+            $this->set_error($result);
+            return false;
+        }
+
+        //Success! Cast each returned tournament in a local BBTournament and return
+        return $this->wrap_list($result->list);
     }
 }
 

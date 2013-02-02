@@ -3,6 +3,8 @@
 //The new API version is adopts a more OOP approach, so we have a few data modal classes to import
 include_once('lib/BBModel.php');
 include_once('lib/BBTournament.php');
+include_once('lib/BBTeam.php');
+include_once('lib/BBMatch.php');
 
 
 /**
@@ -23,8 +25,8 @@ include_once('lib/BBTournament.php');
  *
  * @package BinaryBeast
  *
- * @version 3.0.5
- * @date 2013-01-22
+ * @version 3.0.6
+ * @date 2013-02-01
  * @author Brandon Simmons <contact@binarybeast.com>
  * 
  * For a list of available services, please see http://wiki.binarybeast.com/?title=BinaryBeast_API#Packages
@@ -60,20 +62,10 @@ class BinaryBeast {
     private $server_ready = false;
     
     /**
-     * Cache instances that are used for non-objest specific methods, like loading
-     * lists, etc aka public services
-     * 
-     * BBModal is designed to return a new instance of itself when it is 
-     * provided with data
-     */
-    private $BBTournament;
-    private $BBTeam;
-
-    /**
      * A few constants to make a few values a bit easier to read / use
      */
 
-    const API_VERSION = '3.0.5';
+    const API_VERSION = '3.0.6';
     //
     const BRACKET_GROUPS    = 0;
     const BRACKET_WINNERS   = 1;
@@ -127,11 +119,11 @@ class BinaryBeast {
     function __construct($api_key = null) {
         //Cache the api key
         $this->api_key = $api_key;
-
+        
         //Make sure this server supports json and cURL
         $this->server_ready = $this->check_server();
     }
-    
+
     /**
      * Checks to make sure this server supports json and cURL
      * 
@@ -250,24 +242,6 @@ class BinaryBeast {
     }
 
     /**
-     * Determines which return type to request, according to the local servce's abilities
-     * Preferences json, then xml, then csv
-     *
-     * @return void - even the most uptight servers can parse a csv lol
-     */
-    private function init_return() {
-        //Hopefully we can just use json.. it's so clean and easy
-        if (function_exists('json_decode')) {
-            $this->return = 'json';
-        }
-
-        //I doubt this will happen, but you never know - we MIGHT have to fall back on XML
-        else {
-            $this->return = 'xml';
-        }
-    }
-
-    /**
      * Make a service call to the BinaryBeast API via the cURL library
      *
      * @access private
@@ -313,6 +287,23 @@ class BinaryBeast {
     private function decode($result) {
         return (object)json_decode($result);
     }
+    
+    /**
+     * Allows us to create new model classes as if accessing attributes, avoiding the
+     * need to call it as a function, so we can get a tournametn for example, like this:
+     * $new_tour = $bb->tournament;
+     * 
+     * @param string $name
+     */
+    public function __get($name) {
+        //Only existing models
+        if(in_array(strtolower($name), array('tournament', 'team', 'match'))) {
+            return $this->get_model($name);
+        }
+
+        //Invalid access
+        return null;
+    }
 
     /**
      * Returns a new Tournament object
@@ -322,29 +313,43 @@ class BinaryBeast {
      * @return BBTournament
      */
     public function tournament($tournament = null) {
-        return $this->get_modal('BBTournament', $tournament);
+        return $this->get_model('tournament', $tournament);
     }
 
     /**
-     * Returns a modal class, either returning
-     * a local cached instanct (when not provided with $data)..
-     *  Useful for calling public services like loading lists
-     * or a instnatiated version with data
-     * @param string $modal modal name
+     * Returns a newly instantiated modal class, either returning
+     * 
+     * @param string $model         Base name of the model, for example BBTournament is just "touranment"
      * @return BBModal
      */
-    private function &get_modal($modal, $data = null) {
-        //Data is null, so return a non-specific version, try to return cached version first
-        if(is_null($data)) {
-            if(isset($this->$modal)) return $this->$modal;
-            else {
-                $this->$modal = new $modal($data);
-                return $this->$modal;
-            }
-        }
+    private function get_model($model, $data = null) {
+        //Determine the class name to instantiate, based on the property name, IE team = BBTeam
+        $class_name = 'BB' . ucfirst(strtolower($model));
 
-        //Return an instantiated version
-        return new $modal($this, $data);
+        //EZ
+        return new $class_name($this, $data);
+    }
+
+    /*
+     * 
+     * Public list loading services
+     * 
+     */
+
+
+    /**
+     * Retrieves a list of tournaments created using your account
+     * 
+     * @param string $filter        Optionally, you may filter by title
+     * @param int    $limit         Limit the number of results - defaults to 30
+     * @param bool   $private       true by default, returns ALL of your touranments, even if marked private - pass false to skip your private tournaments
+     * 
+     * @return object
+     */
+    public function tournament_list_my($filter = null, $limit = 30, $private = true) {
+        //Grab a new tournament object, BBTournament hosts all of the tournament logic, keep logic in relevent classes
+        $tournament = $this->get_modal('tournament');
+        return $tournament->list_my($filter, $limit, $private);
     }
 
     /**
@@ -360,17 +365,6 @@ class BinaryBeast {
      */
 
     /**
-     * Returns an object containing information about the given tournament
-     * 
-     * @param string $tourney_id 
-     * 
-     * @return {object}
-     */
-    public function tournament_load($tourney_id) {
-        return $this->call('Tourney.TourneyLoad.Info', array('tourney_id' => $tourney_id));
-    }
-
-    /**
      * Retrieves round format
      * 
      * You can pass '*' for the bracket to retrieve for the entire tournament
@@ -381,81 +375,6 @@ class BinaryBeast {
      */
     public function tournament_load_round_format($tourney_id, $bracket = '*') {
         return $this->call('Tourney.TourneyLoad.Rounds', array('tourney_id' => $tourney_id, 'bracket' => $bracket));
-    }
-
-    /**
-     * This wrapper method is a shortcut to create a tournament, it simply calls the Tourney.TourneyCreate.Create service
-     *
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_tournament_create
-     * 
-     * Available options, check the wiki for their meanings, and default / possible values: 
-     *      string title
-     *      string description
-     *      int    public
-     *      string game_code            (SC2, BW, QL examples, @see http://wiki.binarybeast.com/index.php?title=API_PHP:_game_search)
-     *      int    type_id              (0 = elimination brackets, 1 = group rounds to elimination brackets)
-     *      int    elimination          (1 = single, 2 = double
-     *      int    max_teams
-     *      int    team_mode            (id est 1 = 1v1, 2 = 2v2)
-     *      int    group_count
-     *      int    teams_from_group
-     *      date   date_start
-     *      string location
-     *      array  teams
-     *      int    return_data          (0 = TourneyID and URL only, 1 = List of team id's inserted (from teams array), 2 = team id's and full tourney info dump)
-     * 
-     * @param array $options        keyed array of options
-     *
-     * @return object {int result, ...}
-     */
-    public function tournament_create($options) {
-        return $this->call('Tourney.TourneyCreate.Create', $options);
-    }
-
-    /**
-     * This wrappper method will update the settings of a tournament (Tourney.TourneyUpdate.Settings)
-     *
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_tournament_update
-     *
-     * Available options, check the wiki for their meanings, and default / possible values: 
-     *      string title
-     *      string description
-     *      int    public
-     *      string game_code            (SC2, BW, QL examples, @see http://wiki.binarybeast.com/index.php?title=API_PHP:_game_search)
-     *      int    type_id              (0 = elimination brackets, 1 = group rounds to elimination brackets)
-     *      int    elimination          (1 = single, 2 = double
-     *      int    max_teams
-     *      int    team_mode            (id est 1 = 1v1, 2 = 2v2)
-     *      int    group_count
-     *      int    teams_from_group
-     *      date   date_start
-     *      string location
-     *      array  teams
-     *      int    return_data          (0 = TourneyID and URL only, 1 = List of team id's inserted (from teams array), 2 = team id's and full tourney info dump)
-     * 
-     * @param string $tourney_id
-     * @param array $options        keyed array of options
-     *
-     * @return object {int result}
-     */
-    public function tournament_update($tourney_id, $options = array()) {
-        return $this->call('Tourney.TourneyUpdate.Settings', array_merge( array(
-                'tourney_id' => $tourney_id
-            ), $options )
-        );
-    }
-
-    /**
-     * This wrapper method will delete a tournament (Tourney.TourneyDelete.Delete)
-     *
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_tournament_delete
-     *
-     * @param string $tourney_id		Obviously we need to know which tournament to delete
-     *
-     * @return object {int result}
-     */
-    public function tournament_delete($tourney_id) {
-        return $this->call('Tourney.TourneyDelete.Delete', array('tourney_id' => $tourney_id));
     }
 
     /**
@@ -527,23 +446,6 @@ class BinaryBeast {
             'maps'          => $maps,
             'map_ids'       => $map_ids,
             'dates'         => $dates,
-        ));
-    }
-
-    /**
-     * Retrieves a list of tournaments created using your account
-     * 
-     * @param string $filter        Optionally, you may filter by title
-     * @param int    $limit         Limit the number of results - defaults to 30
-     * @param bool   $private       true by default, returns ALL of your touranments, even if marked private - pass false to skip your private tournaments
-     * 
-     * @return object
-     */
-    public function tournament_list_my($filter = null, $limit = 30, $private = true) {
-        return $this->call('Tourney.TourneyList.Creator', array(
-            'filter'    => $filter,
-            'page_size' => $limit,
-            'private'   => $private,
         ));
     }
 
