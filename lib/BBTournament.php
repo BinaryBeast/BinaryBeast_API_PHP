@@ -23,8 +23,10 @@ class BBTournament extends BBModel {
     //So the parent class knows which property use as the unique id
     protected $id_property = 'tourney_id';
 
-    /*
+    /**
      * Default values for a new tournament
+     * @see BinaryBeast::update()
+     * @var array
      */
     protected $default_values = array(
         'title'             => 'PHP API Test',
@@ -43,40 +45,42 @@ class BBTournament extends BBModel {
     );
 
     /**
-     * Constructor - saves a refernence to the API class, and second param can either by the tournament id, or the data to directly save
-     * 
-     * @param BinaryBeast $bb
-     * @param mixed $tourney     Either provide the tourney_id to auto-load, or an object of data from an already loaded tournament
-     */
-    function __construct(&$bb, $tourney) {
-        parent::__construct($bb);
-
-        //If they provided the data directly save it all locally
-        if(is_object($tourney)) {
-            $this->import_values(200, $tourney);
-            $this->tourney_id = $tourney->tourney_id;
-        }
-
-        //Save the ID
-        else if(is_string($tourney)) {
-            $this->tourney_id = $tourney;
-        }
-    }
-
-    /**
      * Override the getter method - we may have to load teams instead of just general info
      */
     public function __get($name) {
-
-        //Load teams
+        
+        //If attempting to access the array of participants, load them now
         if($name == 'teams' && is_null($this->teams)) {
             
         }
 
-        //Pass control to the default getter
+        //Execute default __get method defined in the base BBModel class
         return parent::__get($name);
     }
 
+    /**
+     * Overrides the parent method import_values, but still uses it
+     * This method uses the property tourney_data to use parent::import_values to 
+     * save the result values into this class
+     * 
+     * @param object
+     */
+    protected function import_values($result) {
+        parent::import_values($result->tourney_data);
+    }
+
+    /**
+     * Load a list of tournaments created by the user of the current api_key
+     * 
+     * @param 
+     */
+    public function list_my($filter = null, $limit = 30, $private = true) {
+        return $this->bb->call('Tourney.TourneyList.Creator', array(
+            'filter'    => $filter,
+            'page_size' => $limit,
+            'private'   => $private,
+        ));
+    }
 }
 
 ?>

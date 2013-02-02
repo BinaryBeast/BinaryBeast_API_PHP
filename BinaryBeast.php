@@ -1,6 +1,6 @@
 <?php
 
-//The new API version is adopts a more OO approach, so we have a few data modal classes to import
+//The new API version is adopts a more OOP approach, so we have a few data modal classes to import
 include_once('lib/BBModel.php');
 include_once('lib/BBTournament.php');
 
@@ -58,6 +58,16 @@ class BinaryBeast {
      * Constructor flags wether or not server is capable of requesting and processing the API requests
      */
     private $server_ready = false;
+    
+    /**
+     * Cache instances that are used for non-objest specific methods, like loading
+     * lists, etc aka public services
+     * 
+     * BBModal is designed to return a new instance of itself when it is 
+     * provided with data
+     */
+    private $BBTournament;
+    private $BBTeam;
 
     /**
      * A few constants to make a few values a bit easier to read / use
@@ -120,12 +130,6 @@ class BinaryBeast {
 
         //Make sure this server supports json and cURL
         $this->server_ready = $this->check_server();
-        
-        $this->map = (object)array(
-            'something' => function($asdf) {
-            
-            }
-        );
     }
     
     /**
@@ -313,12 +317,34 @@ class BinaryBeast {
     /**
      * Returns a new Tournament object
      * 
-     * @param string $tourney_id        Optionally provide a tournament id to auto-load
+     * @param string $tournament        Optionally provide a tournament id to auto-load, or object of tourney data
      * 
      * @return BBTournament
      */
-    public static function tournament($tourney_id = null) {
-        return new BBTournament($this, $tourney_id);
+    public function tournament($tournament = null) {
+        return $this->get_modal('BBTournament', $tournament);
+    }
+
+    /**
+     * Returns a modal class, either returning
+     * a local cached instanct (when not provided with $data)..
+     *  Useful for calling public services like loading lists
+     * or a instnatiated version with data
+     * @param string $modal modal name
+     * @return BBModal
+     */
+    private function &get_modal($modal, $data = null) {
+        //Data is null, so return a non-specific version, try to return cached version first
+        if(is_null($data)) {
+            if(isset($this->$modal)) return $this->$modal;
+            else {
+                $this->$modal = new $modal($data);
+                return $this->$modal;
+            }
+        }
+
+        //Return an instantiated version
+        return new $modal($this, $data);
     }
 
     /**

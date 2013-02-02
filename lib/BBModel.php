@@ -55,24 +55,50 @@ class BBModel {
 
     /**
      * Constructor - accepts a reference the BinaryBeats API $bb
+     * 
+     * @param BinaryBeast $bb       Reference to the main API class
+     * @param object      $data     Optionally auto-load this object with values from $data
      */
-    function __construct(&$bb) {
+    function __construct(&$bb, $data = null) {
         $this->bb = $bb;
+        
+        //If provided with data, automatically import the values into this instance
+        if(is_object($data)) {
+            $this->result = 200;
+            $this->import_values($data);
+        }
+
+        //If provided with an ID, keep track of it so that we know which
+        //ID to load when data is accessed
+        else if(is_numeric($data) || is_string($data)) {
+            $this->{$this->id_property} = $data;
+        }
     }
 
     /**
      * Intercept attempts to load values from this object
      * 
+     * Note: If you update a value, it will return the new value, even if you have
+     * not yet saved the object
+     * 
      * @param type $name
      */
     public function &__get($name) {
-        
-        //First see if we have the value already in $data
-        
-        //Since the value does not exist, see if we've already loaded this object - if not, then load it
-        
-        //Invalid property requested, return null
 
+        //First see if we have the value already in $data, or in new_data
+        if(isset($this->new_data[$name]))   return $this->new_data[$name];
+        if(isset($this->data[$name]))       return $this->data[$name];
+
+        //Since the value does not exist, see if we've already loaded this object
+        if(sizeof($this->data) === 0) {
+            $this->load();
+            //After loading, try again
+            return $this->$name;
+        }
+
+        //Invalid property requested, return null
+        //@todo consider throwing an error instead
+        return null;
     }
 
     /**
@@ -109,23 +135,60 @@ class BBModel {
      * 
      * It also updaates the original_data value, allowing us to call reset();
      * 
+     * This method is overridden by children classes in order to extract the specific
+     * properties containing data, but they then pass it back here
+     * to actually cache it locally
+     * 
      * Lastly, it resets new_data
      * 
      * @param int    $result
      * @param object $data
      * @return void
      */
-    protected function import_values($result, $data) {
-        $this->result           = $result;
+    protected function import_values($data) {
         $this->data             = $data;
         $this->original_data    = $data;
         $this->new_data         = array();
     }
 
     /**
-     * Just a placeholder really - the child class is responsible for this, returned data for each object is unfortunately too variable for a consistent loading method
+     * Call the child-defined load service
+     * 
+     * @param mixed $id     If you did not provide an ID in the instantiation, they can provide one now
+     * 
+     * @return boolean - true if result is 200, false otherwise
      */
-    private function load(){}
+    protected function load($id = null) {
+
+        //If no ID was provided, we can't do anything
+        if(!is_null($id)) $this->{$this->id_property} = $id;
+        if(is_null($this->{$this->id_property})) return false;
+
+        //Determine which sevice to use, return false if the child failed to define one
+        //@todo throw an error here if it can't determine the service name
+        $svc = $this->get_service('SERVICE_LOAD');
+        if(is_null($svc)) return false;
+        
+        //GOGOGO!
+        $result = $this->bb->call($svc, array(
+            $this->id_property => $this->{$this->id_property}
+        ));
+
+        global $doc;
+        $doc->ThrowError($result);
+
+        //If successful, import it now
+        if($result->result == BinaryBeast::RESULT_SUCCESS) {
+            $this->result = 200;
+            $this->import_values($result);
+        }
+
+        //OH NOES!
+        else {
+            $this->result = $result->result;
+            return false;
+        }
+    }
 
     /**
      * Sends the values in this object to the API, to either update or create the tournament, team, etc
@@ -201,6 +264,17 @@ class BBModel {
      */
     public function error() {
         return $this->error;
+    }
+
+    /**
+     * Get the service that the child class supposedly defines
+     * 
+     * @param string $svc
+     * 
+     * @return string
+     */
+    private function get_service($svc) {
+        return constant(get_called_class() . '::' . $svc);
     }
 }
 
