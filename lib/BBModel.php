@@ -3,8 +3,12 @@
 /**
  * Base class for all other object-specific binarybeast service classes (tournaments, teams, etc)
  * 
- * @version 0.0.5
- * @date 2013-02-01
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ * 
+ * @version 1.0.0
+ * @date 2013-02-02
  * @author Brandon Simmons
  */
 class BBModel {
@@ -13,7 +17,7 @@ class BBModel {
      * Reference to the main API class
      * @var BinaryBeast
      */
-    private $bb;
+    protected $bb;
 
     /**
      * Publically accessible result code for the previous api call
@@ -25,11 +29,11 @@ class BBModel {
      * If loading failed, stored the result
      * @var string
      */
-    public $last_error;
+    protected $last_error;
 
     /**
      * We're storing values in this array to allow us to handle intercept an attempt to load a value
-     * Made public for var_dump
+     * Made public for print_r, var_dump etc
      * @var array
      */
     public $data = array();
@@ -48,14 +52,20 @@ class BBModel {
 
     //Overloaded by children to define default values to use when creating a new object
     protected $default_values = array();
-    
+
+    /**
+     * Child classes can define a data extract key to attempt to use
+     * @access protected
+     */
+    protected $data_extraction_key;
+
     /**
      * Constructor - accepts a reference the BinaryBeats API $bb
      * 
      * @param BinaryBeast $bb       Reference to the main API class
      * @param object      $data     Optionally auto-load this object with values from $data
      */
-    function __construct(&$bb, $data = null) {
+    function __construct(BinaryBeast &$bb, $data = null) {
         $this->bb = $bb;
 
         //If provided with data, automatically import the values into this instance
@@ -156,50 +166,76 @@ class BBModel {
      * 
      * Note that $this->data is cast as an array, for consistence access
      * 
+     * If you provide a value for $extract, it will attempt to use that value as a key to $extract from within $data first
+     * Meaning if $data = ['result' => 500, 'tourney_info' => {'title' => blah'}},
+     *  a $key value of 'tourney_info' means {'title' => blah'} will be extracted into $this->data
+     *  otherwise the $this->data would end be the entire $data input
+     * 
      * Lastly, it resets new_data
      * 
-     * @param int    $result
-     * @param object $data
+     * @param object    $data
      * @return void
      */
     protected function import_values($data) {
+        //Cast it as an array now
+        $data = (array)$data;
+
+        //Extract a sub value if requested if the child class defines the key
+        if(!is_null($this->data_extraction_key)) {
+            //Found it! extract it and cast it as an array again
+            if(isset($data[$this->data_extraction_key])) {
+                $data = (array)$data[$this->data_extraction_key];
+            }
+        }
+
+        //Cast as an array for standardization and compatability
         $this->data             = (array)$data;
         $this->new_data         = array();
+        //If we're important, that means the last call was successful, so clear any prior errors - done here to avoid having to type it 15 times
+        $this->clear_error();
     }
 
     /**
      * Call the child-defined load service
      * 
      * @param mixed $id     If you did not provide an ID in the instantiation, they can provide one now
-     * 
+     * @param array $args   Allow child classes to define additional paramaters to send to the API (for example the primary key of an object may consist of multiple values)
      * @return boolean - true if result is 200, false otherwise
      */
-    protected function load($id = null) {
-
+    public function load($id = null, $args = array()) {
+        
         //If no ID was provided, we can't do anything
-        if(!is_null($id)) $this->{$this->id_property} = $id;
-        if(is_null($this->{$this->id_property})) return false;
+        if(!is_null($id)) $this->set_id($id);
+        else              $id = $this->get_id();
+
+        //No ID to load
+        if(is_null($id)) {
+            return $this->set_error('No ' . $this->id_property . ' was provided, there is nothing to load!');
+        }
 
         //Determine which sevice to use, return false if the child failed to define one
-        //@todo throw an error here if it can't determine the service name
         $svc = $this->get_service('SERVICE_LOAD');
-        if(is_null($svc)) return false;
+        if(is_null($svc)) {
+            return $this->set_error('Unable to determine which service to request for this object, please contact a BinaryBeast administrator for assistance');
+        }
 
         //GOGOGO!
-        $result = $this->bb->call($svc, array(
+        $result = $this->bb->call($svc, array_merge(array(
             $this->id_property => $this->{$this->id_property}
-        ));
+        ), $args) );
+
+        //Save the result
+        $this->result = $result->result;
 
         //If successful, import it now
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
-            $this->result = 200;
             $this->import_values($result);
+            return true;
         }
 
         //OH NOES!
         else {
-            $this->result = $result->result;
-            return false;
+            return $this->set_error($result);
         }
     }
 
@@ -224,8 +260,7 @@ class BBModel {
 
             //Nothing has changed!
             if(sizeof($this->new_data) === 0) {
-                $this->set_error('You have not changed any values to submit!');
-                return false;
+                return $this->set_error('You have not changed any values to submit!');
             }
 
             //GOGOGO! determine the service name, and save the id
@@ -282,8 +317,7 @@ class BBModel {
          * Save the response as the local error, and return false
          */
         else {
-            $this->set_error($result);
-            return false;
+            return $this->set_error($result);
         }
     }
 
@@ -306,25 +340,22 @@ class BBModel {
 
         //DELETED!!!
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
-            //Reset all local values
+            //Reset all local values and errors
             $this->set_id(null);
             $this->data = array();
             $this->new_data = array();
+            $this->clear_error();
             return true;
         }
 
         //Most common error would likely be an authentication error
         else if($result->result == BinaryBeast::RESULT_AUTH) {
-            $this->set_error('You do not have permission to delete this object');
-            return false;
+            return $this->set_error('You do not have permission to delete this object!');
         }
 
-        //Other error
+        //Other error, store it and return false
         else {
-            //Just store the entire result into $error
-            
-            //Failure!
-            return false;
+            return $this->set_error($result);
         }
     }
 
@@ -344,14 +375,19 @@ class BBModel {
      * but if you provide a string, it is converted into array('error_message'=>$in)
      * 
      * @param array|string $error
+     * @return false
      */
     protected function set_error($error) {
+
         //Either save as-is, or convert into an array (for standardization)
         $this->last_error = is_string($error)
             ? array('error_message' => $error)
             : $error;
+
+        //Allows return this directly to return false, saves a line of code - don't have to set_error then return false
+        return false;
     }
-    
+
     /**
      * Remove any existing errors
      * @return void
@@ -375,13 +411,17 @@ class BBModel {
      * Save the unique id of this instance, taking into consideration
      * children clases definining the property name, (ie tournament -> tourney_team_id)
      * 
+     * It also saves a reference in this->id for developers can easily refer to $obj->id,
+     *  regardless of the object type
+     * 
      * @param int|string $id
      * @return void
      */
     protected function set_id($id) {
         $this->{$this->id_property} = $id;
+        if($this->id_property !== 'id') $this->id = &$this->{$this->id_property};
     }
-    
+
     /**
      * Attempt to extract the id value from $this->data, and assign it to $ths->{$id_property}
      * 

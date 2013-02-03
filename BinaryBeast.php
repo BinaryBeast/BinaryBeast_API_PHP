@@ -1,18 +1,28 @@
 <?php
 
+/**
+ * Entry point for the BinaryBeast PHP API Library
+ * Relies on everything included in lib/*.php
+ * 
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ */
+
 //The new API version is adopts a more OOP approach, so we have a few data modal classes to import
+include_once('lib/BBHelper.php');
 include_once('lib/BBModel.php');
 include_once('lib/BBTournament.php');
+include_once('lib/BBRound.php');
 include_once('lib/BBTeam.php');
 include_once('lib/BBMatch.php');
-
+include_once('lib/BBMatchGame.php');
 
 /**
  * This class contains the method for interaction with the BinaryBeast API
  *
  * By using this API Class, you are agreeing to the Terms and Conditions
  * The terms can be found in the file "Terms.txt" included with this file
- * visit http://wiki.binarybeast.com/?title=BinaryBeast_API for more information
  * 
  * Example use, let's grab a list of countries that have the word 'king' in it, there are two ways to do it...
  *  $result = $bb->call('Country.CountrySearch.Search', array('country' => 'king'));
@@ -21,15 +31,12 @@ include_once('lib/BBMatch.php');
  *          echo $country . '<br />';
  *      }
  * 
- * This class only supports json
- *
- * @package BinaryBeast
- *
- * @version 3.0.6
- * @date 2013-02-01
- * @author Brandon Simmons <contact@binarybeast.com>
+ * We will be releasing new documntnation on the site soon,
+ * meanwhile, please direct all questions to contact@binarybeast.com
  * 
- * For a list of available services, please see http://wiki.binarybeast.com/?title=BinaryBeast_API#Packages
+ * @version 3.0.6
+ * @date 2013-02-02
+ * @author Brandon Simmons <contact@binarybeast.com>
  */
 class BinaryBeast {
 
@@ -37,6 +44,12 @@ class BinaryBeast {
      * URL to send API Requests
      */
     private $url = 'https://api.binarybeast.com/';
+
+    /**
+     * Calculated path for loading libraries on-demand
+     * @deprecated - nevermind, decided to auto load them anyway: is easier
+     */
+    //private $lib_path = null;
 
     /**
      * BinaryBeast API Key
@@ -58,9 +71,17 @@ class BinaryBeast {
 
     /**
      * Constructor flags wether or not server is capable of requesting and processing the API requests
+     * Static so that we don't have to check it more than once if instantiated again
      */
-    private $server_ready = false;
+    private static $server_ready = null;
     
+    /**
+     * Cache the instance of BBHelper, there's no need to
+     * instantiate it more than once
+     * @var BBHelper
+     */
+    private static $helper = null;
+
     /**
      * A few constants to make a few values a bit easier to read / use
      */
@@ -94,34 +115,45 @@ class BinaryBeast {
     /**
      * Result code values
      */
-    const RESULT_SUCCESS                    = 200;
-    const RESULT_NOT_LOGGED_IN              = 401;
-    const RESULT_AUTH                       = 403;
-    const RESULT_NOT_FOUND                  = 404;
-    const RESULT_API_NOT_ALLOWED            = 405;
-    const RESULT_LOGIN_EMAIL_INVALID        = 406;
-    const RESULT_EMAIL_UNAVAILABLE          = 415;
-    const RESULT_INVALID_EMAIL_FORMAT       = 416;
-    const RESULT_PENDING_ACTIVIATION        = 418;
-    const RESULT_LOGIN_USER_BANNED          = 425;
-    const RESULT_PASSWORD_INVALID           = 450;
-    const RESULT_DUPLICATE_ENTRY            = 470;
-    const RESULT_ERROR                      = 500;
-    const RESULT_INVALID_USER_ID            = 604;
-    const RESULT_TOURNAMENT_NOT_FOUND       = 704;
-    const RESULT_TOURNAMENT_STATUS          = 715;
+    const RESULT_SUCCESS                        = 200;
+    const RESULT_NOT_LOGGED_IN                  = 401;
+    const RESULT_AUTH                           = 403;
+    const RESULT_NOT_FOUND                      = 404;
+    const RESULT_API_NOT_ALLOWED                = 405;
+    const RESULT_LOGIN_EMAIL_INVALID            = 406;
+    const RESULT_EMAIL_UNAVAILABLE              = 415;
+    const RESULT_INVALID_EMAIL_FORMAT           = 416;
+    const RESULT_PENDING_ACTIVIATION            = 418;
+    const RESULT_LOGIN_USER_BANNED              = 425;
+    const RESULT_PASSWORD_INVALID               = 450;
+    const INVALID_BRACKET_NUMBER                = 465;
+    const RESULT_DUPLICATE_ENTRY                = 470;
+    const RESULT_ERROR                          = 500;
+    const RESULT_INVALID_USER_ID                = 604;
+    const RESULT_TOURNAMENT_NOT_FOUND           = 704;
+    const TOURNEY_TEAM_ID_INVALID               = 706;
+    const RESULT_MATCH_ID_INVALID               = 708;
+    const RESULT_MATCH_GAME_ID_INVALID          = 709;
+    const RESULT_NOT_ENOUGH_TEAMS_FOR_GROUPS    = 711;
+    const RESULT_TOURNAMENT_STATUS              = 715;
 
     /**
      * Constructor - import the API Key
+     * 
+     * If you want to use an email / password instead, you'd use login, like this:
+     *  @example $bb = new BinaryBeast();
+     *      $bb->login('name@domain.tld', 'your_password');
      *
-     * @param string		your API Key - optional, you can also use $this->login for simple email / password authentication
+     * @param string		Optional: your api_key
      */
     function __construct($api_key = null) {
         //Cache the api key
         $this->api_key = $api_key;
         
-        //Make sure this server supports json and cURL
-        $this->server_ready = $this->check_server();
+        /* Make sure this server supports json and cURL
+         * Static because there's no point in checking for each instantiation
+         */
+        self::$server_ready = self::check_server();
     }
 
     /**
@@ -129,21 +161,50 @@ class BinaryBeast {
      * 
      * @return boolean
      */
-    private function check_server() {
+    private static function check_server() {
         return function_exists('json_decode') && function_exists('curl_version');
     }
 
     /**
-     * Alternative method of authentication - allow them to use a simple email / password combination
+     * Alternative Email/Password authentication
      * 
-     * @param string $Email
+     * This library defaults to using an api_key, but you can 
+     * alternatively use this method to log in using 
+     * a more traditional email and password
+     * 
+     * @param string $email
      * @param string $Password
+     * @param bool   $test
      * 
-     * @return void
+     * @return boolean
      */
-    public function login($email, $password) {
+    public function login($email, $password, $test = false) {
         $this->email    = $email;
         $this->password = $password;
+
+        if($test) return $this->test_login();
+        return true;
+    }
+
+    /**
+     * Determines wether or not the provided api_key or email/password
+     * are valid
+     * 
+     * It calls the Ping.Ping.Ping service, which is NOT
+     * an anonymously accessible service, therefore if authentication
+     * fails, we will easily be able to determine that, as the
+     * result code would be reflect it
+     * 
+     * If you want the result code directly instead of a boolean,
+     *  pass in true for the argument
+     * 
+     * @param bool  $get_code       Defaults to false, return the result code instead of a boolean
+     * 
+     * @return boolean
+     */
+    public function test_login($get_code = false) {
+        $result = $this->call('Ping.Ping.Ping');
+        return $get_code ? $result->result : $result->result == 200;
     }
 
     /**
@@ -178,8 +239,8 @@ class BinaryBeast {
      */
     public function call_raw($svc, $args = null, $return_type = null) {
         //This server isn't ready for processing API requests
-        if (!$this->server_ready) {
-            return $this->get_server_ready_error();
+        if (!self::$server_ready) {
+            return self::get_server_ready_error();
         }
 
         //Add the service to the arguments, and the return type
@@ -222,8 +283,8 @@ class BinaryBeast {
      */
     public function call($svc, $args = null) {
         //This server does not support curl or fopen
-        if (!$this->server_ready) {
-            return $this->get_server_ready_error();
+        if (!self::$server_ready) {
+            return self::get_server_ready_error();
         }
 
         //Return a parsed value of call_raw
@@ -235,7 +296,7 @@ class BinaryBeast {
      *
      * @return object {int result, string Message}
      */
-    private function get_server_ready_error() {
+    private static function get_server_ready_error() {
         return array('result' => false,
             'message' => 'Please verify that both cURL and json are enabled your server!'
         );
@@ -295,10 +356,15 @@ class BinaryBeast {
      * 
      * @param string $name
      */
-    public function __get($name) {
+    public function &__get($name) {
         //Only existing models
         if(in_array(strtolower($name), array('tournament', 'team', 'match'))) {
             return $this->get_model($name);
+        }
+
+        //Allow accessing the BBHelper as a property
+        if($name == 'helper') {
+            return $this->helper();
         }
 
         //Invalid access
@@ -314,6 +380,22 @@ class BinaryBeast {
      */
     public function tournament($tournament = null) {
         return $this->get_model('tournament', $tournament);
+    }
+    
+    /**
+     * Returns (and caches) an instance of BBHelper, which 
+     * hosts a lot of logic to help developers calculate
+     * common tournament-related values (like bracket size, number of rounds, etc)
+     * 
+     * @return BBHelper
+     */
+    public function &helper() {
+        //Already instantiated
+        if(!is_null(self::$helper)) return self::$helper;
+
+        //Instantiate, cache, and return
+        self::$helper = new BBHelper();
+        return self::$helper;
     }
 
     /**
@@ -737,18 +819,6 @@ class BinaryBeast {
     }
 
     /**
-     *
-     * 
-     * 
-     * 
-     * Map wrapper methods
-     * 
-     * 
-     * 
-     *
-     */
-
-    /**
      * Load a list of maps for the given game_code
      * 
      * this is important to have in order for you to have the ability to 
@@ -764,21 +834,7 @@ class BinaryBeast {
     }
 
     /**
-     *
-     * 
-     * 
-     * 
-     * Games wrapper methods
-     * 
-     * 
-     * 
-     *
-     */
-
-    /**
      * This wrapper will return a list of games according to the filter you provide
-     *
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_game_search
      *
      * Note: a Result of 601 means that your search term was too short, must be at least 3 characters long
      *
@@ -791,28 +847,15 @@ class BinaryBeast {
     }
 
     /**
-     * This wrapper will return a list of games the most popular games at BinaryBeast
-     *
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_game_list_top
+     * Returns the currently most popular games on BinaryBeast
      *
      * @param int $limit        simply limits the number of results, as this service is NOT paginated
      *
      * @return object {int result, [array games]}
      */
-    public function game_list_top($limit) {
+    public function game_list_top($limit = 10) {
         return $this->call('Game.GameSearch.Top', array('limit' => $limit));
     }
-
-    /**
-     * 
-     * 
-     * 
-     * Country services
-     * 
-     * 
-     * 
-     * 
-     */
 
     /**
      * This wrapper allows you to search through the ISO list of countries
@@ -821,16 +864,13 @@ class BinaryBeast {
      * 
      * There's nothing special about our list of countries however, you can look up the official list on wikipedia
      * 
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_country_search
-     * 
-     * @param string $country
+     * @param string $country       Simple search filter, something like "united" would yield things like USA, UK, etc
      * 
      * @return object {int result, [array countries]}
      */
     public function country_search($country) {
         return $this->Call('Country.CountrySearch.Search', array('country' => $country));
     }
-    
-}
 
+}
 ?>
