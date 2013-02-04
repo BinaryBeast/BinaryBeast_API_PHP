@@ -1,9 +1,5 @@
 <?php
 
-
-global $doc;
-//$doc->ThrowError('beginning of BBRound.php');
-
 /**
  * This class represents a single match result withint a tournament
  * 
@@ -12,7 +8,7 @@ global $doc;
  *   http://www.gnu.org/licenses/gpl.html
  * 
  * @version 1.0.0
- * @date 2013-02-02
+ * @date 2013-02-03
  * @author Brandon Simmons
  */
 class BBRound extends BBModel {
@@ -30,15 +26,15 @@ class BBRound extends BBModel {
     private $tournament = null;
 
     /**
-     * Set by the parent, each round is associated with a single bracket
-     * @var int
+     * A round's primary key happens to be a combination of
+     * the tournament id, bracket, and round
+     * so we'll store them separately
+     * 
+     * We're storing a reference to the actual BBTouranment that this round belongs to,
+     * so we can just use that to determine the tourney_id
      */
-    private $bracket;
-    /**
-     * Set by the parent, each round is associated with a single round within as bracket
-     * @var int
-     */
-    private $round;
+    public $bracket;
+    public $round;
 
     /**
      * Default values for a new tournament
@@ -76,12 +72,127 @@ class BBRound extends BBModel {
     }
 
     /**
-     * Overloaded so we can let BBTournament know that something has changed, so that
-     * when the tournament is saved, Rounds wil be updated as well
+     * Overloaded so we can let our tournament know that
+     * we now have unsaved changes
+     * 
+     * @see BBModel::__set()
+     * 
+     * @return void
      */
     function __set($name, $value) {
-        $this->tournament->flag_rounds_changed();
+        //Notify the tournament
+        $this->tournament->flag_round_changed($this);
+
+        //Make sure that when setting best_of, that it's a valid value
+        if($name == 'best_of') $value = BBHelper::get_best_of($value);
+
+        //Let the default method handle the rest
         parent::__set($name, $value);
+    }
+
+    /**
+     * Overloaded so we can cast a valid bets_of value
+     * 
+     * @see BBModel::&__get()
+     * 
+     * @return mixed
+     */
+    public function &__get($name) {
+       $value = parent::__get($name);
+       return $name == 'best_of' ? BBHelper::get_best_of($value) : $value;
+    }
+
+    /**
+     * Overloaded so that we can let our tournament know that this
+     * class no longer has any unsaved changes
+     * 
+     * @see BBModel::reset()
+     * 
+     * @return void
+     */
+    public function reset() {
+        //Notify the tournament
+        $this->tournament->unflag_round_changed($this);
+
+        //Let the default method handle the rest
+        parent::reset();
+    }
+
+    /**
+     * Overloadsd BBModel because we have unique needs as far as how to
+     * let know BinaryBeast what our unique id is, we a round
+     * doesn't actually have a unique id value, it's a combination 
+     * of tournament id, round, and bracket
+     * 
+     * We also notify the tournament this round no longer has unsaved changes
+     * 
+     * @return boolean
+     */
+    public function save() {
+
+        //Nothing to do - set an error but return true since we didn't actually fail
+        if(!$this->changed) {
+            $this->set_error('You have not changed any values to submit!');
+            return true;
+        }
+
+        /**
+         * Build the arguments to send to BinaryBeast
+         * Unfortunately for this service, we have to be careful to 
+         * include all values, even if unchanged, because this particular
+         * service is rather old on BB's end and won't ingore the fact
+         * that some values may be missing, it'll actually update the db to 
+         * "null" if we were to call the update service without defining it
+         */
+        $svc = self::SERVICE_UPDATE;
+        $args = array_merge(array(
+            'tourney_id'            => $this->tournament->tourney_id,
+            'bracket'               => $this->bracket,
+            'round'                 => $this->round
+        ), $this->data, $this->new_data);
+
+        //GOGOGO!
+        $result = $this->bb->call($svc, $args);
+
+        //Delete any prior error messages, and store the result of the api call
+        $this->clear_error();
+        $this->set_result($result->result);
+
+        /*
+         * Saved successfully - reset some local values and return true
+         */
+        if($result->result == BinaryBeast::RESULT_SUCCESS) {
+
+            /**
+             * Let sync_changes update local data values, and to
+             * flag us as no longer having unsaved changes
+             */
+            $this->sync_changes();
+
+            //Success!
+            return true;
+        }
+
+        /**
+         * Oh noes!
+         */
+        else {
+            return $this->set_error($result);
+        }
+    }
+
+    /**
+     * Overloaded - you know the drill, let the tour know we're up to date
+     * @see BBModel::sync_changes();
+     * @param bool $skip_unflag     Allows the tournament to update all of the rounds at once, and clear the array manually - it's better than calling unset and array_search for every single round!
+     * @return void
+     */
+    public function sync_changes($skip_unflag = false) {
+        //Notify the tournament we're up-to-date
+        if(!$skip_unflag) $this->tournament->unflag_round_changed($this);
+
+        //Let BBModel handle the rest
+        parent::sync_changes();
     }
 }
 
