@@ -35,7 +35,7 @@ include_once('lib/BBMatchGame.php');
  * meanwhile, please direct all questions to contact@binarybeast.com
  * 
  * @version 3.0.6
- * @date 2013-02-02
+ * @date 2013-02-03
  * @author Brandon Simmons <contact@binarybeast.com>
  */
 class BinaryBeast {
@@ -74,13 +74,21 @@ class BinaryBeast {
      * Static so that we don't have to check it more than once if instantiated again
      */
     private static $server_ready = null;
-    
+
     /**
      * Cache the instance of BBHelper, there's no need to
      * instantiate it more than once
      * @var BBHelper
      */
     private static $helper = null;
+    
+    /**
+     * Store the result codes / values for the previous
+     * API Request response
+     */
+    public $last_error;
+    public $last_result;
+    public $last_result_friendly;
 
     /**
      * A few constants to make a few values a bit easier to read / use
@@ -149,8 +157,9 @@ class BinaryBeast {
     function __construct($api_key = null) {
         //Cache the api key
         $this->api_key = $api_key;
-        
-        /* Make sure this server supports json and cURL
+
+        /**
+         * Make sure this server supports json and cURL
          * Static because there's no point in checking for each instantiation
          */
         self::$server_ready = self::check_server();
@@ -289,6 +298,58 @@ class BinaryBeast {
 
         //Return a parsed value of call_raw
         return $this->decode($this->call_raw($svc, $args));
+    }
+
+
+
+    /**
+     * If a modal class (ie BBMatch or BBTeam) encounters an error,
+     * it will be sent here so that developers can find the most
+     * recent error by accessing $bb->error()
+     * 
+     * @param string $error
+     * @return void
+     */
+    public function set_error($error = null) {
+        $this->last_error = $error;
+    }
+    /**
+     * Used by modal classes to store the latest API request's result code
+     * @param int $result
+     * @param string $friendly      Optionally define a friendly version 
+     */
+    public function set_result($result, $friendly = null) {
+        $this->last_result = $result;
+        $this->last_result_friendly = $friendly;
+    }
+    /**
+     * Modal classes call this to clear out any prior error results
+     * @return void
+     */
+    public function clear_error() {
+        $this->set_error(null);
+    }
+
+
+    /**
+     * A simple method that just returns the value for the previous error
+     * Defined simply to be consistent with BBModal, which also defines error() for the same purpose
+     * @return mixed
+     */
+    public function error() {
+        return $this->last_error;
+    }
+    /**
+     * Simply returns the latest result 
+     * It will return the friendly version first (unless you specify int_only = true)
+     * It's named result() to be consistent with error()
+     * @return mixed
+     */
+    public function result($int_only = false) {
+        if(is_null($this->last_result_friendly) || $int_only) {
+            return $this->last_result;
+        }
+        return $this->last_result_friendly;
     }
 
     /**
