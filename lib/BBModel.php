@@ -8,7 +8,7 @@
  *   http://www.gnu.org/licenses/gpl.html
  * 
  * @version 1.0.0
- * @date 2013-02-02
+ * @date 2013-02-03
  * @author Brandon Simmons
  */
 class BBModel {
@@ -23,13 +23,18 @@ class BBModel {
      * Publically accessible result code for the previous api call
      * @var int
      */
-    public $result;
+    public $result = null;
+    /**
+     * Publically accessible friendly/human-readable version of the previous result code
+     * @var string
+     */
+    public $result_friendly = null;
 
     /**
      * If loading failed, stored the result
      * @var string
      */
-    protected $last_error;
+    protected $last_error = null;
 
     /**
      * We're storing values in this array to allow us to handle intercept an attempt to load a value
@@ -58,6 +63,11 @@ class BBModel {
      * @access protected
      */
     protected $data_extraction_key;
+
+    /**
+     * Flags wether or not this object has any unsaved changes
+     */
+    public $changed = false;
 
     /**
      * Constructor - accepts a reference the BinaryBeats API $bb
@@ -96,10 +106,40 @@ class BBModel {
      * However you can always call reset() if you would like to revert the
      * accessible values to the original import values
      * 
+     * The naming convention for defining a load method for a property is
+     * strictly &load_{$property_name}(); and should return a boolean
+     * 
      * @param string $name
      * @return mixed
      */
     public function &__get($name) {
+
+        /**
+         * Check to see if this is referring to an
+         * array of sub models, and load them if the 
+         * child defines a method for doing so
+         *
+         * @deprecated - not sure I want to do it this way, will test later 
+         * and either delete, or re-release with this added
+         * 
+        if(property_exists($this, $name)) {
+            //Already instantiated
+            if(!is_null($this->{$name})) {
+                return $this->{$name};
+            }
+
+            //Determine the method name for loading this property
+            $method = "load_$name";
+            
+            //if null, do we have a method of loading it?
+            //Naming convention is strictly load_$property
+            if(method_exists($this, $method)) {
+                //Load and return the result!
+                $this->{$method}();
+                return $this->{$name};
+            }
+        }
+        */
 
         //First see if we have the value already in $data, or in new_data
         if(isset($this->new_data[$name]))   return $this->new_data[$name];
@@ -139,6 +179,9 @@ class BBModel {
     public function __set($name, $value) {
         //Very simply assign the new value into the new values array
         $this->new_data[$name] = $value;
+
+        //Flag changes have been made
+        $this->changed = true;
     }
 
     /**
@@ -154,6 +197,29 @@ class BBModel {
      */
     public function reset() {
         $this->new_data = array();
+
+        //We no longer have any unsaved changes
+        $this->changed = false;
+    }
+    
+    /**
+     * Copy all new changes into $this->data
+     * This is used primarily by models that perform batch updates on 
+     * child models (like BBTournament on an array of rounds)
+     * 
+     * So we can tell each round to import the changes without 
+     * calling the update server for every single one of them
+     * 
+     * It's also used internally as a result handler after a successful save()
+     * 
+     * @return void
+     */
+    public function sync_changes() {
+        //Simple - just use import method using the new data
+        $this->import_values(array_merge($this->data, $this->new_data));
+
+        //This object no longer has unsaved changes
+        $this->changed = false;
     }
 
     /**
@@ -191,19 +257,26 @@ class BBModel {
         //Cast as an array for standardization and compatability
         $this->data             = (array)$data;
         $this->new_data         = array();
-        //If we're important, that means the last call was successful, so clear any prior errors - done here to avoid having to type it 15 times
+        //If we've made it this far, that means the last call was successful, so clear any prior errors - done here to avoid having to type it 15 times
         $this->clear_error();
     }
 
     /**
      * Call the child-defined load service
      * 
+     * This method returns the current instance, allowing us to 
+     * chain like this: 
+     * @example $tournament = $bb->tournament->load('id_here');
+     * Which is basically tournament returning a new instance, then 
+     * calling the load method within that, which returns itself (as long as nothing went wrong)
+     * 
      * @param mixed $id     If you did not provide an ID in the instantiation, they can provide one now
      * @param array $args   Allow child classes to define additional paramaters to send to the API (for example the primary key of an object may consist of multiple values)
-     * @return boolean - true if result is 200, false otherwise
+     * 
+     * @return BBModel  Returns itself unless there was an error, in which case it returns false
      */
     public function load($id = null, $args = array()) {
-        
+
         //If no ID was provided, we can't do anything
         if(!is_null($id)) $this->set_id($id);
         else              $id = $this->get_id();
@@ -225,15 +298,18 @@ class BBModel {
         ), $args) );
 
         //Save the result
-        $this->result = $result->result;
+        $this->set_result($result->result);
 
         //If successful, import it now
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
             $this->import_values($result);
-            return true;
+            return $this;
         }
 
-        //OH NOES!
+        /**
+         * OH NOES! The ID is most likely invalid, the object doens't exist
+         * However we'll leave it up to set_error to translate the code for us
+         */
         else {
             return $this->set_error($result);
         }
@@ -244,11 +320,11 @@ class BBModel {
      * 
      * This method returns the new or existing ID, or false on failure
      * 
-     * @return string|int   false if the call failed
+     * @return string|int       false if the call failed
      */
     public function save() {
 
-        //Initialize some arguments for the API
+        //Initialize some values to send to the API
         $svc    = null;
         $args   = array();
 
@@ -258,9 +334,10 @@ class BBModel {
         //Update
         if( !is_null($id) ) {
 
-            //Nothing has changed!
-            if(sizeof($this->new_data) === 0) {
-                return $this->set_error('You have not changed any values to submit!');
+            //Nothing has changed! Save an error, but since we dind't exactly fail, return true
+            if(!$this->changed) {
+                $this->set_error('You have not changed any values to submit!');
+                return true;
             }
 
             //GOGOGO! determine the service name, and save the id
@@ -278,35 +355,28 @@ class BBModel {
         //GOGOGO
         $result = $this->bb->call($svc, $args);
 
-        //Store the result code
-        $this->result = $result->result;
+        //Delete any prior error messages, and store the result of the api call
+        $this->clear_error();
+        $this->set_result($result->result);
 
         /*
          * Saved successfully - reset some local values and return true
          */
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
 
-            //Delete any prior error messages
-            $this->clear_error();
-
-            //If this was a new object, try to extract the $id directly
+            //For new objects just created, make sure we extract the id and save it locally
             if(is_null($id)) {
                 if(isset($result->{$this->id_property})) {                    
                     $id = $result->{$this->id_property};
                     $this->set_id($id);
                 }
             }
-            /*
-             * For existing instances, remove the id from the arguments list,
-             * otherwise it'll end up in $this->data, which is simply unecessary and messy for var_dumps
-             */
-            else {
-                unset($args[$this->id_property]);
-            }
 
-            //Merge the new values into $this->data
-            $args = array_merge($this->data, $args);
-            $this->import_values($args);
+            /**
+             * Merge the new values into $this->data using the sync() method
+             * Which also takes care of updating the $changed flag for us
+             */
+            $this->sync_changes();
 
             //Updated successfully! return the $id
             return $id;
@@ -336,7 +406,7 @@ class BBModel {
         $result = $this->bb->call($svc, $args);
 
         //Save the result code locally
-        $this->result = $result->result;
+        $this->set_result($result->result);
 
         //DELETED!!!
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
@@ -348,12 +418,11 @@ class BBModel {
             return true;
         }
 
-        //Most common error would likely be an authentication error
-        else if($result->result == BinaryBeast::RESULT_AUTH) {
-            return $this->set_error('You do not have permission to delete this object!');
-        }
-
-        //Other error, store it and return false
+        /**
+         * Error!
+         * We'll rely on set_error to translate it into a friendly version
+         * for the developer
+         */
         else {
             return $this->set_error($result);
         }
@@ -380,12 +449,37 @@ class BBModel {
     protected function set_error($error) {
 
         //Either save as-is, or convert into an array (for standardization)
-        $this->last_error = is_string($error)
-            ? array('error_message' => $error)
-            : $error;
+        if(!is_null($error)) {
+            $this->last_error = is_string($error)
+                ? array('error_message' => $error)
+                : $error;
+        }
+        //Sent a blank error, so we'll delete any previous errors now
+        else $this->last_error = null;
+
+        //Store the error in the main BinaryBeast instance also
+        $this->bb->set_error($this->last_error);
 
         //Allows return this directly to return false, saves a line of code - don't have to set_error then return false
         return false;
+    }
+
+    /**
+     * Stores a result code into $this->result
+     * Also sends the value to $bb it always has the latest result code
+     * publically accessible 
+     * 
+     * @param int $result
+     * @return void
+     */
+    protected function set_result($result) {
+        //Try to determine the friendly version of the result code
+        $friendly = BBHelper::translate_result($result);
+
+        //Store it locally, and send it to the BinaryBeast class
+        $this->result = $result;
+        $this->result_friendly = $friendly;
+        $this->bb->set_result($result, $friendly);
     }
 
     /**
@@ -393,7 +487,8 @@ class BBModel {
      * @return void
      */
     protected function clear_error() {
-        $this->last_error = null;
+        $this->set_error(null);
+        $this->bb->clear_error();
     }
 
     /**
