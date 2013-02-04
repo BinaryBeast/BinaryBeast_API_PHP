@@ -8,7 +8,7 @@
  *   http://www.gnu.org/licenses/gpl.html
  * 
  * @version 1.0.0
- * @date 2013-02-03
+ * @date 2013-02-04
  * @author Brandon Simmons
  */
 class BBModel {
@@ -152,11 +152,22 @@ class BBModel {
             return $this->$name;
         }
 
-        //Last chance is to allow developers to refer to unique id namings as simply "id"
+        //Allow developers to refer to unique id namings as simply "id"
         //IE a developer can retrieve the $tournament->tourney_id by calling $tournament->id
         if($name == 'id') {
             return $this->get_id();
-        } 
+        }
+
+        /**
+         * Allow devs to refer to methods as properties if for whatever reason they feel the need
+         * For example since load() returns $this after loading from the API, it might
+         * be nice to be able to just say var_dump($tournament->load); etc /shrug
+         * 
+         * Also... /shrug, why not?
+         */
+        if(method_exists($this, $name)) {
+            return $this->{$name}();
+        }
 
         //Invalid property requested, return null
         //@todo consider throwing an error instead
