@@ -89,7 +89,7 @@ class BBMatch extends BBModel {
      */
     public function load($id = null, $args = array()) {
         //Let BBModal handle this, just pass it extra paramater
-        return parent::load($id, array('get_round' => true));
+        return parent::load($id, array_merge(array('get_round' => true), $args) );
     }
 
     /**
