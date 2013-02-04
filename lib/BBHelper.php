@@ -45,7 +45,7 @@ class BBHelper {
         '708'               => 'Match not found / invalid tourney_match_id',
         '709'               => 'Match Game not found / invalid tourney_match_game_id',
         '711'               => 'Tournament does not have enough teams to fill the number of groups ($tournament->group_count) you have defined, either add more teams or lower your group_count setting',
-        '715'               => 'The tournament\'s current status does not allow this action (for example, trying to start a touranment that is already complete)',
+        '715'               => 'The tournament\'s current status does not allow this action (For example trying to add players to an active tournament, or trying to start a touranment that is already complete)',
     );
     /**
      * Allows translating a touranment's type_id into a string
