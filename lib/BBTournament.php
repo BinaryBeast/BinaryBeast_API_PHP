@@ -61,8 +61,8 @@ class BBTournament extends BBModel {
         'title'             => 'PHP API Test',
         //string:   Unique game identifier, @see BinaryBeast::game_search([$filter]), or BinaryBeast::game_list_top([$limit])
         'game_code'         => 'HotS',
-        //int:      What kind of tournament, see BinaryBeast::BRACKET_* for values
-        'type_id'           => 0,
+        //int:      What kind of tournament, see BinaryBeast::TOURNEY_TYPE_* for values
+        'type_id'           => BinaryBeast::TOURNEY_TYPE_BRACKETS,
         //int:      Single or Double elimination, see BinaryBeast::ELIMINATION_* for values
         'elimination'       => 1,
         //int:      Number of players per team (1 = a normal 1v1, anything else indicates this is a team-based game
@@ -83,77 +83,42 @@ class BBTournament extends BBModel {
         'description'       => '',
     );
 
-    //Used to track when round information has been updated
-    private $rounds_changed = false;
+    //An array of rounds with unsaved changes, so we know
+    //to save them when save() is invoked
+    private $rounds_changed = array();
 
     /**
      * Override the getter method - we may have to load teams instead of just general info
      */
     public function &__get($name) {
-
         /**
          * If attempting to access the array of participants, load them now
          */
-        if($name == 'teams' && is_null($this->teams)) {
+        if($name == 'teams') {
+            //Do we need to load them first?
+            if(is_null($this->teams)) {
+                $this->load_teams();
+            }
 
-            //GOGOGO!
-            $this->load_teams();
-
-            //Success! return the newly populated array of teams
+            //The array should be populated by this point
             return $this->teams;
         }
 
         /**
          * If attempting to access the round format object, load that now
          */
-        else if($name == 'rounds' && is_null($this->rounds)) {
+        else if($name == 'rounds') {
+            //Do we need to load them first?
+            if(is_null($this->rounds)) {
+                $this->load_rounds();
+            }
 
-            //GOGOGO!
-            $this->load_rounds();
-
-            //Success! return the newly populated array of rounds
+            //The array should be populated by this point
             return $this->rounds;
         }
 
         //Execute default __get method defined in the base BBModel class
         return parent::__get($name);
-    }
-    
-    /**
-     * Save the tournament - overloads BBModel::save() so we can 
-     * check to see if we need to save rounds too
-     */
-    public function save() {
-        //First save the tournament data
-        parent::save();
-
-        //Do we need to send the new round data to the API?
-        if($this->rounds_changed) {
-
-            /*
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * @TODO BUILD THIS LOGIC
-             * don't forget to figure out how to update
-             * each BBRound's $data to reflect its new values, since
-             * BBModal normally does that through save, but we're not
-             * using BBRound::save, we're manually calling it here as a batch update
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             */
-
-            //Reset the flag
-            $this->rounds_changed = false;
-        }
     }
 
     /**
@@ -201,20 +166,33 @@ class BBTournament extends BBModel {
         $result = $this->bb->call('Tourney.TourneyLoad.Rounds', array('tourney_id' => $this->tourney_id));
 
         //Store the result code
-        $this->result = $result->result;
+        $this->set_result($result->result);
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
             return $this->set_error($result);
         }
 
-        //We'll need the BBHelper class to translate bracket integers into string label
-        $helper = $this->bb->helper();
-
         //Initalize the rounds property, and start importing instantiated BBRounds into it
         foreach($result->rounds as $bracket => &$rounds) {
+
+            //I only want relevent rounds imported
+            $load = true;
+
+            //Group rounds - Cup tournaments only
+            if($bracket == BinaryBeast::BRACKET_GROUPS && $this->type_id != BinaryBeast::TOURNEY_TYPE_CUP) $load = false;
+            //Loser/Finals brackets - double elim only
+            else if(($bracket == BinaryBeast::BRACKET_LOSERS || $bracket == BinaryBeast::BRACKET_FINALS) && $this->elimination < 2) $load = false;
+            //Bronze - single elim only
+            else if($bracket == BinaryBeast::BRACKET_BRONZE && (!$this->bronze || $this->elimination > 1)) $load = false;
+
+            //If we've determined not to load this bracket, skip to the next round loading iteration
+            if(!$load) {
+                continue;
+            }
+
             //key each round by the round label
-            $bracket_label = $helper->get_bracket_label($bracket, true);
+            $bracket_label = BBHelper::get_bracket_label($bracket, true);
 
             //Now all we do is loop and instantiate
             $this->rounds->{$bracket_label} = array();
@@ -229,6 +207,99 @@ class BBTournament extends BBModel {
         }
 
         //Success!
+        return true;
+    }
+
+    /**
+     * Save the tournament - overloads BBModel::save() so we can 
+     * check to see if we need to save rounds too
+     */
+    public function save($data_only = false) {
+        //First save the tournament data, stop if it fails
+        if(!parent::save()) return false;
+
+        /**
+         * Check sub models (rounds, teams) unless requested not to
+         */
+        if(!$data_only) {
+            //Submit any round format changes
+            if(!$this->save_rounds()) return false;
+
+            //Submit any team changes
+            //TODO
+        }
+
+        //Success!
+        return true;
+    }
+
+    /**
+     * Update all rounds that have had any values changed in one go
+     * 
+     * You can either call this direclty (if for some reason you don't yet want touranmetn changes saved)
+     * or call save(), which will save EVERYTHING, including tour data, teams, and rounds
+     * 
+     * @return boolean
+     */
+    public function save_rounds() {
+
+        /**
+         * We have to compile all of the values into separate arrays, keyed by round,
+         * and we'll call one service for each bracket with any rounds changed
+         * 
+         * BinaryBeast expects 1 array for maps, bestofs, etc.. keyed by round,
+         * and we'll have to call the service once for each bracket that has
+         * any changes in it
+         */
+        $format = array();
+
+        foreach($this->rounds_changed as &$round) {
+            //Bracket value initailized?
+            if(!isset($format[$round->bracket])) $format[$round->bracket] = array(
+                'maps'      => array(),
+                'map_ids'   => array(),
+                'dates'     => array(),
+                'best_ofs'  => array(),
+            );
+
+            //Add it to the queue!
+            $format[$round->bracket]['maps'][$round->round]         = $round->map;
+            $format[$round->bracket]['map_ids'][$round->round]      = $round->map_id;
+            $format[$round->bracket]['dates'][$round->round]        = $round->date;
+            $format[$round->bracket]['best_ofs'][$round->round]     = $round->best_of;
+        }
+
+        //Loop through the results, and call the API once for each bracket with any values in it
+        foreach($format as $bracket => &$rounds) {
+            //Determine the arguments for this bracket
+            $args = array_merge($rounds, array(
+                'tourney_id'    => $this->tourney_id,
+                'bracket'       => $bracket,
+            ));
+
+            //GOGOGO! store the result each time
+            $result = $this->bb->call('Tourney.TourneyRound.BatchUpdate', $args);
+            $this->set_result($result);
+
+            //OH NOES!
+            if($result->result != BinaryBeast::RESULT_SUCCESS) {
+                return $this->set_error($result);
+            }
+        }
+
+        /**
+         * If we've gotten this far, that means everything updated!!
+         * Last step is to reset each round and list of changed rounds
+         * 
+         * We waited to do this because we wouldn't want to clear the queue
+         * before insuring that we submitted the changes successfully
+         */
+        foreach($this->rounds_changed as &$round) {
+            $round->sync_changes(true);
+        }
+
+        //Reset our list of changed rounds, and return true, yay!
+        $this->rounds_changed = array();
         return true;
     }
 
@@ -249,22 +320,41 @@ class BBTournament extends BBModel {
 
         //OH NOES!
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
-            $this->result = $result;
+            $this->set_result($result->result);
             return $this->set_error($result);
         }
 
         //Success! Cast each returned tournament as a local BBTournament instance and return the array
         return $this->wrap_list($result->list);
     }
-    
+
     /**
-     * BBRound uses this method to let us know that round data has changed,
-     * so we know to call save_rounds() when save() is called
+     * Save a reference a round that has unsaved chnages, so that we can
+     * update all rounds that have any changes once save() is invoked
      * 
+     * It stores a reference to the round with changes in rounds_changed, which
+     * makes iterating through them much much easier when we decide to submit
+     * the changes
+     * 
+     * @param BBRound $round - a reference to the Round calling
      * @return void
      */
-    public function flag_rounds_changed() {
-        $this->rounds_changed = true;
+    public function flag_round_changed(BBRound &$round) {
+        if(!in_array($round, $this->rounds_changed)) {
+            $this->rounds_changed[] = &$round;
+        }
+    }
+    /**
+     * Removes any references to a BBRound, so we know that
+     * the round has no unsaved changes
+     * 
+     * @param BBRound $round - a reference to the Round calling
+     * @return void
+     */
+    public function unflag_round_changed(BBRound &$round) {
+        if(in_array($round, $this->rounds_changed)) {
+            unset($this->rounds_changed[ array_search($round, $this->rounds_changed) ]);
+        }
     }
 }
 
