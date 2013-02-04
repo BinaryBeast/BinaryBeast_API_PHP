@@ -35,7 +35,7 @@ include_once('lib/BBMatchGame.php');
  * meanwhile, please direct all questions to contact@binarybeast.com
  * 
  * @version 3.0.6
- * @date 2013-02-03
+ * @date 2013-02-04
  * @author Brandon Simmons <contact@binarybeast.com>
  */
 class BinaryBeast {
@@ -120,6 +120,12 @@ class BinaryBeast {
     const REPLAY_UPLOADS_DISABLED   = 0;
     const REPLAY_UPLOADS_OPTIONAL   = 1;
     const REPLAY_UPLOADS_MANDATORY  = 2;
+    /**
+     * Team int "status" values
+     */
+    const TEAM_STATUS_UNCONFIRMED           = 0;
+    const TEAM_STATUS_CONFIRMED             = 1;
+    const TEAM_STATUS_BANNED                = -1;
     /**
      * Result code values
      */
