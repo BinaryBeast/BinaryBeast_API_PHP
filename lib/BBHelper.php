@@ -41,6 +41,7 @@ class BBHelper {
         '470'               => 'Duplicate entry',
         '500'               => 'Generic error, likely something wrong on BinaryBeast\'s end',
         '604'               => 'Invalid user_id',
+        '705'               => 'Proivded tourney_team_id and tourney_id do not match!',        
         '704'               => 'Tournament not found / invalid tourney_id',
         '706'               => 'Team not found / invalid tourney_team_id',
         '708'               => 'Match not found / invalid tourney_match_id',

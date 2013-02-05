@@ -146,6 +146,7 @@ class BinaryBeast {
     const RESULT_ERROR                          = 500;
     const RESULT_INVALID_USER_ID                = 604;
     const RESULT_TOURNAMENT_NOT_FOUND           = 704;
+    const TEAM_NOT_IN_TOURNEY_ID                = 705;
     const TOURNEY_TEAM_ID_INVALID               = 706;
     const RESULT_MATCH_ID_INVALID               = 708;
     const RESULT_MATCH_GAME_ID_INVALID          = 709;
