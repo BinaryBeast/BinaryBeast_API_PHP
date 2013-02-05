@@ -140,6 +140,7 @@ class BinaryBeast {
     const RESULT_PENDING_ACTIVIATION            = 418;
     const RESULT_LOGIN_USER_BANNED              = 425;
     const RESULT_PASSWORD_INVALID               = 450;
+    const GAME_CODE_INVALID                     = 461;
     const INVALID_BRACKET_NUMBER                = 465;
     const RESULT_DUPLICATE_ENTRY                = 470;
     const RESULT_ERROR                          = 500;

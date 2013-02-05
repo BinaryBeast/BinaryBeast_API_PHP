@@ -36,6 +36,7 @@ class BBHelper {
         '418'               => 'E-Mail address is currently pending activation',
         '425'               => 'Your account is banned! Try viewing the result directly for a explaination',
         '450'               => 'Incorrect Password',
+        '461'               => 'Invalid game_code',
         '465'               => 'Invalid bracket number, use the BinaryBeast::BRACKET_* constants for available options',
         '470'               => 'Duplicate entry',
         '500'               => 'Generic error, likely something wrong on BinaryBeast\'s end',
