@@ -87,7 +87,7 @@ class BBMatch extends BBModel {
      * 
      * @return boolean - true if result is 200, false otherwise
      */
-    public function load($id = null, $args = array()) {
+    public function &load($id = null, $args = array()) {
         //Let BBModal handle this, just pass it extra paramater
         return parent::load($id, array_merge(array('get_round' => true), $args) );
     }
