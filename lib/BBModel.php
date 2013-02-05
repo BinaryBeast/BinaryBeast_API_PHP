@@ -106,67 +106,47 @@ class BBModel {
      * However you can always call reset() if you would like to revert the
      * accessible values to the original import values
      * 
-     * The naming convention for defining a load method for a property is
-     * strictly &load_{$property_name}(); and should return a boolean
+     * This method also allows executing methods as if they were properties, for example
+     * $bb->load returns BBTournament::load()
+     * 
+     * Priority of returned value:
+     *      $new_data
+     *      $data
+     *      {$method}()
+     *      $id as ${$id_property}
      * 
      * @param string $name
      * @return mixed
      */
     public function &__get($name) {
 
-        /**
-         * Check to see if this is referring to an
-         * array of sub models, and load them if the 
-         * child defines a method for doing so
-         *
-         * @deprecated - not sure I want to do it this way, will test later 
-         * and either delete, or re-release with this added
-         * 
-        if(property_exists($this, $name)) {
-            //Already instantiated
-            if(!is_null($this->{$name})) {
-                return $this->{$name};
-            }
-
-            //Determine the method name for loading this property
-            $method = "load_$name";
-            
-            //if null, do we have a method of loading it?
-            //Naming convention is strictly load_$property
-            if(method_exists($this, $method)) {
-                //Load and return the result!
-                $this->{$method}();
-                return $this->{$name};
-            }
-        }
-        */
-
         //First see if we have the value already in $data, or in new_data
         if(isset($this->new_data[$name]))   return $this->new_data[$name];
         if(isset($this->data[$name]))       return $this->data[$name];
 
+        /**
+         * If a method exists with this name, execute it now and return the result
+         * Nice for a few reasons - but most importantly, child classes
+         * 
+         * can now define methods for properties that may require an API Request before
+         * returning (like BBTournament->rounds for example)
+         */
+        if(method_exists($this, $name)) {
+            return $this->{$name}();
+        }
+
         //Since the value does not exist, see if we've already loaded this object
         if(sizeof($this->data) === 0) {
             $this->load();
+
             //After loading, try again
-            return $this->$name;
+            return $this->__get($name);
         }
 
         //Allow developers to refer to unique id namings as simply "id"
         //IE a developer can retrieve the $tournament->tourney_id by calling $tournament->id
         if($name == 'id') {
             return $this->get_id();
-        }
-
-        /**
-         * Allow devs to refer to methods as properties if for whatever reason they feel the need
-         * For example since load() returns $this after loading from the API, it might
-         * be nice to be able to just say var_dump($tournament->load); etc /shrug
-         * 
-         * Also... /shrug, why not?
-         */
-        if(method_exists($this, $name)) {
-            return $this->{$name}();
         }
 
         //Invalid property requested, return null
@@ -286,7 +266,7 @@ class BBModel {
      * 
      * @return BBModel  Returns itself unless there was an error, in which case it returns false
      */
-    public function load($id = null, $args = array()) {
+    public function &load($id = null, $args = array()) {
 
         //If no ID was provided, we can't do anything
         if(!is_null($id)) $this->set_id($id);
