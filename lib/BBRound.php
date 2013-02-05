@@ -81,7 +81,7 @@ class BBRound extends BBModel {
      */
     function __set($name, $value) {
         //Notify the tournament
-        $this->tournament->flag_round_changed($this);
+        $this->tournament->flag_child_changed($this);
 
         //Make sure that when setting best_of, that it's a valid value
         if($name == 'best_of') $value = BBHelper::get_best_of($value);
@@ -112,7 +112,7 @@ class BBRound extends BBModel {
      */
     public function reset() {
         //Notify the tournament
-        $this->tournament->unflag_round_changed($this);
+        $this->tournament->unflag_child_changed($this);
 
         //Let the default method handle the rest
         parent::reset();
@@ -189,7 +189,7 @@ class BBRound extends BBModel {
      */
     public function sync_changes($skip_unflag = false) {
         //Notify the tournament we're up-to-date
-        if(!$skip_unflag) $this->tournament->unflag_round_changed($this);
+        if(!$skip_unflag) $this->tournament->unflag_child_changed($this);
 
         //Let BBModel handle the rest
         parent::sync_changes();
