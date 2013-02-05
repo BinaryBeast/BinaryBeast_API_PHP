@@ -171,6 +171,19 @@ class BBHelper {
         }
         return null;
     }
+    
+    /**
+     * Simply reduces several status options down to a simple: active | not active
+     * 
+     * It will return true for any of the following values for $status:
+     * Active, Active-Groups, Active-Brackets, Complete
+     *
+     * @param BBTournament $tournament
+     * @return boolean
+     */
+    public static function tournament_is_active(&$tournament) {
+        return in_array($tournament->status, array('Active', 'Active-Groups', 'Active-Brackets', 'Complete'));
+    }
 
 }
 
