@@ -91,7 +91,7 @@ class BBRound extends BBModel {
     }
 
     /**
-     * Overloaded so we can cast a valid bets_of value
+     * Overloaded so we can cast a valid best_of value
      * 
      * @see BBModel::&__get()
      * 
