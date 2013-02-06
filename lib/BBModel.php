@@ -58,6 +58,9 @@ class BBModel {
     //Overloaded by children to define default values to use when creating a new object
     protected $default_values = array();
 
+    //Overloaded by children to define a list of values that developers are NOT allowed to change
+    protected $read_only = array();
+
     /**
      * Child classes can define a data extract key to attempt to use
      * @access protected
@@ -68,6 +71,13 @@ class BBModel {
      * Flags wether or not this object has any unsaved changes
      */
     public $changed = false;
+
+    /**
+     * Really stupid way of getting around the ridiculous error when trying
+     * to return null in &__get
+     */
+    protected $null  = null;
+    protected $false = false;
 
     /**
      * Constructor - accepts a reference the BinaryBeats API $bb
@@ -137,28 +147,36 @@ class BBModel {
 
         //Since the value does not exist, see if we've already loaded this object
         if(sizeof($this->data) === 0) {
-            $this->load();
-
-            //After loading, try again
-            return $this->__get($name);
+            //if there is no ID associated with this tournament, set an error instead
+            if(is_null($this->get_id())) {
+                $this->set_error('Error accessing ' . $name . ', cannot load from API without a value for ' . $this->id_property);
+                return $this->null;
+            }
+            //Since this is a real object, try loading it and trying again
+            else {
+                $this->load();
+                return $this->__get($name);
+            }
         }
 
-        //Allow developers to refer to unique id namings as simply "id"
-        //IE a developer can retrieve the $tournament->tourney_id by calling $tournament->id
-        if($name == 'id') {
-            return $this->get_id();
-        }
-
+        /**
+         * Invalid property / method - return null
+         * 
+         * This is the dumbest thing ever, but we can't just directly return null, we 
+         * have to return an actual reference to something null 
+         */
         //Invalid property requested, return null
-        //@todo consider throwing an error instead
-        return null;
+        else {
+            $this->null = null;
+            return $this->null;
+        }
     }
 
     /**
      * Intercepts attempts to set property values
      * Very simply stores in $this->new_data
      * 
-     * This method actually returns itself to allow chaining, for instance...
+     * This method actually returns itself to allow chaining
      * @example
      * $tournament = $bb->tournament->title = 'asdf';
      * 
@@ -168,6 +186,9 @@ class BBModel {
      * @return void
      */
     public function __set($name, $value) {
+        //Read only?
+        if(in_array($name, $this->read_only)) return false;
+
         //Very simply assign the new value into the new values array
         $this->new_data[$name] = $value;
 
@@ -274,7 +295,8 @@ class BBModel {
 
         //No ID to load
         if(is_null($id)) {
-            return $this->set_error('No ' . $this->id_property . ' was provided, there is nothing to load!');
+            $this->set_error('No ' . $this->id_property . ' was provided, there is nothing to load!');
+            return $this->false;
         }
 
         //Determine which sevice to use, return false if the child failed to define one
@@ -339,7 +361,9 @@ class BBModel {
 
         //Create - merge the arguments with the default / newly set values
         else {
-            $args = array_merge($this->default_values, $this->new_data);
+            //Copy default values into $data, so when we sync it will merge them in with the data_new values
+            $this->data = $this->default_values;
+            $args = array_merge($this->data, $this->new_data);
             $svc = $this->get_service('SERVICE_CREATE');
         }
 
@@ -560,6 +584,36 @@ class BBModel {
             $out[] = new $class($this->bb, $object);
         }
 
+        return $out;
+    }
+
+    /**
+     * Returns an array of values that have changed since the last save() / load()
+     * @return array
+     */
+    public function get_changed_values() {
+        return $this->new_data;
+    }
+
+    /**
+     * Return an array of values, merged from default values and data_new
+     * @return array
+     */
+    public function get_all_values() {
+        return array_merge($this->default_values, $this->new_data);
+    }
+
+    /**
+     * Used by BBTournament while performing a BatchUpdate, this
+     * method returns an array of all NON-NULL values, by combining
+     * anything manually set + default values
+     */
+    public function get_non_null_new_values() {
+        $out = array();
+        $values = array_merge($this->default_values, $this->new_data);
+        foreach($values as $key => $value) {
+            if(!is_null($value)) $out[$key] = $value;
+        }
         return $out;
     }
 }

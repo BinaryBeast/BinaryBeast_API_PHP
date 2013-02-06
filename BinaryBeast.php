@@ -417,7 +417,7 @@ class BinaryBeast {
     private function decode($result) {
         return (object)json_decode($result);
     }
-    
+
     /**
      * Allows us to create new model classes as if accessing attributes, avoiding the
      * need to call it as a function, so we can get a tournametn for example, like this:
@@ -425,7 +425,7 @@ class BinaryBeast {
      * 
      * @param string $name
      */
-    public function &__get($name) {
+    public function __get($name) {
         //Only existing models
         if(in_array(strtolower($name), array('tournament', 'team', 'match'))) {
             return $this->get_model($name);

@@ -11,8 +11,8 @@
  *   http://www.opensource.org/licenses/mit-license.php
  *   http://www.gnu.org/licenses/gpl.html
  * 
- * @version 1.0.0
- * @date 2013-02-04
+ * @version 1.0.2
+ * @date 2013-02-05
  * @author Brandon Simmons
  */
 class BBTournament extends BBModel {
@@ -109,6 +109,12 @@ class BBTournament extends BBModel {
     );
 
     /**
+     * An array of value keys that we would like
+     * to prevent developers from changing
+     */
+    protected $read_only = array('status', 'tourney_id');
+
+    /**
      * An array of rounds with unsaved changes, so we know
      * to save them when save() is invoked
      */
@@ -133,6 +139,12 @@ class BBTournament extends BBModel {
         //Already instantiated
         if(!is_null($this->teams)) return $this->teams;
 
+        //New tournaments must be saved before we can start saving child data
+        if(is_null($this->tourney_id)) {
+            $this->set_error('Please execute save() before manipulating rounds or teams');
+            return $this->false;
+        }
+
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
         $result = $this->bb->call('Tourney.TourneyLoad.Teams', array('tourney_id' => $this->tourney_id));
 
@@ -141,7 +153,8 @@ class BBTournament extends BBModel {
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
-            return $this->set_error($result);
+             $this->set_error($result);
+             return $this->false;
         }
 
         //Initalize the teams array, and start importing instantiated BBTeam instances into it
@@ -193,6 +206,12 @@ class BBTournament extends BBModel {
         //Already instantiated
         if(!is_null($this->rounds));
 
+        //New tournaments must be saved before we can start saving child data
+        if(is_null($this->tourney_id)) {
+            $this->set_error('Please execute save() before manipulating rounds or teams');
+            return $this->false;
+        }
+
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
         $result = $this->bb->call('Tourney.TourneyLoad.Rounds', array('tourney_id' => $this->tourney_id));
 
@@ -201,7 +220,8 @@ class BBTournament extends BBModel {
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
-            return $this->set_error($result);
+            $this->set_error($result);
+            return $this->false;
         }
 
         //Initalize the rounds property, and start importing instantiated BBRounds into it
@@ -258,8 +278,8 @@ class BBTournament extends BBModel {
             //Submit any round format changes
             if(!$this->save_rounds()) return false;
 
-            //Submit any team changes
-            //TODO
+            //Save any new / updated teams
+            if(!$this->save_teams()) return false;
         }
 
         //Success! Return the original save() result (if this tour is new, it'll give us the tourney_id)
@@ -269,12 +289,19 @@ class BBTournament extends BBModel {
     /**
      * Update all rounds that have had any values changed in one go
      * 
-     * You can either call this direclty (if for some reason you don't yet want touranmetn changes saved)
+     * You can either call this directly (if for some reason you don't yet want touranmetn changes saved)
      * or call save(), which will save EVERYTHING, including tour data, teams, and rounds
      * 
      * @return boolean
      */
     public function save_rounds() {
+
+        /**
+         * Can't save children before the tournament even exists!
+         */
+        if(is_null($this->tourney_id)) {
+            return $this->set_error('Can\t save teams before saving the tournament!');
+        }
 
         /**
          * We have to compile all of the values into separate arrays, keyed by round,
@@ -337,6 +364,86 @@ class BBTournament extends BBModel {
     }
 
     /**
+     * Update all teams/participants etc that have had any values changed in one go
+     * 
+     * You can either call this directly (if for some reason you don't yet want touranmetn changes saved)
+     * or call save(), which will save EVERYTHING, including tour data, teams, and rounds
+     * 
+     * @return boolean
+     */
+    public function save_teams() {
+
+        /**
+         * Can't save children before the tournament even exists!
+         */
+        if(is_null($this->tourney_id)) {
+            return $this->set_error('Can\t save teams before saving the tournament!');
+        }
+
+        /**
+         * Using the array of tracked / changed teams, let's compile
+         * a couple arrays of team values to send to the API
+         * 
+         * Initialize the two team arrays: new + update
+         */
+        $teams = array();
+        $new_teams = array();
+
+        /**
+         * GOGOGO!
+         */
+        foreach($this->teams_changed as &$team) {
+            /**
+             * New team - get all values and add to $new_teams
+             */
+            if(is_null($team->id)) {
+                $new_teams[] = $team->get_non_null_new_values();
+            }
+            /**
+             * Existing team - get only values that are new, and key by team id
+             */
+            else {
+                $teams[$team->tourney_team_id] = $team->get_changed_values();
+            }
+        }
+
+        //Send the compiled arrays to BinaryBeast
+        $result = $this->bb->call('Tourney.TourneyTeam.BatchUpdate', array(
+            'tourney_id'        => $this->tourney_id,
+            'teams'             => $teams,
+            'new_teams'         => $new_teams
+        ));
+        //Oh noes!
+        if($result->result != 200) {
+            return $this->set_error($result);
+        }
+
+        /**
+         * Tell all team instances to synchronize their settings
+         */
+        $new_id_index = 0;
+        foreach($this->teams_changed as &$team) {
+            
+            //Tell the tournament to merge all unsaved changed into $data
+            $team->sync_changes(true);
+
+            /**
+             * For new tournaments, make sure they get the new team_id
+             */
+            if(is_null($team->tourney_team_id)) {
+                $team->set_tourney_team_id($result->team_ids[$new_id_index]);
+                ++$new_id_index;
+            }
+        }
+
+        //Clear the list of teams with changes
+        $this->teams_changed = array();
+
+        //Success!
+        return true;
+    }
+
+    /**
      * Load a list of tournaments created by the user of the current api_key
      * 
      * Note: each tournament is actually instantiated as a new BBTournament class, so you 
@@ -377,8 +484,8 @@ class BBTournament extends BBModel {
         $property = get_class($child) == 'BBTeam' ? 'teams_changed' : 'rounds_changed';
 
         //If it isn't already being tracked, add it now
-        if(!in_array($child, $this->$property)) {
-            $this->$property[] = &$child;
+        if(!in_array($child, $this->{$property})) {
+            $this->{$property}[] = &$child;
         }
     }
     /**
@@ -393,8 +500,8 @@ class BBTournament extends BBModel {
         $property = get_class($child) == 'BBTeam' ? 'teams_changed' : 'rounds_changed';
 
         //If it's currently being tracked, remove it now
-        if(in_array($child, $this->$property)) {
-            unset($this->$property[ array_search($child, $this->$property) ]);
+        if(in_array($child, $this->{$property})) {
+            unset($this->{$property}[ array_search($child, $this->{$property}) ]);
         }
     }
 
@@ -439,6 +546,7 @@ class BBTournament extends BBModel {
      * @return BBTeam
      */
     public function &team() {
+
         //We can't add new players to an active-tournament
         if(BBHelper::tournament_is_active($this)) {
             return $this->set_error('You cannot add players to active tournaments!!');
@@ -458,12 +566,26 @@ class BBTournament extends BBModel {
          * and then return a reference to it
          */
         $this->teams();
-        $this->teams[] = $team;
-        $this->teams_changed[] = $team;
+        //If teams is still null, that means this is a new tournament, so let's manually initalize teams()
+        if(is_null($this->teams)) $this->teams = array();
         
-        
-        
-        
+        //Figure out the next key, so we can more easily return references to the new element
+        $key = sizeof($this->teams);
+
+        //Add it our teams list, then add a reference to the changed array
+        $this->teams[$key] = $team;
+        $this->teams_changed[] = &$this->teams[$key];
+
+        //Success! return a reference to the new team
+        return $this->teams[$key];
+    }
+    /**
+     * Alias for team()
+     * 
+     * @return BBTeam
+     */
+    public function &add_team() {
+        return $this->team();
     }
 }
 

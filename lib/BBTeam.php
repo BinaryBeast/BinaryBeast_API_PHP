@@ -13,7 +13,7 @@
  *   http://www.gnu.org/licenses/gpl.html
  * 
  * @version 1.0.0
- * @date 2013-02-04
+ * @date 2013-02-05
  * @author Brandon Simmons
  */
 class BBTeam extends BBModel {
@@ -45,7 +45,7 @@ class BBTeam extends BBModel {
      */
     protected $default_values = array(
         //The name displayed on the brackets for this participant
-        'display_name'                          => 'New API Player',
+        'display_name'                          => 'New Participant',
         //3 character ISO CountryCode, use $bb->country_search([$filter]) for values
         'country_code'                          => null,
         //The initial status of this team, see BinaryBeast::TEAM_STATUS_* for values
@@ -65,6 +65,9 @@ class BBTeam extends BBModel {
         'network_display_name'                  => null,
     );
 
+    //Values that developers aren't allowed to change
+    protected $read_only = array('players');
+
     /**
      * Array of players within this team (only for tours with team_mode > 1, aka only for team games)
      * 
@@ -82,7 +85,7 @@ class BBTeam extends BBModel {
      * @return void
      */
     public function init(BBTournament &$tournament) {
-        $this->tournament   = $tournament;
+        $this->tournament = $tournament;
     }
 
     /**
@@ -100,6 +103,33 @@ class BBTeam extends BBModel {
         //Let the default method handle the rest
         parent::__set($name, $value);
     }
+    
+    
+    /**
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * TODO: overload delete():
+     * if team is new, tell tourney to simply remove it from the list
+     * oterhwise, actually try to delete through the API
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     * 
+     */
 
     /**
      * Overloaded so that we can let our tournament know that this
@@ -127,8 +157,28 @@ class BBTeam extends BBModel {
         //Notify the tournament we're up-to-date
         if(!$skip_unflag) $this->tournament->unflag_child_changed($this);
 
+        /**
+         * If this was a new tournament, we'll actually import default values in
+         * instead of simply merging data with new_data
+         */
+        if(is_null($this->tourney_team_id)) {
+            $this->import_values($this->get_non_null_new_values());
+        }
+
         //Let BBModel handle the rest
         parent::sync_changes();
+    }
+
+    /**
+     * This method is used by BBTournament to set our tourney_team_id 
+     * for new teams
+     * 
+     * @param int $tourney_team_id
+     */
+    public function set_tourney_team_id($tourney_team_id) {
+        if(is_null($this->tourney_team_id)) {
+            $this->set_id($tourney_team_id);
+        }
     }
 }
 
