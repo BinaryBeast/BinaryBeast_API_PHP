@@ -74,10 +74,9 @@ class BBModel {
 
     /**
      * Really stupid way of getting around the ridiculous error when trying
-     * to return null in &__get
+     * to return null in &__get, so we use ref() to set this value and return it
      */
-    protected $null  = null;
-    protected $false = false;
+    protected $ref = null;
 
     /**
      * Constructor - accepts a reference the BinaryBeats API $bb
@@ -228,7 +227,7 @@ class BBModel {
      */
     public function sync_changes() {
         //Simple - just use import method using the new data
-        $this->import_values(array_merge($this->data, $this->new_data));
+        $this->import_values($this->get_sync_values(is_null($this->get_id())));
 
         //This object no longer has unsaved changes
         $this->changed = false;
@@ -596,25 +595,24 @@ class BBModel {
     }
 
     /**
-     * Return an array of values, merged from default values and data_new
+     * This method is used to figure out which values we should now
+     * consider the new $data array, based on wether or not this
+     * We're creating (default + new), or updating (data + new)
+     * 
+     * That means this method must be called before importing the new 
+     * 
+     * @param bool $new    Pass in true if this object is just newly created
      * @return array
      */
-    public function get_all_values() {
-        return array_merge($this->default_values, $this->new_data);
-    }
-
-    /**
-     * Used by BBTournament while performing a BatchUpdate, this
-     * method returns an array of all NON-NULL values, by combining
-     * anything manually set + default values
-     */
-    public function get_non_null_new_values() {
-        $out = array();
-        $values = array_merge($this->default_values, $this->new_data);
-        foreach($values as $key => $value) {
-            if(!is_null($value)) $out[$key] = $value;
+    public function get_sync_values($new = false) {
+        //For new objects, combine the defaults with any values manually set
+        if($new) {
+            return array_merge($this->default_values, $this->new_data);
         }
-        return $out;
+        //Existing object, combine existing data with new data
+        else {
+            return array_merge($this->data, $this->new_data);
+        }
     }
 }
 

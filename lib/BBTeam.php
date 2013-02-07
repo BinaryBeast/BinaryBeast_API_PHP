@@ -162,7 +162,7 @@ class BBTeam extends BBModel {
          * instead of simply merging data with new_data
          */
         if(is_null($this->tourney_team_id)) {
-            $this->import_values($this->get_non_null_new_values());
+            $this->import_values($this->get_sync_values());
         }
 
         //Let BBModel handle the rest

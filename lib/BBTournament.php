@@ -227,6 +227,35 @@ class BBTournament extends BBModel {
         //Initalize the rounds property, and start importing instantiated BBRounds into it
         $this->rounds = (object)array();
         foreach($result->rounds as $bracket => &$rounds) {
+            
+            /*
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * Move this to a "helper"
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             * 
+             */
 
             //I only want relevent rounds imported
             $load = true;
@@ -394,10 +423,10 @@ class BBTournament extends BBModel {
          */
         foreach($this->teams_changed as &$team) {
             /**
-             * New team - get all values and add to $new_teams
+             * New team - get all default + new values and add to $new_teams
              */
             if(is_null($team->id)) {
-                $new_teams[] = $team->get_non_null_new_values();
+                $new_teams[] = $team->get_sync_values();
             }
             /**
              * Existing team - get only values that are new, and key by team id

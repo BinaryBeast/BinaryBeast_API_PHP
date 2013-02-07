@@ -10,7 +10,7 @@
  *   http://www.gnu.org/licenses/gpl.html
  * 
  * @version 1.0.0
- * @date 2013-02-02
+ * @date 2013-02-06
  * @author Brandon Simmons
  */
 class BBMatch extends BBModel {
@@ -20,7 +20,7 @@ class BBMatch extends BBModel {
     const SERVICE_CREATE = 'Tourney.TourneyMatch.Update';
     const SERVICE_UPDATE = 'Tourney.TourneyMatch.Update';
     const SERVICE_DELETE = 'Tourney.TourneyMatch.Delete';
-    
+
     //This Match's ID, using BinaryBeast's naming convention
     public $tourney_match_id;
 
@@ -34,7 +34,7 @@ class BBMatch extends BBModel {
      * Public array of games within this match
      * @var array<BBMatchGame>
      */
-    public $games;
+    private $games;
 
     /**
      * Default values for a new tournament
@@ -111,7 +111,7 @@ class BBMatch extends BBModel {
             //Now loop through each game as instantiate a new BBMatchGame for it
             $this->games = array();
             foreach($data->games as &$game) {
-                $this->games[] = new BBMatchGame($bb, $data);
+                $this->games[] = new BBMatchGame($bb, $game);
             }
         }
         //Let BBModal handle the rest, business as usual
