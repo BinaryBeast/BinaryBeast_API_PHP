@@ -141,8 +141,9 @@ class BBTournament extends BBModel {
 
         //New tournaments must be saved before we can start saving child data
         if(is_null($this->tourney_id)) {
-            $this->set_error('Please execute save() before manipulating rounds or teams');
-            return $this->false;
+            return $this->ref(
+                $this->set_error('Please execute save() before manipulating rounds or teams')
+            );
         }
 
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
@@ -153,8 +154,7 @@ class BBTournament extends BBModel {
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
-             $this->set_error($result);
-             return $this->false;
+             return $this->ref($this->set_error($result));
         }
 
         //Initalize the teams array, and start importing instantiated BBTeam instances into it
@@ -185,7 +185,7 @@ class BBTournament extends BBModel {
      * Returns an array of players/teams/participants within this tournament
      * @return array
      */
-    public function participants() {
+    public function &participants() {
         return $this->teams();
     }
 
@@ -208,8 +208,9 @@ class BBTournament extends BBModel {
 
         //New tournaments must be saved before we can start saving child data
         if(is_null($this->tourney_id)) {
-            $this->set_error('Please execute save() before manipulating rounds or teams');
-            return $this->false;
+            return $this->ref(
+                $this->set_error('Please execute save() before manipulating rounds or teams')
+            );
         }
 
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
@@ -220,8 +221,7 @@ class BBTournament extends BBModel {
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
-            $this->set_error($result);
-            return $this->false;
+            return $this->ref($this->set_error($result));
         }
 
         //Initalize the rounds property, and start importing instantiated BBRounds into it
@@ -578,7 +578,7 @@ class BBTournament extends BBModel {
 
         //We can't add new players to an active-tournament
         if(BBHelper::tournament_is_active($this)) {
-            return $this->set_error('You cannot add players to active tournaments!!');
+            return $this->ref($this->set_error('You cannot add players to active tournaments!!'));
         }
 
         //Instantiate a blank Team, and give it a reference to this tournament

@@ -91,18 +91,6 @@ class BBRound extends BBModel {
     }
 
     /**
-     * Overloaded so we can cast a valid best_of value
-     * 
-     * @see BBModel::&__get()
-     * 
-     * @return mixed
-     */
-    public function &__get($name) {
-       $value = parent::__get($name);
-       return $name == 'best_of' ? BBHelper::get_best_of($value) : $value;
-    }
-
-    /**
      * Overloaded so that we can let our tournament know that this
      * class no longer has any unsaved changes
      * 

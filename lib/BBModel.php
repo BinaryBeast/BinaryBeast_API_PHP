@@ -121,6 +121,7 @@ class BBModel {
      * Priority of returned value:
      *      $new_data
      *      $data
+     *      $default_values
      *      {$method}()
      *      $id as ${$id_property}
      * 
@@ -130,8 +131,36 @@ class BBModel {
     public function &__get($name) {
 
         //First see if we have the value already in $data, or in new_data
-        if(isset($this->new_data[$name]))   return $this->new_data[$name];
-        if(isset($this->data[$name]))       return $this->data[$name];
+        /**
+         * If the value exists in data, new_data, or default (only if it's a new object)
+         * return it through ref, so that we're not actually returning a reference that can be 
+         * edited - this is to maintain children class abilities to overload the __set method
+         */
+        if(isset($this->new_data[$name])) return $this->ref($this->new_data[$name]);
+        /**
+         * Return value from default_values - but only if this is a new object (aka doesn't have an ID yet)
+         * Again, return it through ref so that it can't be edited
+         */
+        if(is_null($id = $this->get_id())) {
+            if(isset($this->default_values[$name])) {
+                return $this->ref($this->default_values[$name]);
+            }
+        }
+        /**
+         * Only bother checking for a value for $data if this is an existing object
+         * At this point we can also check to see if we need to execute load(), since we already
+         * have an id
+         */
+        else {
+            //Found it in $data
+            if(isset($this->data[$name])) return $this->ref($this->data[$name]);
+
+            //If data isn't set, let's call the load service, since we have an id to use - then try __get again
+            if(sizeof($this->data) === 0) {
+                $this->load();
+                return $this->__get($name);
+            }
+        }
 
         /**
          * If a method exists with this name, execute it now and return the result
@@ -144,31 +173,10 @@ class BBModel {
             return $this->{$name}();
         }
 
-        //Since the value does not exist, see if we've already loaded this object
-        if(sizeof($this->data) === 0) {
-            //if there is no ID associated with this tournament, set an error instead
-            if(is_null($this->get_id())) {
-                $this->set_error('Error accessing ' . $name . ', cannot load from API without a value for ' . $this->id_property);
-                return $this->null;
-            }
-            //Since this is a real object, try loading it and trying again
-            else {
-                $this->load();
-                return $this->__get($name);
-            }
-        }
-
         /**
-         * Invalid property / method - return null
-         * 
-         * This is the dumbest thing ever, but we can't just directly return null, we 
-         * have to return an actual reference to something null 
+         * Invalid property / method - return null (through the stupid ref() function)
          */
-        //Invalid property requested, return null
-        else {
-            $this->null = null;
-            return $this->null;
-        }
+        else return $this->ref(null);
     }
 
     /**
@@ -185,8 +193,11 @@ class BBModel {
      * @return void
      */
     public function __set($name, $value) {
-        //Read only?
-        if(in_array($name, $this->read_only)) return false;
+        //Read only? - set a warning and return false
+        if(in_array($name, $this->read_only)) {
+            $this->set_error($name . ' is a read-only property');
+            return false;
+        }
 
         //Very simply assign the new value into the new values array
         $this->new_data[$name] = $value;
@@ -294,14 +305,17 @@ class BBModel {
 
         //No ID to load
         if(is_null($id)) {
-            $this->set_error('No ' . $this->id_property . ' was provided, there is nothing to load!');
-            return $this->false;
+            return $this->ref(
+                $this->set_error('No ' . $this->id_property . ' was provided, there is nothing to load!')
+            );
         }
 
         //Determine which sevice to use, return false if the child failed to define one
         $svc = $this->get_service('SERVICE_LOAD');
         if(is_null($svc)) {
-            return $this->set_error('Unable to determine which service to request for this object, please contact a BinaryBeast administrator for assistance');
+            return $this->ref(
+                $this->set_error('Unable to determine which service to request for this object, please contact a BinaryBeast administrator for assistance')
+            );
         }
 
         //GOGOGO!
@@ -323,7 +337,7 @@ class BBModel {
          * However we'll leave it up to set_error to translate the code for us
          */
         else {
-            return $this->set_error($result);
+            return $this->ref($this->set_error($result));
         }
     }
 
@@ -554,6 +568,22 @@ class BBModel {
      */
     protected function get_id() {
         return $this->{$this->id_property};
+    }
+
+    /**
+     * BBModel defined __get as returning a reference, which is nice in most cases...
+     * however for example we can't return directly null, false etc.. and we don't want
+     * to return references to $data elements, because we don't want those to be 
+     * editable
+     * 
+     * Therefore this method can be used to return a raw value as a reference
+     * It stores the provided value in $this->ref, and returns a reference to it
+     * 
+     * @param mixed $value
+     * @return mixed
+     */
+    protected function &ref($value) {
+        return $this->ref = $value;
     }
 
     /**
