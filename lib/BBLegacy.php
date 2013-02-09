@@ -12,6 +12,10 @@
  * This is basically a snap-shot 1:1 legacy version of what we had released with 2.7.2, and is in
  * itself even backwards compatible with older version than that :)
  * 
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ * 
  * @version 2.7.2
  * @date 2013-02-08
  * @author Brandon Simmons

@@ -3,38 +3,19 @@
 /**
  * Base class for all other object-specific binarybeast service classes (tournaments, teams, etc)
  * 
+ * Extends the functionality defined in the SimpleModel class.  Simple model provides most
+ *      functionality for error handling / result storage / API interaction etc, 
+ *      while this function provides logic for data manipulation + synchronizing the changes with BinaryBeast
+ * 
  * Dual licensed under the MIT and GPL licenses:
  *   http://www.opensource.org/licenses/mit-license.php
  *   http://www.gnu.org/licenses/gpl.html
  * 
  * @version 1.0.0
- * @date 2013-02-08
+ * @date 2013-02-09
  * @author Brandon Simmons
  */
-class BBModel {
-
-    /**
-     * Reference to the main API class
-     * @var BinaryBeast
-     */
-    protected $bb;
-
-    /**
-     * Publicly accessible result code for the previous api call
-     * @var int
-     */
-    public $result = null;
-    /**
-     * Publically accessible friendly/human-readable version of the previous result code
-     * @var string
-     */
-    public $result_friendly = null;
-
-    /**
-     * Value of the last error set
-     * @var string
-     */
-    protected $last_error = null;
+class BBModel extends BBSimpleModel {
 
     /**
      * We're storing values in this array to allow us to handle intercept an attempt to load a value
@@ -82,7 +63,9 @@ class BBModel {
     public $changed = false;
 
     /**
-     * Constructor - accepts a reference the BinaryBeats API $bb
+     * Constructor
+     * Stores a reference to the main BinaryBeast library class, 
+     * and imports any data or id provided
      * 
      * @param BinaryBeast $bb       Reference to the main API class
      * @param object      $data     Optionally auto-load this object with values from $data
@@ -111,28 +94,21 @@ class BBModel {
 
 
     /**
-     * Calls the BinaryBeast API using the given service name and arguments, 
-     * and grabs the result code so we can locally stash it 
+     * Use the main BinaryBeast library class to send an API service request to BinaryBeast.com
      * 
-     * Unlike BBSimleModel, we don't necessary want to auto-wrap our results, since we're letting
-     * child classes handle the data - so we disable it unless asked otherwise
+     * Overloads the simple model's call() to set the default value of 
+     * $wrapped to false
+     * 
+     * 
+     * @see BBSimpleModel::call();
      * 
      * @param string $svc
      * @param array $args
      * @return object
      */
     protected function call($svc, $args, $wrapped = false) {
-        //First, clear out any errors that may have existed before this call
-        $this->clear_error();
-
-        //Use BinaryBeast library to make the actual call
-        $response = $this->bb->call($svc, $args, $wrapped);
-
-        //Store the result code in the model itself, to make debuggin as easy as possible for developers
-        $this->set_result($response);
-
-        //Finallly, return the response
-        return $response;
+        //Let BBSimpleModel::call() handle it
+        parent::call($svc, $args, $wrapped);
     }
 
     /**
@@ -359,7 +335,7 @@ class BBModel {
         }
 
         //Determine which sevice to use, return false if the child failed to define one
-        $svc = $this->get_service('SERVICE_LOAD');
+        $svc = $this->get_service('LOAD');
         if(is_null($svc)) {
             return $this->ref(
                 $this->set_error('Unable to determine which service to request for this object, please contact a BinaryBeast administrator for assistance')
@@ -420,7 +396,7 @@ class BBModel {
             //GOGOGO! determine the service name, and save the id
             $args = $this->new_data;
             $args[$this->id_property] = $id;
-            $svc = $this->get_service('SERVICE_UPDATE');
+            $svc = $this->get_service('update');
         }
 
         //Create - merge the arguments with the default / newly set values
@@ -428,7 +404,7 @@ class BBModel {
             //Copy default values into $data, so when we sync it will merge them in with the data_new values
             $this->data = $this->default_values;
             $args = array_merge($this->data, $this->new_data);
-            $svc = $this->get_service('SERVICE_CREATE');
+            $svc = $this->get_service('CREATE');
         }
         
         //If child defined additonal arguments, merge them in now
@@ -478,7 +454,7 @@ class BBModel {
      */
     public function delete() {
         //Determine the service name and arguments
-        $svc = $this->get_service('SERVICE_DELETE');
+        $svc = $this->get_service('DELETE');
         $args = array(
             $this->id_property => $this->{$this->id_property}
         );
@@ -504,68 +480,6 @@ class BBModel {
         else {
             return $this->set_error($result);
         }
-    }
-
-    /**
-     * Returns the last error (if it exists)
-     * @return mixed
-     */
-    public function error() {
-        return $this->last_error;
-    }
-
-    /**
-     * Store an error into $this->error, developers can refer to it
-     * as $tournament|$match|etc->error()
-     * 
-     * In order to standardize error values, we send it first to the main library class,
-     * which will either save as-is or convert to an array - either way it will return us the new value
-     *      We locally store the value returned back from the main library
-     * 
-     * Lastly, we return false - this allows model methods simultaneously set an error, and return false
-     * at the same time - allowing me to be lazy and type that all into a single line :)
-     * 
-     * @param array|string $error
-     * @return false
-     */
-    protected function set_error($error) {
-        //Send to the main BinaryBeast API Library, and locally save whatever is sent back (a standardized format)
-        $this->last_error = $this->bb->set_error($error);
-
-        //Allows return this directly to return false, saves a line of code - don't have to set_error then return false
-        return false;
-    }
-
-    /**
-     * Stores a result code into $this->result, and also stores a
-     * readable translation into result_friendly
-     * 
-     * @param object $result    A reference to the API's response
-     * @return void
-     */
-    protected function set_result(&$result) {
-        $this->result = isset($result->result) ? $result->result : false;
-        $this->friendly_result = BBHelper::translate_result($this->result);
-    }
-
-    /**
-     * Remove any existing errors
-     * @return void
-     */
-    protected function clear_error() {
-        $this->set_error(null);
-        $this->bb->clear_error();
-    }
-
-    /**
-     * Get the service that the child class supposedly defines
-     * 
-     * @param string $svc
-     * 
-     * @return string
-     */
-    private function get_service($svc) {
-        return constant(get_called_class() . '::' . $svc);
     }
 
     /**
@@ -606,36 +520,6 @@ class BBModel {
      */
     protected function get_id() {
         return $this->{$this->id_property};
-    }
-
-    /**
-     * Iterates through a list of returned objects form the API, and "casts" them as
-     * modal classes
-     * for example, $bb->tournament->list_my() returns an array, each element being an instance of BBTournament,
-     * so you could for example, delete all of your 'SC2' Tournaments like this (be careful, this can be dangerous and irreversable!)
-     * 
-     * 
-     *  $tournies = $bb->tournament->list_my('SC2');
-     *  foreach($tournies as &$tournament) {
-     *      $tournament->delete();
-     *  }
-     * 
-     * @param array $list
-     * @return array<BBTournament> $class
-     */
-    protected function wrap_list($list, $class = null) {
-        //Determine which class to instantiate if not provided
-        if(is_null($class)) {
-            $class = get_called_class();
-        }
-
-        //Add instantiated modals of each element into a new output array
-        $out = array();
-        foreach($list as $object) {
-            $out[] = new $class($this->bb, $object);
-        }
-
-        return $out;
     }
 
     /**

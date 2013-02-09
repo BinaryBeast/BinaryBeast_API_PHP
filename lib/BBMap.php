@@ -9,6 +9,10 @@
  * reporting matches - becuase those services allow you to define a <code>map_id</code>, and here
  * is where you can find those ids
  * 
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ * 
  * @version 1.0.0
  * @date 2013-02-08
  * @author Brandon Simmons

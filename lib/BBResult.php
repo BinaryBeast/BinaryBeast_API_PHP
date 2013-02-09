@@ -6,6 +6,10 @@
  * they can access values as array elements, object elements, and 
  * in any naming convention (camel case, underscores, upper case, lower, etc)
  * 
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ * 
  * @version 1.0.0
  * @date 2013-02-08
  * @author Brandon Simmons

@@ -1,22 +1,35 @@
 <?php
 
 /**
- * Base class for simple models that only need to provide some api wrapper methods
+ * Base class for models - simple and full
  * 
- * Figured I didn't necessarily want to confuse developers by giving them 
- * full fledged Model classes for public binarybeast data, that they can't edit anyway
+ * The SimpleModel class provides most of the error handling / result storage, 
+ *      logic for determining a service name, and so on
  * 
- * So we use this simplified version that has no save() methods etc, and all they do
- * is provide some api service wrappers
+ * It does not howerver, provide any functionality for updating, creating, or deleting data
+ * 
+ * That's why I've separated that logic into a different model: BBModel
+ * 
+ * It's not to save space or ram or whatever, it would make little difference anyway,
+ *  the point is to avoid any confusion with developers as to what
+ *  data they have the ability to manipulate
+ * 
+ * So this class is used primary for service wrapper hosting (like BBGame)
+ *      while BBModel is used for full manipulatable objects for creating/creating/updating - like BBTournament
+ *  
+ * Dual licensed under the MIT and GPL licenses:
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ * 
  * 
  * @version 1.0.0
- * @date 2013-02-8
+ * @date 2013-02-9
  * @author Brandon Simmons
  */
 class BBSimpleModel {
 
     /**
-     * Reference to the main API class
+     * Reference to the main API library class
      * @var BinaryBeast
      */
     protected $bb;
@@ -33,12 +46,15 @@ class BBSimpleModel {
     public $result_friendly = null;
     /**
      * If loading failed, stored the result
-     * @var string
+     * @var array
      */
     protected $last_error = null;
 
     /**
-     * Constructor - accepts a reference the BinaryBeats API $bb
+     * Constructor
+     * Stores a reference to the main BinaryBeast library class
+     * 
+     * @param BinaryBeast $bb       Reference to the main API class
      */
     function __construct(BinaryBeast $bb) {
         $this->bb = $bb;
@@ -104,12 +120,61 @@ class BBSimpleModel {
     }
 
     /**
+     * Returns the last error (if it exists)
+     * @return mixed
+     */
+    public function error() {
+        return $this->last_error;
+    }
+
+    /**
      * Remove any existing errors
      * @return void
      */
     protected function clear_error() {
         $this->set_error(null);
         $this->bb->clear_error();
+    }
+
+    /**
+     * Get the service that the child class supposedly defines
+     * 
+     * @param string $svc
+     * 
+     * @return string
+     */
+    protected function get_service($svc) {
+        return constant(get_called_class() . '::' . 'SERVICE_' . strtoupper($svc));
+    }
+
+    /**
+     * Iterates through a list of returned objects form the API, and "casts" them as
+     * modal classes
+     * for example, $bb->tournament->list_my() returns an array, each element being an instance of BBTournament,
+     * so you could for example, delete all of your 'SC2' Tournaments like this (be careful, this can be dangerous and irreversable!)
+     * 
+     * 
+     *  $tournies = $bb->tournament->list_my('SC2');
+     *  foreach($tournies as &$tournament) {
+     *      $tournament->delete();
+     *  }
+     * 
+     * @param array $list
+     * @return array<BBTournament> $class
+     */
+    protected function wrap_list($list, $class = null) {
+        //Determine which class to instantiate if not provided
+        if(is_null($class)) {
+            $class = get_called_class();
+        }
+
+        //Add instantiated modals of each element into a new output array
+        $out = array();
+        foreach($list as $object) {
+            $out[] = new $class($this->bb, $object);
+        }
+
+        return $out;
     }
 }
 
