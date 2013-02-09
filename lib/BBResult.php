@@ -51,6 +51,16 @@ class BBResult implements ArrayAccess, Iterator {
     function __construct($result) {
 
         /**
+         * If somehow we're handed a BBResult, extract JUST the values from it
+         * 
+         * Using instanceof to check, since I've run tests to show that it's incredibly fast,
+         * especially compared to is_subclass_of, is_a... etc
+         */
+        if($result instanceof BBResult) {
+            $result = $result->result_values;
+        }
+
+        /**
          * Loop through all values given to us, and either
          * save them locally with a standardized key, and them
          * save them publically with the original key
@@ -80,7 +90,7 @@ class BBResult implements ArrayAccess, Iterator {
                  * all nested values can be accessed flexibly
                  */
                 if(is_object($value) || is_array($value)) {
-                    $value = new BBServiceResult($value);
+                    $value = new BBResult($value);
                 }
 
                 //Create a standardized key, to avoid any chance of mistaken formatting (strip underscores, all lower case)
@@ -163,7 +173,7 @@ class BBResult implements ArrayAccess, Iterator {
     public function __get($name) {
         //Try retrieving using the standardized notation
         $key = $this->get_standard_key($name);
-        if(key_exists($key, $this->values)) {
+        if(isset($this->values[$key])) {
             return $this->values[$key];
         }
         //Invalid
@@ -265,7 +275,7 @@ class BBResult implements ArrayAccess, Iterator {
      * @return boolean
      */
     public function valid() {
-        return isset($this->values[ $this->get_standard_key($this->keys[$this->position]) ]);
+        return isset($this->keys[$this->position]);
     }
 
     /**
@@ -280,14 +290,15 @@ class BBResult implements ArrayAccess, Iterator {
     }
 
     /**
-     * Returns an array of iteratable array indexed values
+     * Simply returns $this->result_values, so that the returned
+     * array is indexed using the original keys / indexes
      * 
      * @see array_values()
      * 
      * @return array
      */
     public function array_values() {
-        return $this->values;
+        return $this->result_values;
     }
 
     /**
