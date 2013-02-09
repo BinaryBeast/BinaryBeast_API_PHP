@@ -8,7 +8,7 @@
  *   http://www.gnu.org/licenses/gpl.html
  * 
  * @version 1.0.0
- * @date 2013-02-04
+ * @date 2013-02-08
  * @author Brandon Simmons
  */
 class BBModel {
@@ -20,7 +20,7 @@ class BBModel {
     protected $bb;
 
     /**
-     * Publically accessible result code for the previous api call
+     * Publicly accessible result code for the previous api call
      * @var int
      */
     public $result = null;
@@ -31,7 +31,7 @@ class BBModel {
     public $result_friendly = null;
 
     /**
-     * If loading failed, stored the result
+     * Value of the last error set
      * @var string
      */
     protected $last_error = null;
@@ -63,6 +63,15 @@ class BBModel {
 
     /**
      * Child classes can define a data extract key to attempt to use
+     * This is necessary due to the fact that BinaryBeast does not return consistent formats unfortunately
+     * For example Tourney.TourneyLoad.Info returns array[int result, array tourney_inf], so BBTournament
+     *      defines this values as 'tourney_info', 
+     * But Tourney.TourneyLoad.match returns array[int result, array match_info], so BBMatch
+     *      defines this value as 'match_info'
+     * 
+     * It just let's import_values() know to first try extract from $result['match_info'] before importing
+     * $result directly
+     * 
      * @access protected
      */
     protected $data_extraction_key;
@@ -73,11 +82,11 @@ class BBModel {
     public $changed = false;
 
     /**
-     * Really stupid way of getting around the ridiculous error when trying
-     * to return null in &__get
+     * My best solution for overcoming the silly
+     * errors when trying to return null / false etc from methods
+     * defined as returning references
      */
-    protected $null  = null;
-    protected $false = false;
+    protected $ref;
 
     /**
      * Constructor - accepts a reference the BinaryBeats API $bb
@@ -107,6 +116,32 @@ class BBModel {
         }
     }
 
+
+    /**
+     * Calls the BinaryBeast API using the given service name and arguments, 
+     * and grabs the result code so we can locally stash it 
+     * 
+     * Unlike BBSimleModel, we don't necessary want to auto-wrap our results, since we're letting
+     * child classes handle the data - so we disable it unless asked otherwise
+     * 
+     * @param string $svc
+     * @param array $args
+     * @return object
+     */
+    protected function call($svc, $args, $wrapped = false) {
+        //First, clear out any errors that may have existed before this call
+        $this->clear_error();
+
+        //Use BinaryBeast library to make the actual call
+        $response = $this->bb->call($svc, $args, $wrapped);
+
+        //Store the result code in the model itself, to make debuggin as easy as possible for developers
+        $this->set_result($response);
+
+        //Finallly, return the response
+        return $response;
+    }
+
     /**
      * Intercept attempts to load values from this object
      * 
@@ -122,6 +157,7 @@ class BBModel {
      * Priority of returned value:
      *      $new_data
      *      $data
+     *      $default_data (new objects only)
      *      {$method}()
      *      $id as ${$id_property}
      * 
@@ -129,10 +165,53 @@ class BBModel {
      * @return mixed
      */
     public function &__get($name) {
+        
+        /**
+         * I want __get to return references in most cases, like BBTournament::load()|rounds|teams, etc etc
+         * but I also need to be able to return values without sending references, because I also don't want 
+         * developers directly editing references to the internal value arrays, because that would
+         * circum-vent the __save method, and we would therefore not know to send changes to the API
+         * 
+         * So if we find the value locally, we use BBModel::ref() to save the value to a temporary
+         * reference, and to return THAT
+         * 
+         * 
+         * Regardless of wether or not this object has an ID, we'll first check new_data
+         */
+        if(isset($this->new_data[$name])) {
+            return $this->ref($this->new_data[$name]);
+        }
 
-        //First see if we have the value already in $data, or in new_data
-        if(isset($this->new_data[$name]))   return $this->new_data[$name];
-        if(isset($this->data[$name]))       return $this->data[$name];
+        /**
+         * Nothing in new_data, so next we need to figure out if this is a new object, or if we are creating a new one
+         */
+        if(is_null($this->id)) {
+            /**
+             * New object, now we can safely return from default_values if set
+             */
+            if(isset($this->default_values[$name])) {
+                return $this->ref($this->default_values[$name]);
+            }
+        }
+
+        /**
+         * So at this point we know it's an existing object (it has an ID to load), so the last thing
+         * we can try is to actually ask BinaryBeast for the information of this object
+         * 
+         * So next: load() (if we haven't already), and try again
+         */
+        else {
+            //We need to load the data first
+            if(sizeof($this->data) === 0) {
+                $this->load();
+                return $this->__get($name);
+            }
+
+            //Data already exists, see if our $name is in there
+            else if(isset($this->data[$name])) {
+                return $this->ref($this->data[$name]);
+            }
+        }
 
         /**
          * If a method exists with this name, execute it now and return the result
@@ -145,30 +224,16 @@ class BBModel {
             return $this->{$name}();
         }
 
-        //Since the value does not exist, see if we've already loaded this object
-        if(sizeof($this->data) === 0) {
-            //if there is no ID associated with this tournament, set an error instead
-            if(is_null($this->get_id())) {
-                $this->set_error('Error accessing ' . $name . ', cannot load from API without a value for ' . $this->id_property);
-                return $this->null;
-            }
-            //Since this is a real object, try loading it and trying again
-            else {
-                $this->load();
-                return $this->__get($name);
-            }
-        }
-
         /**
          * Invalid property / method - return null
-         * 
-         * This is the dumbest thing ever, but we can't just directly return null, we 
-         * have to return an actual reference to something null 
          */
-        //Invalid property requested, return null
         else {
-            $this->null = null;
-            return $this->null;
+            /**
+             * So stupid but PHP will complain if we just return null, since we defined
+             * &__get as returning a reference, therefore we'll use our cheat BBModel::ref(), 
+             * pass it null, and it will return a reference to a variable containing null()
+             */
+            return $this->ref(null);
         }
     }
 
@@ -197,13 +262,8 @@ class BBModel {
     }
 
     /**
-     * In case anything has been changed, this method can be used
-     * to reset this objects attributes to their original values
-     * 
-     * Since $this->data isn't changed until sending the data to the API,
-     * all we have to do is clear out the new_data array, which is
-     * used as a temporary buffer until asking the API to import
-     * the changes
+     * Reset this object back to its original state, as if nothing
+     * had changed since its instantiation
      * 
      * @return void
      */
@@ -227,8 +287,8 @@ class BBModel {
      * @return void
      */
     public function sync_changes() {
-        //Simple - just use import method using the new data
-        $this->import_values(array_merge($this->data, $this->new_data));
+        //Simple - let get_sync_values figure out which values to merge together
+        $this->import_values($this->get_sync_values());
 
         //This object no longer has unsaved changes
         $this->changed = false;
@@ -269,8 +329,6 @@ class BBModel {
         //Cast as an array for standardization and compatability
         $this->data             = (array)$data;
         $this->new_data         = array();
-        //If we've made it this far, that means the last call was successful, so clear any prior errors - done here to avoid having to type it 15 times
-        $this->clear_error();
     }
 
     /**
@@ -283,35 +341,46 @@ class BBModel {
      * calling the load method within that, which returns itself (as long as nothing went wrong)
      * 
      * @param mixed $id     If you did not provide an ID in the instantiation, they can provide one now
-     * @param array $args   Allow child classes to define additional paramaters to send to the API (for example the primary key of an object may consist of multiple values)
+     * @param array $child_args   Allow child classes to define additional paramaters to send to the API (for example the primary key of an object may consist of multiple values)
      * 
      * @return BBModel  Returns itself unless there was an error, in which case it returns false
      */
-    public function &load($id = null, $args = array()) {
+    public function &load($id = null, $child_args = array()) {
 
-        //If no ID was provided, we can't do anything
-        if(!is_null($id)) $this->set_id($id);
-        else              $id = $this->get_id();
+        /**
+         * If defining an ID manually, go ahead make sure that we 
+         * completely wipe everything that may have changed, and THEN save it
+         */
+        if(!is_null($id)) {
+            $this->reset();
+            $this->set_id($id);
+        }
+        /**
+         * Otherwise, make sure we actually HAVE an id to load
+         */
+        else {
+            $id = $this->get_id();
+        }
 
         //No ID to load
         if(is_null($id)) {
-            $this->set_error('No ' . $this->id_property . ' was provided, there is nothing to load!');
-            return $this->false;
+            return $this->ref(
+                $this->set_error('No ' . $this->id_property . ' was provided, there is nothing to load!')
+            );
         }
 
         //Determine which sevice to use, return false if the child failed to define one
         $svc = $this->get_service('SERVICE_LOAD');
         if(is_null($svc)) {
-            return $this->set_error('Unable to determine which service to request for this object, please contact a BinaryBeast administrator for assistance');
+            return $this->ref(
+                $this->set_error('Unable to determine which service to request for this object, please contact a BinaryBeast administrator for assistance')
+            );
         }
 
         //GOGOGO!
-        $result = $this->bb->call($svc, array_merge(array(
+        $result = $this->call($svc, array_merge(array(
             $this->id_property => $this->{$this->id_property}
-        ), $args) );
-
-        //Save the result
-        $this->set_result($result->result);
+        ), $child_args) );
 
         //If successful, import it now
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
@@ -324,18 +393,24 @@ class BBModel {
          * However we'll leave it up to set_error to translate the code for us
          */
         else {
-            return $this->set_error($result);
+            return $this->ref($this->set_error($result));
         }
     }
 
     /**
      * Sends the values in this object to the API, to either update or create the tournament, team, etc
      * 
-     * This method returns the new or existing ID, or false on failure
+     * By default this method returns the new or existing ID, or false on failure
+     *      However for $return_result = true, it will simply return the API's response directly
+     * 
+     * Child classes may also define additional arguments to send using the second $args argument
+     * 
+     * @param boolean $return_result        By default this method returns the id or false, but setting this to true will make it return the api's result instead
+     * @param array   $args                 Child classes may define additional arguments to send along with the request
      * 
      * @return string|int       false if the call failed
      */
-    public function save() {
+    public function save($return_result = false, $child_args = null) {
 
         //Initialize some values to send to the API
         $svc    = null;
@@ -345,7 +420,7 @@ class BBModel {
         $id = $this->get_id();
 
         //Update
-        if( !is_null($id) ) {
+        if(!is_null($id) ) {
 
             //Nothing has changed! Save an error, but since we dind't exactly fail, return true
             if(!$this->changed) {
@@ -366,14 +441,13 @@ class BBModel {
             $args = array_merge($this->data, $this->new_data);
             $svc = $this->get_service('SERVICE_CREATE');
         }
+        
+        //If child defined additonal arguments, merge them in now
+        if(is_array($child_args)) $args = array_merge($args, $child_args);
 
         //GOGOGO
-        $result = $this->bb->call($svc, $args);
-
-        //Delete any prior error messages, and store the result of the api call
-        $this->clear_error();
-        $this->set_result($result->result);
-
+        $result = $this->call($svc, $args);
+        
         /*
          * Saved successfully - reset some local values and return true
          */
@@ -393,7 +467,10 @@ class BBModel {
              */
             $this->sync_changes();
 
-            //Updated successfully! return the $id
+            //Child requested the result directly, do so now before we do anything else
+            if($return_result) return $result;
+
+            //Otherwise, return the id to indicate success
             return $id;
         }
 
@@ -418,10 +495,7 @@ class BBModel {
         );
 
         //GOGOGO!!!
-        $result = $this->bb->call($svc, $args);
-
-        //Save the result code locally
-        $this->set_result($result->result);
+        $result = $this->call($svc, $args);
 
         //DELETED!!!
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
@@ -455,46 +529,34 @@ class BBModel {
      * Store an error into $this->error, developers can refer to it
      * as $tournament|$match|etc->error()
      * 
-     * In order to standardize error values, it accepts arrays, or strings
-     * but if you provide a string, it is converted into array('error_message'=>$in)
+     * In order to standardize error values, we send it first to the main library class,
+     * which will either save as-is or convert to an array - either way it will return us the new value
+     *      We locally store the value returned back from the main library
+     * 
+     * Lastly, we return false - this allows model methods simultaneously set an error, and return false
+     * at the same time - allowing me to be lazy and type that all into a single line :)
      * 
      * @param array|string $error
      * @return false
      */
     protected function set_error($error) {
-
-        //Either save as-is, or convert into an array (for standardization)
-        if(!is_null($error)) {
-            $this->last_error = is_string($error)
-                ? array('error_message' => $error)
-                : $error;
-        }
-        //Sent a blank error, so we'll delete any previous errors now
-        else $this->last_error = null;
-
-        //Store the error in the main BinaryBeast instance also
-        $this->bb->set_error($this->last_error);
+        //Send to the main BinaryBeast API Library, and locally save whatever is sent back (a standardized format)
+        $this->last_error = $this->bb->set_error($error);
 
         //Allows return this directly to return false, saves a line of code - don't have to set_error then return false
         return false;
     }
 
     /**
-     * Stores a result code into $this->result
-     * Also sends the value to $bb it always has the latest result code
-     * publically accessible 
+     * Stores a result code into $this->result, and also stores a
+     * readable translation into result_friendly
      * 
-     * @param int $result
+     * @param object $result    A reference to the API's response
      * @return void
      */
-    protected function set_result($result) {
-        //Try to determine the friendly version of the result code
-        $friendly = BBHelper::translate_result($result);
-
-        //Store it locally, and send it to the BinaryBeast class
-        $this->result = $result;
-        $this->result_friendly = $friendly;
-        $this->bb->set_result($result, $friendly);
+    protected function set_result(&$result) {
+        $this->result = isset($result->result) ? $result->result : false;
+        $this->friendly_result = BBHelper::translate_result($this->result);
     }
 
     /**
@@ -521,8 +583,8 @@ class BBModel {
      * Save the unique id of this instance, taking into consideration
      * children clases definining the property name, (ie tournament -> tourney_team_id)
      * 
-     * It also saves a reference in this->id for developers can easily refer to $obj->id,
-     *  regardless of the object type
+     * It also saves a reference in this->id for internal use, and it's nice to have a
+     * standardized property name for ids, so any dev can use it if they wish
      * 
      * @param int|string $id
      * @return void
@@ -594,27 +656,46 @@ class BBModel {
     public function get_changed_values() {
         return $this->new_data;
     }
-
+    
     /**
-     * Return an array of values, merged from default values and data_new
+     * This method returns a combination of current values + new values
+     * But the trick is that it's sensitive to wether or not this object is new..
+     * 
+     * So for new objects that don't yet have an ID associated with it, it actually
+     * returns a combination of default values + changed values
+     * 
+     * For existing objects, it returns a combination of current values + changed values
+     * 
      * @return array
      */
-    public function get_all_values() {
-        return array_merge($this->default_values, $this->new_data);
+    public function get_sync_values() {
+        /**
+         * New object: default + new
+         */
+        if(is_null($this->id)) {
+            return array_merge($this->default_values, $this->new_data);
+        }
+        /**
+         * Existing object: existing + new
+         */
+        return array_merge($this->data, $this->new_data);
     }
 
     /**
-     * Used by BBTournament while performing a BatchUpdate, this
-     * method returns an array of all NON-NULL values, by combining
-     * anything manually set + default values
+     * Our stupid silly hacking solution to the infuratingly 
+     * frustrating error returned whenever we try to return
+     * a null / false non-reference value from reference methods, such as &__get
+     * 
+     * What we do as we call this method with the value we want to refer, and it
+     * stores it into a property made just for this (called ref), and 
+     * returns a reference to it
+     * 
+     * @param mixed $value
+     * @return mixed
      */
-    public function get_non_null_new_values() {
-        $out = array();
-        $values = array_merge($this->default_values, $this->new_data);
-        foreach($values as $key => $value) {
-            if(!is_null($value)) $out[$key] = $value;
-        }
-        return $out;
+    protected function &ref($value) {
+        $this->ref = $value;
+        return $this->ref;
     }
 }
 

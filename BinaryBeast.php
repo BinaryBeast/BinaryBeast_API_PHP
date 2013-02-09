@@ -4,37 +4,45 @@
  * Entry point for the BinaryBeast PHP API Library
  * Relies on everything included in lib/*.php
  * 
+ * This is the 3rd release of our public library written in PHP.  The biggest change from the 
+ * previous being that it now takes on a more object-oriented approach in exchange for
+ * the more procedural feel of the former version
+ * 
+ * However we have included all of the originally wrapper methods defined previously, and 
+ * moved them into a new library class called BBLegacy - so you confidently upgrade your code
+ * without worrying about breaking anything
+ * 
+ * This class is depedent on classes included in the /lib directory, so please make sure
+ * to include both BinaryBeast.php, and /lib
+ * 
+ * This class in fact, does not offer any wrapper methods at all any more, you should be using
+ * models for everything.   For example use BBGame even for loading a list of games, and
+ * BBCountry for listing / searching countries, and BBMap for listing maps for specific games
+ * 
+ * As for the object oriented approach, note that most values returned are instances of BBModel. 
+ * Note for example $tour = $bb->tournament('x12345'); - this will return an instance of BBTournament, 
+ * and it will autoamtically assume it's for tournament id x12345
+ * 
+ * Note that BBModel classes do not automatically load any data from the API, it is actually
+ * loaded on-demand.  So until you try to access a property from $tour, it will be blank
+ * 
+ * But the moment you do try to access $tour->title for example, it will first execute the 
+ *  API request required to load the tournament information, then try to return that value
+ *  to you
+ * 
+ * Same goes for lists of child models within models, like BBRound instances within BBTournament,
+ *  $tour->rounds is an array of rounds within that tournament, but the list is not populated
+ *  until you try to access it
+ * 
+ * We will be releasing new documntnation on the site soon,
+ *      meanwhile, please direct all questions to contact@binarybeast.com
+ * 
  * Dual licensed under the MIT and GPL licenses:
  *   http://www.opensource.org/licenses/mit-license.php
  *   http://www.gnu.org/licenses/gpl.html
- */
-
-//The new API version is adopts a more OOP approach, so we have a few data modal classes to import
-include_once('lib/BBHelper.php');
-include_once('lib/BBModel.php');
-include_once('lib/BBTournament.php');
-include_once('lib/BBRound.php');
-include_once('lib/BBTeam.php');
-include_once('lib/BBMatch.php');
-include_once('lib/BBMatchGame.php');
-
-/**
- * This class contains the method for interaction with the BinaryBeast API
- *
- * By using this API Class, you are agreeing to the Terms and Conditions
- * The terms can be found in the file "Terms.txt" included with this file
  * 
- * Example use, let's grab a list of countries that have the word 'king' in it, there are two ways to do it...
- *  $result = $bb->call('Country.CountrySearch.Search', array('country' => 'king'));
- *  $result = $bb->country_search('king');
- *      if($result->result == 200) foreach($result->countries as $country) {
- *          echo $country . '<br />';
- *      }
  * 
- * We will be releasing new documntnation on the site soon,
- * meanwhile, please direct all questions to contact@binarybeast.com
- * 
- * @version 3.0.6
+ * @version 3.0.0
  * @date 2013-02-04
  * @author Brandon Simmons <contact@binarybeast.com>
  */
@@ -76,25 +84,47 @@ class BinaryBeast {
     private static $server_ready = null;
 
     /**
-     * Cache the instance of BBHelper, there's no need to
-     * instantiate it more than once
-     * @var BBHelper
+     * Used for two purposes:  
+     *      1: During __call to check the $name against a list of models that we can auto load
+     *      2: To define a list of dependent classes to automatically load when a class is included
+     * 
+     * Note that the names of the classes in here are the simplified versions, since
+     * @example tournament represents BBTournament
+     * @example match_game respresnts BBMatchGame
      */
-    private static $helper = null;
-    
+    private static $models = array(
+        'tournament'    => array('model', 'match', 'match_game', 'team', 'round'),
+        'map'           => array('simple_model'),
+        'game'          => array('simple_model'),
+        'country'       => array('simple_model'),
+    );
+
     /**
      * Store the result codes / values for the previous
      * API Request response
      */
     public $last_error;
     public $last_result;
-    public $last_result_friendly;
+    public $last_friendly_result;
+
+    /**
+     * Store an instance of BBLegacy, it's only even
+     * included() on demand
+     * @var BBLegacy
+     */
+    private $legacy = null;
+
+    /**
+     * cache instances of BBSimpleModel classes
+     */
+    private $map;
+    private $country;
+    private $game;
 
     /**
      * A few constants to make a few values a bit easier to read / use
      */
-
-    const API_VERSION = '3.0.6';
+    const API_VERSION = '3.0.0';
     //
     const BRACKET_GROUPS    = 0;
     const BRACKET_WINNERS   = 1;
@@ -171,6 +201,13 @@ class BinaryBeast {
          * Static because there's no point in checking for each instantiation
          */
         self::$server_ready = self::check_server();
+
+        /**
+         * Make sure some of the core libraries are pre-loaded, like
+         * BBHelper and BBResult
+         */
+        $this->load_library('helper');
+        $this->load_library('result');
     }
 
     /**
@@ -292,43 +329,68 @@ class BinaryBeast {
      * Make a service call to the remote BinaryBeast API
      * 
      * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_call
+     * 
+     * New in 3.0.0 - this method now by default, automatically returns the result wrapped in a new BBResult class
+     * This can be overridden however, by setting the third paramater to false
+     * 
+     * I suggest reading the documentation in BBResult.php to see what it does, but in short:
+     * it makes accessing the values returned a lot more flexibile and forgiving, basically
+     * allowing you to refer to values within it in any format you'd like (ie underscore_keys or camelCasee)
      *
-     * @param string Service to call (ie Tourney.TourneyCreate.Create)
-     * @param array  Arguments to send
+     * @param string    Service to call (ie Tourney.TourneyCreate.Create)
+     * @param array     Arguments to send
+     * @param wrapped   True by default, wraps API results in the BBResult class - which allows flexibile accessability, custom iteration etc etc
      *
-     * @return int result
+     * @return BBResult
      */
-    public function call($svc, $args = null) {
+    public function call($svc, $args = null, $wrapped = true) {
         //This server does not support curl or fopen
         if (!self::$server_ready) {
             return self::get_server_ready_error();
         }
 
-        //Return a parsed value of call_raw
-        return $this->decode($this->call_raw($svc, $args));
+        //GOGOGO! grab the raw result (call_raw), and parse it through decode for json decoding + (object) casting
+        $response = $this->decode($this->call_raw($svc, $args));
+
+        //Store the latest result code, so developers can have easy access to it in $bb->result[_friendly]
+        $this->set_result($response);
+
+        //Success!  Now return it either raw, or wrapped in a new BBResult()
+        return $wrapped ? new BBResult($response) : $response;
     }
 
 
-
     /**
-     * If a modal class (ie BBMatch or BBTeam) encounters an error,
-     * it will be sent here so that developers can find the most
-     * recent error by accessing $bb->error()
+     * Store an error into $this->error, developers can refer to it
+     * as $tournament|$match|etc->error()
      * 
-     * @param string $error
-     * @return void
+     * In order to standardize error values, it accepts arrays, or strings
+     * but if you provide a string, it is converted into array('error_message'=>$in)
+     * 
+     * This method will return the new error value, in case we
+     * decided to reformat it / add to it, so that model classes
+     * can be sure to stash the same error set here
+     * 
+     * @param mixed $error
+     * @return array
      */
     public function set_error($error = null) {
-        $this->last_error = $error;
-    }
-    /**
-     * Used by modal classes to store the latest API request's result code
-     * @param int $result
-     * @param string $friendly      Optionally define a friendly version 
-     */
-    public function set_result($result, $friendly = null) {
-        $this->last_result = $result;
-        $this->last_result_friendly = $friendly;
+        //Convert objecst into arrays
+        if(is_object($error)) $error = (array)$error;
+
+        /*
+         * If it's already an array - save it as-is
+         * Otherwise, save an error containing the value provided as the property 'error_message'
+         */
+        if(!is_null($error)) {
+            $this->last_error = is_array($error)
+                ? $error
+                : array('error_message' => $error);
+        }
+        //Sent a blank error, so we'll delete any previous errors now
+        else $this->last_error = null;
+
+        return $this->last_error;
     }
     /**
      * Modal classes call this to clear out any prior error results
@@ -337,27 +399,16 @@ class BinaryBeast {
     public function clear_error() {
         $this->set_error(null);
     }
-
-
     /**
-     * A simple method that just returns the value for the previous error
-     * Defined simply to be consistent with BBModal, which also defines error() for the same purpose
-     * @return mixed
+     * Stores the result code from the latest API Request, so developers can
+     * always access the latest result in $bb->result, or $bb->result(), or $bb->result_friendly etc
+     * 
+     * @param object $result    A reference to the API's response
+     * @return void
      */
-    public function error() {
-        return $this->last_error;
-    }
-    /**
-     * Simply returns the latest result 
-     * It will return the friendly version first (unless you specify int_only = true)
-     * It's named result() to be consistent with error()
-     * @return mixed
-     */
-    public function result($int_only = false) {
-        if(is_null($this->last_result_friendly) || $int_only) {
-            return $this->last_result;
-        }
-        return $this->last_result_friendly;
+    private function set_result(&$result) {
+        $this->last_result = isset($result->result) ? $result->result : false;
+        $this->last_friendly_result = BBHelper::translate_result($this->last_result);
     }
 
     /**
@@ -420,526 +471,205 @@ class BinaryBeast {
 
     /**
      * Allows us to create new model classes as if accessing attributes, avoiding the
-     * need to call it as a function, so we can get a tournametn for example, like this:
-     * $new_tour = $bb->tournament;
+     * need to call it as a function, so we can get a tournament instance for example, like this:
+     * $new_tour = $bb->tournament; which translates to:
+     * $new_tour = $bb->touranment(); - creating a new blank tournament
      * 
      * @param string $name
      */
     public function __get($name) {
-        //Only existing models
-        if(in_array(strtolower($name), array('tournament', 'team', 'match'))) {
-            return $this->get_model($name);
-        }
-
-        //Allow accessing the BBHelper as a property
-        if($name == 'helper') {
-            return $this->helper();
+        //attempting to access a valid model?
+        $model = strtolower($name);
+        if(key_exists(strtolower($model), self::$models)) {
+            return $this->{$model}();
         }
 
         //Invalid access
         return null;
     }
-
     /**
-     * Returns a new Tournament object
+     * Returns a new BBTournament model class
+     * You can optionally pre-define the tourney_id in the constructor
+     * It's nice to have this be a real public method, to avoid the slight
+     * overhead of having to go through __get and __call
      * 
-     * @param string $tournament        Optionally provide a tournament id to auto-load, or object of tourney data
-     * 
+     * @param string $tourney_id    Optionally pre-define the tournament to load
      * @return BBTournament
      */
-    public function tournament($tournament = null) {
-        return $this->get_model('tournament', $tournament);
+    public function tournament($tourney_id = null) {
+        return $this->get_model('tournament', $tourney_id, false);
+    }
+    /**
+     * Returns a new BBMap simple_model class
+     * @return BBMap
+     */
+    public function &map() {
+        return $this->get_simple_model('map');
+    }
+    /**
+     * Returns a new BBCountry simple_model class
+     * @return BBCountry
+     */
+    public function &country() {
+        return $this->get_simple_model('map');
+    }
+    /**
+     * Returns a new BBGame simple_model class
+     * @return BBGame
+     */
+    public function &game() {
+        return $this->get_simple_model('game');
     }
     
     /**
-     * Returns (and caches) an instance of BBHelper, which 
-     * hosts a lot of logic to help developers calculate
-     * common tournament-related values (like bracket size, number of rounds, etc)
+     * To avoid the overhead of include|require_once.. we use this method
+     * to load libraries on demand, but we use class_exists first to see
+     * if we actually need to load the file
      * 
-     * @return BBHelper
+     * Be sure that when you call this method, you provide the simplified
+     * libary name... for example ask for round, not BBRound..
+     * and ask for match_game, not BBMatchGame
+     * 
+     * @param string $library
+     * @return string       Returns the full class_name of the actual class and file name
      */
-    public function &helper() {
-        //Already instantiated
-        if(!is_null(self::$helper)) return self::$helper;
+    private function load_library($library) {
+        //Convert the library name to the full class name
+        $class = $this->full_library_name($library);
 
-        //Instantiate, cache, and return
-        self::$helper = new BBHelper();
-        return self::$helper;
+        //require(), only if the class isn't already defined
+        if(!class_exists($class)) {
+            require("lib/$class.php");
+        }
+
+        //Load all dependents
+        if(key_exists($library, self::$models)) {
+            if(is_array(self::$models[$library])) {
+                foreach(self::$models[$library] as $child) {
+                    $this->load_library($child);
+                }
+            }
+        }
+
+        //Return the class_name we converted
+        return $class;
+    }
+    /**
+     * Converts a simplified library name to the full
+     * class name (@example tournament => BBTournament, match_game => BBMatchGame)
+     * @param string $library
+     */
+    private function full_library_name($library) {
+        /*
+         * First replace underscores with spaces, so that ucwords
+         * will capitalize each word.. then return it
+         * with BB prepended, and the spaces removed
+         */
+        return 'BB' . str_replace(' ', '', ucwords(
+            str_replace('_', ' ', (
+                strtolower($library)
+            ))
+        ));
     }
 
+    /**
+     * Mode like get_model, except this method cached
+     * the instances locally before returning
+     * @param string $model
+     * @return BBSimpleModel
+     */
+    private function &get_simple_model($model) {
+
+        //Already cached
+        if(!is_null($this->{$model})) return $this->{$model};
+
+        //Use get_model to do two things:  auto load BBSimpleModel, and to return a new instance of $model
+        $this->{$model} = $this->get_model($model, null, true);
+
+        //Success! return a reference to the newly instnatated cached simple model
+        return $this->{$model};
+    }
     /**
      * Returns a newly instantiated modal class, either returning
      * 
-     * @param string $model         Base name of the model, for example BBTournament is just "touranment"
+     * @param string  $model        Base name of the model, for example BBTournament is just "touranment"
+     * @param string  $data         Optional data to send to the new model, like a result set or id value
+     * @param boolean $simple       False by default - autoload BBSimpleModel instead of BBModel if true
+     * @param boolean $direct       Return the class direclty instead of an instance - allows model() methods to instantiate manually
      * @return BBModal
      */
-    private function get_model($model, $data = null) {
-        //Determine the class name to instantiate, based on the property name, IE team = BBTeam
-        $class_name = 'BB' . ucfirst(strtolower($model));
+    private function get_model($model, $data = null, $simple = false) {
+        //Make sure the base BBModel class is available
+        $this->load_library($simple ? 'simple_model' : 'model');
 
-        //EZ
+        /**
+         * Use load_library to make sure the class is available,
+         * and it will also return to us the real class_name we can use
+         * while creating a new instance
+         */
+        $class_name = $this->load_library($model);
+
+        //Success! Now return a new instance
         return new $class_name($this, $data);
     }
 
-    /*
-     * 
-     * Public list loading services
-     * 
-     */
-
-
     /**
-     * Retrieves a list of tournaments created using your account
+     * Call a legacy wrapper method
      * 
-     * @param string $filter        Optionally, you may filter by title
-     * @param int    $limit         Limit the number of results - defaults to 30
-     * @param bool   $private       true by default, returns ALL of your touranments, even if marked private - pass false to skip your private tournaments
+     * Intercept attempts to call missing methods that may have previous been
+     * defined in 2.7.7- or earlier version of this library
      * 
-     * @return object
+     * In which case, we'll use BBLegacy to do the work, since I want to keep this class 
+     * as clean as possible
+     * 
+     * If we can find the method to call, we'll go ahead and use the new
+     * BBResult wrapper to wrap the results for a more flexibily accessible result set
      */
-    public function tournament_list_my($filter = null, $limit = 30, $private = true) {
-        //Grab a new tournament object, BBTournament hosts all of the tournament logic, keep logic in relevent classes
-        $tournament = $this->get_modal('tournament');
-        return $tournament->list_my($filter, $limit, $private);
+    public function __call($name, $args) {
+
+        //Get the legacy API class in hopes that this method is an old wrapper method from an older library version
+        $legacy = $this->get_legacy();
+
+        /**
+         * This method exists in BBLegacy, call it, store the result code,
+         * then return the result direclty
+         */
+        if(method_exists($legacy, $name)) {
+            $result = call_user_func_array(array($legacy, $name), $args);
+            $this->set_result($result);
+            return $result;
+        }
+
+        //Failure!
+        $this->set_error('Method name ' . $name . ' does not exist!');
+        return false;
     }
 
     /**
-     *
+     * Returns a reference to the locally stored version of BBLegacy
+     * The reason we setup a method for this, is we want to be able to quickly
+     * grab a reference if already stored.. 
      * 
+     * and if it isn't already stored: include the file, instantiate it with the local
+     * api_key or username and email, save a reference, then return that reference
      * 
+     * That allows us to keep BBLegacy as a load-on-demand class only
      * 
-     * Tournament wrapper methods
+     * aka this returns the version 2.7.2 API Library 
      * 
-     * 
-     * 
-     *
+     * @return BBLegacy
      */
+    private function &get_legacy() {
+        //Already instantiated
+        if(!is_null($this->legacy)) return $this->legacy;
 
-    /**
-     * Retrieves round format
-     * 
-     * You can pass '*' for the bracket to retrieve for the entire tournament
-     * 
-     * @param int $bracket 
-     * 
-     * @return {object}
-     */
-    public function tournament_load_round_format($tourney_id, $bracket = '*') {
-        return $this->call('Tourney.TourneyLoad.Rounds', array('tourney_id' => $tourney_id, 'bracket' => $bracket));
+        //Make sure that BBLegacy.php is included
+        $this->load_library('legacy');
+
+        //Return a reference to a newly instantated BBLegacy class
+        $this->legacy = new BBLegacy($this);
+        return $this->legacy;
     }
-
-    /**
-     * This wrapper class is a shortcut to Tourney.TourneyStart.Start
-     * It will generate groups or brackets, depending on TypeID and Status
-     *
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_tournament_start
-     *
-     * @param string       $tourney_id		Obviously, we need to know which tournament to start
-     * @param string       $seeding           See the help page on what these mean [random, traditional, balanced, manual]
-     * @param array        $teams             If seeding is anything but random, you'll need to provide an ordered array of tourney_team_ids, either in order of team position, or rank
-     *
-     * @return object {int result}
-     */
-    public function tournament_start($tourney_id, $seeding = 'random', $teams = null) {
-        return $this->call('Tourney.TourneyStart.Start', array(
-            'tourney_id'    => $tourney_id,
-            'seeding'       => $seeding,
-            'teams'         => $teams,
-        ));
-    }
-
-    /**
-     * Change the format of a round within a tournament (best of, map, and date)
-     * 
-     * This function also works to create the details - even if they have not yet been provided
-     * 
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_tournament_round_update
-     * 
-     * @param string    $tourney_id
-     * @param int       $bracket      - which bracket the round effects - ie 0 = groups, 1 = winners (there are class constants for these values
-     * @param int       $round        - which round to update, starting with 0 for the first round
-     * @param int       $best_of      - just like it sounds, BO$X - pass in the interger 1 for Best of 1
-     * @param string    $map
-     * @param string    $date
-     * 
-     * @return object {int result}
-     */
-    public function tournament_round_update($tourney_id, $bracket, $round = 0, $best_of = 1, $map = null, $date = null) {
-        return $this->call('Tourney.TourneyRound.Update', array(
-            'tourney_id'    => $tourney_id,
-            'bracket'       => $bracket,
-            'round'         => $round,
-            'best_of'       => $best_of,
-            'map'           => $map,
-            'date'          => $date,
-        ));
-    }
-
-    /**
-     * the round_update function is fine and all.. but not incredibly effecient for large tournaments with many rounds and brackets, this method
-     * allows you to update all rounds with one call, by passing in a simple array
-     * 
-     * @see link http://wiki.binarybeast.com/index.php?title=API_PHP:_tournament_round_update_batch
-     * 
-     * @param string        $tourney_id
-     * @param int           $bracket      - which bracket the round effects - ie 0 = groups, 1 = winners (there are class constants for these values
-     * @param <int>array    $best_ofs     - array of best_of values to update, IN ORDER ($best_ofs[0] = round 1, $best_ofs[1] = round 2)
-     * @param <string>array $maps         - array of maps for this bracket
-     * @param <string>array $dates        - array of dates for this bracket
-     * @param <int>array    $map_ids      - array of map_ids - official maps with stat tracking etc in our databased, opposed to simply trying to give us the name of the map - use map_list to get maps ids
-     * 
-     */
-    public function tournament_round_update_batch($tourney_id, $bracket, $best_ofs = array(), $maps = array(), $dates = array(), $map_ids = array()) {
-        return $this->call('Tourney.TourneyRound.BatchUpdate', array(
-            'tourney_id'    => $tourney_id,
-            'bracket'       => $bracket,
-            'best_ofs'      => $best_ofs,
-            'maps'          => $maps,
-            'map_ids'       => $map_ids,
-            'dates'         => $dates,
-        ));
-    }
-
-    /**
-     * Retrieves a list of matches that have are currently opened 
-     * This does not help you determine matches that are waiting on opponents, 
-     * it simply lets you know currently open matches
-     * 
-     * @param string $tourney_id
-     * 
-     * @return object[int Result [, array matches]]
-     */
-    public function tournament_get_open_matches($tourney_id) {
-        return $this->call('Tourney.TourneyLoad.OpenMatches', array('tourney_id' => $tourney_id));
-    }
-
-    /**
-     * Reopen a tournament
-     * 
-     * Complete -> Active,Active-Brackets -> Active-Brackets -> Active-Groups, Active/Active-Groups -> Confirmation
-     * 
-     * @param string $tourney_id 
-     */
-    public function tournament_reopen($tourney_id) {
-        return $this->call('Tourney.TourneyReopen.Reopen', array('tourney_id' => $tourney_id));
-    }
-
-    /**
-     * Wrapper method for Tourney.TourneySetStatus.Confirmation, allow players to confirm their positions
-     * 
-     * @param string $tourney_id
-     * 
-     * @return object {int result]
-     */
-    public function tournament_confirm($tourney_id) {
-        return $this->call('Tourney.TourneySetStatus.Confirmation', array('tourney_id' => $tourney_id));
-    }
-
-    /**
-     * Wrapper method for Tourney.TourneySetStatus.Confirmation, allow players to confirm their positions
-     * 
-     * @param string $tourney_id
-     * 
-     * @return object {int result]
-     */
-    public function tournament_unconfirm($tourney_id) {
-        return $this->call('Tourney.TourneySetStatus.Building', array('tourney_id' => $tourney_id));
-    }
-
-    /**
-     *
-     * 
-     * 
-     * 
-     * Teams/Participants wrapper methods
-     * 
-     * 
-     * 
-     *
-     */
-
-    /**
-     * This wrapper class will insert a team into your tournament (Tourney.TourneyTeam.Insert)
-     * It will automatically confirm the team unless it has already been filled according to your MaxTeams setting
-     *
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_insert
-     * 
-     * Available options:
-     *      string country_code
-     *      int    status               (0 = unconfirmed, 1 = confirmed, -1 = banned)
-     *      string notes                Notes on the team - this can also be used possibly to store a team's remote userid for your own website
-     *      array  players              If the TeamMode is > 1, you can provide a list of players to add to this team, by CSV (Player1,,Player2,,Player3)
-     *      string network_name         If the game you've chosen for the tournament has a network configured (like sc2 = bnet 2, sc2eu = bnet europe), you can provide their in-game name here
-     * 
-     * @param string $tourney_id    
-     * @param string $display_name  The team / player name
-     * @param array  $options        keyed array of options
-     *
-     * @return array [int result [, int tourney_team_id]]
-     */
-    public function team_insert($tourney_id, $display_name, $options = array()) {
-        $args = array_merge(array(
-            'tourney_id'    => $tourney_id,
-            'display_name'  => $display_name,
-            'status'        => 1,
-        ), $options);
-
-        return $this->call('Tourney.TourneyTeam.Insert', $args);
-    }
-
-    /**
-     * Change a team's settings
-     * 
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_update
-     * 
-     * Available options, check the wiki for their meanings, and default / possible values: 
-     *      string country_code
-     *      int    status               (0 = unconfirmed, 1 = confirmed, -1 = banned)
-     *      string notes                Notes on the team - this can also be used possibly to store a team's remote userid for your own website
-     *      array  players              If the TeamMode is > 1, you can provide a list of players to add to this team, by CSV (Player1,,Player2,,Player3)
-     *      string network_name         If the game you've chosen for the tournament has a network configured (like sc2 = bnet 2, sc2eu = bnet europe), you can provide their in-game name here
-     *
-     * @param type $tourney_team_id
-     * @param type $options 
-     * 
-     * @return object {int result}
-     */
-    public function team_update($tourney_team_id, $options) {
-        $args = array_merge(array('tourney_team_id' => $tourney_team_id), $options);
-        return $this->call('Tourney.TourneyTeam.Update', $args);
-    }
-
-    /**
-     * Granted that the tournament can still accept new teams, this method will update the status of a team to confirm his position in the draw
-     * 
-     * Unless otherwise specified, if you manually add a team through team_insert, he is confirmed by default
-     * 
-     * btw here's a tip: you can actually pass in '*' for the tourney_team_id to confirm ALL teams, but you would also have to include $tourney_id
-     * 
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_confirm
-     * 
-     * @param type $tourney_team_id 
-     * 
-     * @return object {int result [, int tourney_team_id]}
-     */
-    public function team_confirm($tourney_team_id, $tourney_id = null) {
-        return $this->call('Tourney.TourneyTeam.Confirm', array('tourney_team_id' => $tourney_team_id, 'tourney_id' => $tourney_id));
-    }
-
-    /**
-     * Granted that the tournament hasn't started yet, this method can be used to unconfirm a team, so he will no longer be included in the grid once the tournament starts
-     * 
-     * Unless otherwise specified, if you manually add a team through team_insert, he is confirmed by default
-     * 
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_unconfirm
-     * 
-     * @param type $tourney_team_id 
-     * 
-     * @return object {int result [, int tourney_team_id]}
-     */
-    public function team_unconfirm($tourney_team_id) {
-        return $this->call('Tourney.TourneyTeam.Unconfirm', array('tourney_team_id' => $tourney_team_id));
-    }
-
-    /**
-     * BANNEDED!!!
-     * 
-     * Ban a team from the tournament
-     * 
-     * Warning: this will NOT work if the tournament has already started, the best you can do is rename the player (using team_update, 'display_name' => 'foo')
-     * 
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_ban
-     * 
-     * @param type $tourney_team_id 
-     * 
-     * @return object {int result [, int tourney_team_id]}
-     */
-    public function team_ban($tourney_team_id) {
-        return $this->call('Tourney.TourneyTeam.Ban', array('tourney_team_id' => $tourney_team_id));
-    }
-
-    /**
-     * This wrapper method will delete a team from a touranment
-     * as long as the tournament has not been started or the team is unconfirmed
-     *
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_delete
-     *
-     * @param int $tourney_team_id 	Which team to delete - the binarybeast value TourneyTeamID
-     *
-     * @return object {int result}
-     */
-    public function team_delete($tourney_team_id) {
-        return $this->call('Tourney.TourneyTeam.Delete', array('tourney_team_id' => $tourney_team_id));
-    }
-
-    /**
-     * This wrapper method will report a team's win (Tourney.TourneyTeam.ReportWin)
-     * 
-     * Available Options:
-     *  @param int     `score`				The score of the winner
-     *  @param int     `o_score`                        The score fo the opponent (loser)
-     *  @param bool    `draw`                           If this match was a draw, pass in true for this value
-     *  @param string  `replay`				A URL to download the replay (first match only, for more detailed replay per game within the match, see Tourney.TourneyGame services for b03+)
-     *  @param string  `map`				You may specify which map it took place on (applies to the first match only, for more, see the Tourney.TourneyGame services)
-     *  @param string  `notes`				An optional description of the match
-     *  @param boolean `force`				You can pass in true for this paramater, to force advancing the team even if he has no opponent (it would have thrown an error otherwise)
-     * 
-     *
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_report_win
-     *
-     * @param string    $tourney_id                     Duh
-     * @param int       $winner_tourney_team_id         The winner's team id
-     * @param int       $loser_tourney_team_id          Only used / necessary in group rounds, the TeamID of the loser
-     * @param array     $options                        An associative array of additional options
-     *
-     * @return object {int result}
-     */
-    public function team_report_win($tourney_id, $winner_tourney_team_id, $loser_tourney_team_id = null, $options = array()) {
-        $args = array_merge(array(
-            'tourney_id'        => $tourney_id,
-            'tourney_team_id'   => $winner_tourney_team_id,
-            'o_tourney_team_id' => $loser_tourney_team_id,
-        ), $options);
-        return $this->call('Tourney.TourneyTeam.ReportWin', $args);
-    }
-
-    /**
-     * This wrapper will return the TourneyTeamID of the given team (Tourney.TourneyTeam.GetOTourneyTeamID)
-     *
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_get_opponent
-     *
-     * Note: a Result of 200 = the team currently has an opponent
-     * Result 735 and OTourneyTeamID -1 = The team has been eliminated
-     * Result 734 and OTourneyTeamID 0  = The team is currently waiting on an opponent
-     *
-     * Also, if the team has been eliminated, it will return an object 'Victor" with some information
-     * about the winning team
-     *
-     * @param int $tourney_team_id		The team of which to determine the opponent
-     *
-     * @return object {int Result [, object TeamInfo, array Players]}
-     */
-    public function team_get_opponent($tourney_team_id) {
-        return $this->call('Tourney.TourneyTeam.GetOTourneyTeamID', array('tourney_team_id' => $tourney_team_id));
-    }
-
-    /**
-     * Returns as much information about a team as possible
-     * 
-     * @param int $tourney_team_id 
-     * 
-     * @return object {int result {
-     */
-    public function team_load($tourney_team_id) {
-        return $this->call('Tourney.TourneyLoad.Team', array('tourney_team_id' => $tourney_team_id));
-    }
-
-    /**
-     *
-     * 
-     * 
-     * Match service wrappers
-     * 
-     * 
-     *  
-     */
-
-    /**
-     * Save the individual game details for a reported match
-     * 
-     * Each array (winners, scores, o_scores, races, maps, and replays) must be indexed in order of game
-     * so winners[0] => is the tourney_team_id of the player that won the FIRST game in the match
-     * winners[1] => the tourney_team_id of the player that won the second game... et c
-     * 
-     * 
-     * It's important to note that scores refers to the score of the winner of that specific game
-     * 
-     * So if player 1 defeats player 2 30 to 17 in game one
-     * Then let's say game 2.. player 2 defeats player 1 13:7...
-     * 
-     * In such a scenario, here's how your arrays should look:
-     *  winners[0] => tourney_team_id of player 1
-     *  score[0]   => score of player 1
-     *  o_score[0] => score of player 2
-     *  --
-     *  winners[1] => tourney_team_id of player 2
-     *  score[1]   => score of player 2
-     *  o_score[1] => score of player 1
-     * 
-     * 
-     * @param int $tourney_match_id
-     * @param array $winners
-     * @param array $scores
-     * @param array $o_scores
-     * @param array $maps
-     * 
-     * @return {object}
-     */
-    public function match_report_games($tourney_match_id, array $winners, array $scores, array $o_scores, array $maps) {
-        $args = array(
-            'tourney_match_id' => $tourney_match_id,
-            'winners' => $winners,
-            'scores' => $scores,
-            'o_scores' => $o_scores,
-            'races' => $races,
-            'maps' => $maps,
-        );
-        return $this->call('Tourney.TourneyMatchGame.ReportBatch', $args);
-    }
-
-    /**
-     * Load a list of maps for the given game_code
-     * 
-     * this is important to have in order for you to have the ability to 
-     * specify maps for the round format for each bracket, as you can 
-     * identify the maps by simply giving us the map_id
-     * 
-     * @param string $game_code
-     * 
-     * @return {object}
-     */
-    public function map_list($game_code) {
-        return $this->call('Game.GameMap.LoadList', array('game_code' => $game_code));
-    }
-
-    /**
-     * This wrapper will return a list of games according to the filter you provide
-     *
-     * Note: a Result of 601 means that your search term was too short, must be at least 3 characters long
-     *
-     * @param string $filter     filter the results with a generic filter
-     *
-     * @return object {int result [, array games]}
-     */
-    public function game_search($filter) {
-        return $this->call('Game.GameSearch.Search', array('game' => $filter));
-    }
-
-    /**
-     * Returns the currently most popular games on BinaryBeast
-     *
-     * @param int $limit        simply limits the number of results, as this service is NOT paginated
-     *
-     * @return object {int result, [array games]}
-     */
-    public function game_list_top($limit = 10) {
-        return $this->call('Game.GameSearch.Top', array('limit' => $limit));
-    }
-
-    /**
-     * This wrapper allows you to search through the ISO list of countries
-     * This is useful because BinaryBeast team's use ISO 3 character character codes, so 
-     * to keep it simple, you can just look through our list of countries to get the codes
-     * 
-     * There's nothing special about our list of countries however, you can look up the official list on wikipedia
-     * 
-     * @param string $country       Simple search filter, something like "united" would yield things like USA, UK, etc
-     * 
-     * @return object {int result, [array countries]}
-     */
-    public function country_search($country) {
-        return $this->Call('Country.CountrySearch.Search', array('country' => $country));
-    }
-
 }
+
 ?>

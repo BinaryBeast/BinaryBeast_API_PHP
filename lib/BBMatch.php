@@ -54,23 +54,30 @@ class BBMatch extends BBModel {
         //General notes / description on the match
         'notes'                     => null,
     );
-
+    
     /**
-     * Override the getter method - we may have to access games within the match instead of just general info
+     * Returns a list of games within this tournament
+     * BBModel allows us to define a method to call when developers
+     * try to access a property that isn't accessible, for example
+     * $match->games -- BBModel will return BBMatch::games()
      */
-    public function &__get($name) {
-        
-        //If attempting to access the array of participants, load them now
-        if($name == 'games' && is_null($this->games)) {
-            //GOGOGO!
-            $this->load_games();
-
-            //Success! now finish the array we just created
-            return $this->games;
-        }
-
-        //Execute default __get method defined in the base BBModel class
-        return parent::__get($name);
+    protected function games() {
+        /**
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * Build this method
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         */
     }
 
     /**
@@ -111,7 +118,7 @@ class BBMatch extends BBModel {
             //Now loop through each game as instantiate a new BBMatchGame for it
             $this->games = array();
             foreach($data->games as &$game) {
-                $this->games[] = new BBMatchGame($bb, $data);
+                $this->games[] = new BBMatchGame($this->bb, $game);
             }
         }
         //Let BBModal handle the rest, business as usual
