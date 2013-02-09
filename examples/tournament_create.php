@@ -13,7 +13,7 @@
 
 
 //Require the main class and instantiate with our API Key
-require('../BinaryBeast.php');
+//require('../BinaryBeast.php');
 //This is a valid test key, please use responsibly ;)
 $bb = new BinaryBeast('e17d31bfcbedd1c39bcb018c5f0d0fbf.4dcb36f5cc0d74.24632846');
 
