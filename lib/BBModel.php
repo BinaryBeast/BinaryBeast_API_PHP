@@ -82,12 +82,6 @@ class BBModel {
     public $changed = false;
 
     /**
-     * Really stupid way of getting around the ridiculous error when trying
-     * to return null in &__get, so we use ref() to set this value and return it
-     */
-    protected $ref = null;
-
-    /**
      * Constructor - accepts a reference the BinaryBeats API $bb
      * 
      * @param BinaryBeast $bb       Reference to the main API class
@@ -615,22 +609,6 @@ class BBModel {
     }
 
     /**
-     * BBModel defined __get as returning a reference, which is nice in most cases...
-     * however for example we can't return directly null, false etc.. and we don't want
-     * to return references to $data elements, because we don't want those to be 
-     * editable
-     * 
-     * Therefore this method can be used to return a raw value as a reference
-     * It stores the provided value in $this->ref, and returns a reference to it
-     * 
-     * @param mixed $value
-     * @return mixed
-     */
-    protected function &ref($value) {
-        return $this->ref = $value;
-    }
-
-    /**
      * Iterates through a list of returned objects form the API, and "casts" them as
      * modal classes
      * for example, $bb->tournament->list_my() returns an array, each element being an instance of BBTournament,
@@ -692,22 +670,6 @@ class BBModel {
         return array_merge($this->data, $this->new_data);
     }
 
-    /**
-     * Our stupid silly hacking solution to the infuratingly 
-     * frustrating error returned whenever we try to return
-     * a null / false non-reference value from reference methods, such as &__get
-     * 
-     * What we do as we call this method with the value we want to refer, and it
-     * stores it into a property made just for this (called ref), and 
-     * returns a reference to it
-     * 
-     * @param mixed $value
-     * @return mixed
-     */
-    protected function &ref($value) {
-        $this->ref = $value;
-        return $this->ref;
-    }
 }
 
 ?>

@@ -84,22 +84,6 @@ class BinaryBeast {
     private static $server_ready = null;
 
     /**
-     * Used for two purposes:  
-     *      1: During __call to check the $name against a list of models that we can auto load
-     *      2: To define a list of dependent classes to automatically load when a class is included
-     * 
-     * Note that the names of the classes in here are the simplified versions, since
-     * @example tournament represents BBTournament
-     * @example match_game respresnts BBMatchGame
-     */
-    private static $models = array(
-        'tournament'    => array('model', 'match', 'match_game', 'team', 'round'),
-        'map'           => array('simple_model'),
-        'game'          => array('simple_model'),
-        'country'       => array('simple_model'),
-    );
-
-    /**
      * Store the result codes / values for the previous
      * API Request response
      */
@@ -115,11 +99,15 @@ class BinaryBeast {
     private $legacy = null;
 
     /**
-     * cache instances of BBSimpleModel classes
+     * Cache of simple models
      */
-    private $map;
-    private $country;
-    private $game;
+    private $simple_models = array();
+
+    /**
+     * Really stupid way of getting around the ridiculous error when trying
+     * to return null in &__get, so we use ref() to set this value and return it
+     */
+    protected $ref = null;
 
     /**
      * A few constants to make a few values a bit easier to read / use
@@ -204,10 +192,25 @@ class BinaryBeast {
 
         /**
          * Make sure some of the core libraries are pre-loaded, like
-         * BBHelper and BBResult
+         * BBHelper and BBResult, and the model classes
          */
-        $this->load_library('helper');
-        $this->load_library('result');
+        $this->load_library('BBHelper');
+        $this->load_library('BBResult');
+        $this->load_library('BBSimpleModel');
+        $this->load_library('BBModel');
+
+        /**
+         * For the convenience of developers using IDEs with code completion / hinting, 
+         * we created public properties for creating new models, like 
+         * $bb->tournament, $bb->map... but in essence what we need that to return is actually
+         * the result of executing tournament()
+         * 
+         * So here, we actually set the values of those properties to functions that return 
+         * the instance through their defined methods
+         */
+        $this->tournament = function() {
+            return $this->tournament();
+        };
     }
 
     /**
@@ -478,14 +481,24 @@ class BinaryBeast {
      * @param string $name
      */
     public function __get($name) {
-        //attempting to access a valid model?
-        $model = strtolower($name);
-        if(key_exists(strtolower($model), self::$models)) {
-            return $this->{$model}();
-        }
+        
+        //Convert to a model name, and try loading it as such
+        $model_name = $this->full_library_name($name);
+
+        /**
+         * Try treating as a SimpleModel
+         */
+        $simple_model = $this->get_simple_model($model_name);
+        if($simple_model) return $simple_model;
+
+        /**
+         * Try treating this as a full model
+         */
+        $model = $this->get_model($model_name);
+        if($model) return $model;
 
         //Invalid access
-        return null;
+        return $this->set_error('Attempted to access invalid property "' . $name . '"');
     }
     /**
      * Returns a new BBTournament model class
@@ -497,28 +510,28 @@ class BinaryBeast {
      * @return BBTournament
      */
     public function tournament($tourney_id = null) {
-        return $this->get_model('tournament', $tourney_id, false);
+        return $this->get_model('BBTournament', $tourney_id);
     }
     /**
      * Returns a new BBMap simple_model class
      * @return BBMap
      */
     public function &map() {
-        return $this->get_simple_model('map');
+        return $this->get_simple_model('BBMap');
     }
     /**
      * Returns a new BBCountry simple_model class
      * @return BBCountry
      */
     public function &country() {
-        return $this->get_simple_model('map');
+        return $this->get_simple_model('BBCountry');
     }
     /**
      * Returns a new BBGame simple_model class
      * @return BBGame
      */
     public function &game() {
-        return $this->get_simple_model('game');
+        return $this->get_simple_model('BBGame');
     }
     
     /**
@@ -526,33 +539,25 @@ class BinaryBeast {
      * to load libraries on demand, but we use class_exists first to see
      * if we actually need to load the file
      * 
-     * Be sure that when you call this method, you provide the simplified
-     * libary name... for example ask for round, not BBRound..
-     * and ask for match_game, not BBMatchGame
-     * 
-     * @param string $library
-     * @return string       Returns the full class_name of the actual class and file name
+     * @param string        $library        Full library class name / file name
+     * @return boolean      False if the library name is invalid
      */
     private function load_library($library) {
-        //Convert the library name to the full class name
-        $class = $this->full_library_name($library);
 
         //require(), only if the class isn't already defined
-        if(!class_exists($class)) {
-            require("lib/$class.php");
-        }
-
-        //Load all dependents
-        if(key_exists($library, self::$models)) {
-            if(is_array(self::$models[$library])) {
-                foreach(self::$models[$library] as $child) {
-                    $this->load_library($child);
-                }
+        if(!class_exists($library)) {
+            //Does the file even exist??
+            if(file_exists("lib/$library.php")) {
+                require("lib/$library.php");
+                return true;
             }
+
+            //Invalid library name
+            else return false;
         }
 
-        //Return the class_name we converted
-        return $class;
+        //Success!
+        return true;
     }
     /**
      * Converts a simplified library name to the full
@@ -573,44 +578,72 @@ class BinaryBeast {
     }
 
     /**
-     * Mode like get_model, except this method cached
-     * the instances locally before returning
+     * returns a reference to a locally cached instance of a simple model
+     * 
+     * Simple models do not have exclusive data / offer methods for saving data
+     * to the API - all they do is wrap services
+     * 
+     * Therefore there's no point in wasting the time in returning a new instance each time, we'll
+     * just store a copy of the first instance we create, and return that each time
+     * 
+     * Returns false if either the library could not be loaded, or it was an instance of BBModel
+     * 
+     * Note that when provding the $model name, this method expects the FULL model name
+     * 
      * @param string $model
      * @return BBSimpleModel
      */
     private function &get_simple_model($model) {
 
         //Already cached
-        if(!is_null($this->{$model})) return $this->{$model};
+        if(key_exists($model, $this->simple_models)) return $this->simple_models[$model];
+        
+        /*
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * Test this
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         */
 
-        //Use get_model to do two things:  auto load BBSimpleModel, and to return a new instance of $model
-        $this->{$model} = $this->get_model($model, null, true);
+        //Store the new instance returned by get_model, and store it locally
+        if(!$instance = $this->get_model($model, null)) return false;
 
-        //Success! return a reference to the newly instnatated cached simple model
-        return $this->{$model};
+        //Make sure that the instance is actually an instance of BBSimpleModel
+        if(!($instance instanceof BBSimpleModel)) {
+            return $this->set_error($model . ' is not a SimpleModel class!');
+        }
+
+        //Cache it, and return the cached version
+        $this->simple_models[$model] = $instance;
+        return $this->simple_models[$model];
     }
     /**
      * Returns a newly instantiated modal class, either returning
      * 
-     * @param string  $model        Base name of the model, for example BBTournament is just "touranment"
+     * @param string  $model        Full name of the model (example: BBTournament, BBMatchGame)
      * @param string  $data         Optional data to send to the new model, like a result set or id value
-     * @param boolean $simple       False by default - autoload BBSimpleModel instead of BBModel if true
-     * @param boolean $direct       Return the class direclty instead of an instance - allows model() methods to instantiate manually
-     * @return BBModal
+     * @return BBModal              False if the $model name is invalid
      */
-    private function get_model($model, $data = null, $simple = false) {
-        //Make sure the base BBModel class is available
-        $this->load_library($simple ? 'simple_model' : 'model');
-
-        /**
-         * Use load_library to make sure the class is available,
-         * and it will also return to us the real class_name we can use
-         * while creating a new instance
-         */
-        $class_name = $this->load_library($model);
+    private function get_model($model, $data = null) {
+        //If we can't load the class file, stop now
+        if(!$this->load_library($model)) {
+            //load_library sets an error for us already, so we can just return false
+            return false;
+        }
 
         //Success! Now return a new instance
-        return new $class_name($this, $data);
+        return new $model($this, $data);
     }
 
     /**
@@ -669,6 +702,22 @@ class BinaryBeast {
         //Return a reference to a newly instantated BBLegacy class
         $this->legacy = new BBLegacy($this);
         return $this->legacy;
+    }
+
+    /**
+     * BBModel defined __get as returning a reference, which is nice in most cases...
+     * however for example we can't return directly null, false etc.. and we don't want
+     * to return references to $data elements, because we don't want those to be 
+     * editable
+     * 
+     * Therefore this method can be used to return a raw value as a reference
+     * It stores the provided value in $this->ref, and returns a reference to it
+     * 
+     * @param mixed $value
+     * @return mixed
+     */
+    protected function &ref($value) {
+        return $this->ref = $value;
     }
 }
 
