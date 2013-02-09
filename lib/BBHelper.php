@@ -141,10 +141,15 @@ class BBHelper {
      * @param string $result
      */
     public static function translate_result($result) {
-        if(isset(self::$results_codes[$result])) {
-            return self::$results_codes[$result];
+        //Only bother if it's a string/number
+        if(is_string($result) || is_numeric($result)) {
+            if(key_exists($result, self::$results_codes)) {
+                return self::$results_codes[$result];
+            }
         }
-        return null;
+        
+        //If unable to find af riendly version, just pass back the original input
+        return $result;
     }
 
     /**

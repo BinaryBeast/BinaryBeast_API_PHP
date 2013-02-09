@@ -12,7 +12,7 @@
  *   http://www.gnu.org/licenses/gpl.html
  * 
  * @version 1.0.2
- * @date 2013-02-05
+ * @date 2013-02-08
  * @author Brandon Simmons
  */
 class BBTournament extends BBModel {
@@ -50,7 +50,7 @@ class BBTournament extends BBModel {
 
     //Define the key to use for extracting data from the API result
     protected $data_extraction_key = 'tourney_info';
-
+    
     /**
      * Default values for a new tournament, also a useful reference for developers
      * @var array
@@ -147,10 +147,7 @@ class BBTournament extends BBModel {
         }
 
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
-        $result = $this->bb->call('Tourney.TourneyLoad.Teams', array('tourney_id' => $this->tourney_id));
-
-        //Store the result code
-        $this->set_result($result->result);
+        $result = $this->call('Tourney.TourneyLoad.Teams', array('tourney_id' => $this->tourney_id));
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
@@ -214,10 +211,7 @@ class BBTournament extends BBModel {
         }
 
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
-        $result = $this->bb->call('Tourney.TourneyLoad.Rounds', array('tourney_id' => $this->tourney_id));
-
-        //Store the result code
-        $this->set_result($result->result);
+        $result = $this->call('Tourney.TourneyLoad.Rounds', array('tourney_id' => $this->tourney_id));
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
@@ -295,24 +289,57 @@ class BBTournament extends BBModel {
      * Save the tournament - overloads BBModel::save() so we can 
      * check to see if we need to save rounds too
      */
-    public function save($data_only = false) {
-        //First save the tournament data, stop if it fails (store the result so we can return it)
-        $result = parent::save();
+    public function save($return_result = false, $child_args = null) {
+        /**
+         * Before trying to save any teams or rounds, first step is to save the tournament itself
+         * Depending on new vs old, we save it and stash the result, then return
+         * the result later after updating children
+         */
+        //For new tournaments - use save_new for special import instructions
+        if(is_null($this->id)) $result = $this->save_new();
+
+        //Simple update - use standard save() method
+        else $result = parent::save();
+
+        //Info update failed, return fasle
         if(!$result) return false;
 
-        /**
-         * Check sub models (rounds, teams) unless requested not to
-         */
-        if(!$data_only) {
-            //Submit any round format changes
-            if(!$this->save_rounds()) return false;
+        //Submit any round format changes
+        if(!$this->save_rounds()) return false;
 
-            //Save any new / updated teams
-            if(!$this->save_teams()) return false;
-        }
-
+        //Save any new / updated teams
+        if(!$this->save_teams()) return false;
+        
         //Success! Return the original save() result (if this tour is new, it'll give us the tourney_id)
         return $result;
+    }
+    /**
+     * If creating a new tournament, we want to make sure that when the data is sent
+     * to the API, that we request return_data => 2, therefore asking BinaryBeast to send
+     * back a full TourneyInfo object for us to import all values that may have been
+     * generated on BB's end
+     * 
+     * @return boolean
+     */
+    private function save_new() {
+        /**
+         * Use the parent save(), but request the result to be returned, and add
+         * return_data = 2 to the arguments
+         * 
+         * If all goes well, bb will send back a full tourney_info object we can import
+         */
+        if(!$result = parent::save(true, array('return_data' => 2))) return false;
+
+        //OH NOES!
+        if($result->result !== 200) return false;
+
+        /**
+         * Import the new data
+         */
+        $this->import_values($result);
+
+        //Success!
+        return true;
     }
 
     /**
@@ -367,8 +394,7 @@ class BBTournament extends BBModel {
             ));
 
             //GOGOGO! store the result each time
-            $result = $this->bb->call('Tourney.TourneyRound.BatchUpdate', $args);
-            $this->set_result($result);
+            $result = $this->call('Tourney.TourneyRound.BatchUpdate', $args);
 
             //OH NOES!
             if($result->result != BinaryBeast::RESULT_SUCCESS) {
@@ -437,13 +463,13 @@ class BBTournament extends BBModel {
         }
 
         //Send the compiled arrays to BinaryBeast
-        $result = $this->bb->call('Tourney.TourneyTeam.BatchUpdate', array(
+        $result = $this->call('Tourney.TourneyTeam.BatchUpdate', array(
             'tourney_id'        => $this->tourney_id,
             'teams'             => $teams,
             'new_teams'         => $new_teams
         ));
         //Oh noes!
-        if($result->result != 200) {
+        if($result->result != BinaryBeast::RESULT_SUCCESS) {
             return $this->set_error($result);
         }
 
@@ -481,7 +507,7 @@ class BBTournament extends BBModel {
      * @param 
      */
     public function list_my($filter = null, $limit = 30, $private = true) {
-        $result = $this->bb->call('Tourney.TourneyList.Creator', array(
+        $result = $this->call('Tourney.TourneyList.Creator', array(
             'filter'    => $filter,
             'page_size' => $limit,
             'private'   => $private,
@@ -489,7 +515,6 @@ class BBTournament extends BBModel {
 
         //OH NOES!
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
-            $this->set_result($result->result);
             return $this->set_error($result);
         }
 

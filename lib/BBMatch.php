@@ -54,7 +54,7 @@ class BBMatch extends BBModel {
         //General notes / description on the match
         'notes'                     => null,
     );
-
+    
     /**
      * Returns an array of games within this tournament
      * BBModel will automatically execute this when $match->games is accessed, so that we 
@@ -123,7 +123,7 @@ class BBMatch extends BBModel {
             //Now loop through each game as instantiate a new BBMatchGame for it
             $this->games = array();
             foreach($data->games as &$game) {
-                $this->games[] = new BBMatchGame($bb, $game);
+                $this->games[] = new BBMatchGame($this->bb, $game);
             }
         }
         //Let BBModal handle the rest, business as usual

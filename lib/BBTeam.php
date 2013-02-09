@@ -157,14 +157,6 @@ class BBTeam extends BBModel {
         //Notify the tournament we're up-to-date
         if(!$skip_unflag) $this->tournament->unflag_child_changed($this);
 
-        /**
-         * If this was a new tournament, we'll actually import default values in
-         * instead of simply merging data with new_data
-         */
-        if(is_null($this->tourney_team_id)) {
-            $this->import_values($this->get_sync_values());
-        }
-
         //Let BBModel handle the rest
         parent::sync_changes();
     }

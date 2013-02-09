@@ -116,7 +116,7 @@ class BBRound extends BBModel {
      * 
      * @return boolean
      */
-    public function save() {
+    public function save($return_result = false, $child_args = null) {
 
         //Nothing to do - set an error but return true since we didn't actually fail
         if(!$this->changed) {
@@ -140,11 +140,7 @@ class BBRound extends BBModel {
         ), $this->data, $this->new_data);
 
         //GOGOGO!
-        $result = $this->bb->call($svc, $args);
-
-        //Delete any prior error messages, and store the result of the api call
-        $this->clear_error();
-        $this->set_result($result->result);
+        $result = $this->call($svc, $args);
 
         /*
          * Saved successfully - reset some local values and return true
