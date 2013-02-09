@@ -54,12 +54,6 @@ class BinaryBeast {
     private $url = 'https://api.binarybeast.com/';
 
     /**
-     * Calculated path for loading libraries on-demand
-     * @deprecated - nevermind, decided to auto load them anyway: is easier
-     */
-    //private $lib_path = null;
-
-    /**
      * BinaryBeast API Key
      * @access private
      * @var string
@@ -90,6 +84,11 @@ class BinaryBeast {
     public $last_error;
     public $last_result;
     public $last_friendly_result;
+    /**
+     * When a new error or result is set, we stash previous values in these arrays
+     */
+    public $error_history   = array();
+    public $result_history  = array();
 
     /**
      * Store an instance of BBLegacy, it's only even
@@ -101,7 +100,7 @@ class BinaryBeast {
     /**
      * Cache of simple models
      */
-    private $simple_models = array();
+    private $models_cache = array();
 
     /**
      * Really stupid way of getting around the ridiculous error when trying
@@ -198,19 +197,6 @@ class BinaryBeast {
         $this->load_library('BBResult');
         $this->load_library('BBSimpleModel');
         $this->load_library('BBModel');
-
-        /**
-         * For the convenience of developers using IDEs with code completion / hinting, 
-         * we created public properties for creating new models, like 
-         * $bb->tournament, $bb->map... but in essence what we need that to return is actually
-         * the result of executing tournament()
-         * 
-         * So here, we actually set the values of those properties to functions that return 
-         * the instance through their defined methods
-         */
-        $this->tournament = function() {
-            return $this->tournament();
-        };
     }
 
     /**
@@ -378,6 +364,7 @@ class BinaryBeast {
      * @return array
      */
     public function set_error($error = null) {
+        
         //Convert objecst into arrays
         if(is_object($error)) $error = (array)$error;
 
@@ -392,6 +379,9 @@ class BinaryBeast {
         }
         //Sent a blank error, so we'll delete any previous errors now
         else $this->last_error = null;
+
+        //Store it in the error history array too
+        $this->error_history[] = $this->last_error;
 
         return $this->last_error;
     }
@@ -410,8 +400,12 @@ class BinaryBeast {
      * @return void
      */
     private function set_result(&$result) {
+        //Stash the new values, and try to translate the result code to be more readable
         $this->last_result = isset($result->result) ? $result->result : false;
         $this->last_friendly_result = BBHelper::translate_result($this->last_result);
+
+        //Store it in the result history array too
+        $this->result_history[] = array('result' => $this->last_result, 'friendly' => $this->last_friendly_result);
     }
 
     /**
@@ -454,7 +448,8 @@ class BinaryBeast {
 
         //SSL Verification failed
         if (!$result) {
-            return json_encode(array('result' => curl_errno($curl), 'error_message' => curl_error($curl)));
+            $this->set_error(array('error_message' => 'cURL call failed', 'curl_error' => curl_error($curl), 'curl_code' => curl_errno($curl)));
+            return json_encode(array('result' => false, 'error' => $this->last_error));
         }
 
         //Success!
@@ -553,7 +548,10 @@ class BinaryBeast {
             }
 
             //Invalid library name
-            else return false;
+            else {
+                $this->set_error("Unable to load file \"lib/$library.php\" - file does not exist");
+                return false;
+            }
         }
 
         //Success!
@@ -596,37 +594,13 @@ class BinaryBeast {
     private function &get_simple_model($model) {
 
         //Already cached
-        if(key_exists($model, $this->simple_models)) return $this->simple_models[$model];
-        
-        /*
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * Test this
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         */
+        if(isset($this->models_cache[$model])) return $this->models_cache[$model];
 
-        //Store the new instance returned by get_model, and store it locally
-        if(!$instance = $this->get_model($model, null)) return false;
-
-        //Make sure that the instance is actually an instance of BBSimpleModel
-        if(!($instance instanceof BBSimpleModel)) {
-            return $this->set_error($model . ' is not a SimpleModel class!');
-        }
+        //Store the new instance returned by get_model directly into the local model cache
+        if(!$this->models_cache[$model] = $this->get_model($model, null)) return $this->ref(false);
 
         //Cache it, and return the cached version
-        $this->simple_models[$model] = $instance;
-        return $this->simple_models[$model];
+        return $this->models_cache[$model];
     }
     /**
      * Returns a newly instantiated modal class, either returning
@@ -636,14 +610,33 @@ class BinaryBeast {
      * @return BBModal              False if the $model name is invalid
      */
     private function get_model($model, $data = null) {
-        //If we can't load the class file, stop now
+        /**
+         * load_library was not able to find the file for this class, so we return false
+         * Note: We don't have to worry about setting an error, load_library does that for us
+         */
         if(!$this->load_library($model)) {
-            //load_library sets an error for us already, so we can just return false
             return false;
         }
 
-        //Success! Now return a new instance
-        return new $model($this, $data);
+        //Load it first, so we can test it to make sure it's actually a model (we only want to return models)
+        $instance = new $model($this, $data);
+
+        /*
+         * If it's not a model, don't return it as one, return false
+         * Note: My benchmarks have shown the instanceof operator to be DRASTICALLY faster
+         * than any other method of determine if an object inherits from a certain class
+         * 
+         * The performance of is_subclass_of and is_a were nearly identical, typeof was BY FAR infinitely faster than either
+         * 
+         * (7 * faster than subclasss using a string, 32 * faster than subclass without using string)
+         */
+        if(!($instance instanceof BBSimpleModel)) {
+            $this->set_error("$model is not a BBModel class! Only classes that extend BBModel or BBSimpleModel can be returned from get_model");
+            return false;
+        }
+
+        //Success! Now return the instance we created earlier
+        return $instance;
     }
 
     /**
@@ -697,7 +690,7 @@ class BinaryBeast {
         if(!is_null($this->legacy)) return $this->legacy;
 
         //Make sure that BBLegacy.php is included
-        $this->load_library('legacy');
+        $this->load_library('BBLegacy');
 
         //Return a reference to a newly instantated BBLegacy class
         $this->legacy = new BBLegacy($this);
@@ -717,7 +710,8 @@ class BinaryBeast {
      * @return mixed
      */
     protected function &ref($value) {
-        return $this->ref = $value;
+        $this->ref = $value;
+        return $this->ref;
     }
 }
 
