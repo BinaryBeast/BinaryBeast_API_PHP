@@ -142,6 +142,14 @@ class BBTournament extends BBModel {
      * This method takes advantage of BBModel's __get, which allows us to emulate public values that we can
      * intercept access attempts, so we can execute an API request to get the values first
      * 
+     * WARNING:  Be careful when evaluating the result of this method, if you try to evaluate the result
+     * as a boolean, you may be surprised when an empty array is returned making it look like the service failed
+     * 
+     * If you want to check for errors with this method, make sure you do it like this:
+     *      if($tournament->teams() === false) {
+     *          OH NO!!!
+     *      }
+     * 
      * @return boolean      False if it fails for any reason - it will only return false for API / validation errors, never for an empty array set
      */
     public function &teams() {
@@ -298,28 +306,32 @@ class BBTournament extends BBModel {
     /**
      * Save the tournament - overloads BBModel::save() so we can 
      * check to see if we need to save rounds too
+     * 
+     * @return int|string       The id of this tournament to indicate a successful save
      */
     public function save($return_result = false, $child_args = null) {
+        //Remember wether or not this tournament is new - because we'll want to skip teams / rounds later if it is
+        $new = is_null($this->id);
+
         /**
          * Before trying to save any teams or rounds, first step is to save the tournament itself
          * Depending on new vs old, we save it and stash the result, then return
          * the result later after updating children
          */
-        //For new tournaments - use save_new for special import instructions
-        if(is_null($this->id)) $result = $this->save_new();
+        //For new tournaments - use save_new for special import instructions, otherwise use the standard save() method
+        $result = $new ? $this->save_new() : parent::save();
 
-        //Simple update - use standard save() method
-        else $result = parent::save();
-
-        //Info update failed, return fasle
+        //Oh noes!! save failed, so return false - developer should check the value of $bb->last_error
         if(!$result) return false;
 
-        //Submit any round format changes
-        if(!$this->save_rounds()) return false;
+        /**
+         * For existing tournaments, now we update any rounds or teams that have changed
+         */
+        if(!$new) {
+            if(!$this->save_rounds()) return false;
+            if(!$this->save_teams()) return false;
+        }
 
-        //Save any new / updated teams
-        if(!$this->save_teams()) return false;
-        
         //Success! Return the original save() result (if this tour is new, it'll give us the tourney_id)
         return $result;
     }
@@ -329,14 +341,12 @@ class BBTournament extends BBModel {
      * back a full TourneyInfo object for us to import all values that may have been
      * generated on BB's end
      * 
-     * @return boolean
+     * @return string       The new tourney_id for this object
      */
     private function save_new() {
         /**
-         * Use the parent save(), but request the result to be returned, and add
-         * return_data = 2 to the arguments
-         * 
-         * If all goes well, bb will send back a full tourney_info object we can import
+         * Use the standard BBModel::save, but add the paramater return_data, so that 
+         * BinaryBeast will send back in the response a full tourney_info dump that we can import
          */
         if(!$result = parent::save(true, array('return_data' => 2))) return false;
 
@@ -344,12 +354,13 @@ class BBTournament extends BBModel {
         if($result->result !== 200) return false;
 
         /**
-         * Import the new data
+         * Import the new data, and save the ID
          */
         $this->import_values($result);
+        $this->set_id($result->tourney_id);
 
         //Success!
-        return true;
+        return $this->id;
     }
 
     /**
@@ -365,9 +376,12 @@ class BBTournament extends BBModel {
         /**
          * Can't save children before the tournament even exists!
          */
-        if(is_null($this->tourney_id)) {
+        if(is_null($this->id)) {
             return $this->set_error('Can\t save teams before saving the tournament!');
         }
+
+        //Nothing has changed, just return true
+        if(sizeof($this->rounds_changed) == 0) return true;
 
         /**
          * We have to compile all of the values into separate arrays, keyed by round,
@@ -441,9 +455,12 @@ class BBTournament extends BBModel {
         /**
          * Can't save children before the tournament even exists!
          */
-        if(is_null($this->tourney_id)) {
+        if(is_null($this->id)) {
             return $this->set_error('Can\t save teams before saving the tournament!');
         }
+
+        //Nothing has changed, just return true
+        if(sizeof($this->teams_changed) == 0) return true;
 
         /**
          * Using the array of tracked / changed teams, let's compile
@@ -533,15 +550,14 @@ class BBTournament extends BBModel {
      * However since this service is loading public tournaments, that means we likely
      *      won't have access to edit any of them
      * 
-     * Therefore, all tournaments returned by this service are simplly BBResult wrapped values, they are not
-     *  full BBTournament models
+     * Therefore, all tournaments returned by this service are simple data objects
      * 
      * @param string $game_code
      *      You have the option of limiting the tournaments returned by context of a specific game,
      *      In otherwords for example game_code QL will ONLY return the most popular games that are using
      *      Quake Live
      * @param int $limit            Defaults to 10, cannot exceed 100
-     * @return BBResult
+     * @return array<object>
      */
     public function list_popular($game_code = null, $limit = 10) {
         return $this->get_list(self::SERVICE_LIST_POPULAR, array(
@@ -605,12 +621,12 @@ class BBTournament extends BBModel {
     }
 
     /**
-     * Returns a new BBTeam object to add to the tournament
+     * Either returns a new BBTeam to add to the tournament, or returns a reference to an existing one
      * 
      * This method will return a value of false if the tournament is already active!
      * 
-     * A cool tip: this method can actually be used to pre-definea list of players in a new tournaemnt, before
-     * you even create it :)
+     * A cool tip: this method can actually be used to pre-define a list of players in a new tournaemnt, before
+     *      you even create it :)
      * 
      * Note: ALL this method does is return a new BBTeam! it does NOT send it to the API and save it!
      * 
@@ -643,9 +659,12 @@ class BBTournament extends BBModel {
             return $this->bb->ref($this->set_error('You cannot add players to active tournaments!!'));
         }
 
-        //Insure that the local teams array is up to date according to BinaryBeast
-        if(!$this->teams()) return $this->bb->ref(false);
-
+        /**
+         * Insure that the local teams array is up to date according to BinaryBeast
+         * Wouldn't want to risk adding a new player to make teams() look initilaized,
+         *  when in reality it hasn't yet
+         */
+        if($this->teams() === false) return $this->bb->ref(false);
 
         /**
          * If they provided an $id, that means they we need to return a 
@@ -694,6 +713,103 @@ class BBTournament extends BBModel {
      */
     public function &add_team() {
         return $this->team();
+    }
+
+    /**
+     * If you plan to allow players to join externaly from BinaryBeast.com, 
+     *  you can use this method to allow them to start confirming their positions
+     * 
+     * @return boolean
+     */
+    public function allow_player_confirmations() {
+        /**
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * Build this
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         */
+    }
+
+    /**
+     * DANGER DANGER DANGER DANGER DANGER
+     * DANGER!
+     * 
+     * This method will actually revert the tournament to its previous stage,
+     *      So if you have brackets or groups, ALL progress in them will be lost forever
+     * 
+     * 
+     * So BE VERY CAREFUL AND BE CERTAIN YOU WANT TO USE THIS
+     * 
+     * 
+     * @return boolean      Simple result boolean, false on error true on success 
+     */
+    public function reopen() {
+        //Can only reopen an active tournament
+        if(!BBHelper::tournament_is_active($this)) {
+            return $this->set_error('Tournament is not currently actve (current status is ' . $this->status . ')');
+        }
+
+        //Make the call
+        /*
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * Build this
+         * 
+         * 
+         * 
+         * 
+         * 
+         */
+
+        bb_debug('reopen now');
+    }
+
+    /**
+     * Start the tournament!!
+     * 
+     * This method will move the tournament into the next stage
+     *      Depending on type_id and current status, the next stage could be Active, Active-Groups, or Active-Brackets
+     * 
+     * 
+     * 
+     * @param string $seeding       'random' by default, any of the following are accepted: 'manual', 'sports', 'balanced'
+     * @param type $order
+     */
+    public function start($seeding = 'random', $order = null) {
+        //Use BBHelper to run verify that this touranment is ready to start
+        if(is_string($error = BBHelper::tournament_can_start($this))) {
+            //If it returned a string, that means there's an error to set
+            return $this->set_error($error);
+        }
+
+        bb_debug('start!');
+    }
+    /**
+     * When starting a tournament, this method is used to make sure that
+     * if the developer provides us with a order of teams to set when starting,
+     * that all values are valid / in this tournament
+     * 
+     * @param array $teams
+     * @return boolean
+     */
+    private function validate_teams(&$teams) {
+        
     }
 }
 

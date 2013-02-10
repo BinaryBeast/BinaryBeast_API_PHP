@@ -222,7 +222,6 @@ class BinaryBeast {
      */
     private static function init(&$bb) {
         $bb->load_library('BBHelper');
-        $bb->load_library('BBResult');
         $bb->load_library('BBSimpleModel');
         $bb->load_library('BBModel');
 
@@ -350,20 +349,12 @@ class BinaryBeast {
      * 
      * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_call
      * 
-     * New in 3.0.0 - this method now by default, automatically returns the result wrapped in a new BBResult class
-     * This can be overridden however, by setting the third paramater to false
-     * 
-     * I suggest reading the documentation in BBResult.php to see what it does, but in short:
-     * it makes accessing the values returned a lot more flexibile and forgiving, basically
-     * allowing you to refer to values within it in any format you'd like (ie underscore_keys or camelCasee)
-     *
      * @param string    Service to call (ie Tourney.TourneyCreate.Create)
      * @param array     Arguments to send
-     * @param wrapped   True by default, wraps API results in the BBResult class - which allows flexibile accessability, custom iteration etc etc
      *
-     * @return BBResult
+     * @return object
      */
-    public function call($svc, $args = null, $wrapped = true) {
+    public function call($svc, $args = null) {
         //This server does not support curl or fopen
         if (!self::$server_ready) {
             return self::get_server_ready_error();
@@ -375,8 +366,8 @@ class BinaryBeast {
         //Store the latest result code, so developers can have easy access to it in $bb->result[_friendly]
         $this->set_result($response, $svc, $args);
 
-        //Success!  Now return it either raw, or wrapped in a new BBResult()
-        return $wrapped ? new BBResult($response) : $response;
+        //Success!
+        return $response;
     }
 
 
@@ -694,9 +685,6 @@ class BinaryBeast {
      * 
      * In which case, we'll use BBLegacy to do the work, since I want to keep this class 
      * as clean as possible
-     * 
-     * If we can find the method to call, we'll go ahead and use the new
-     * BBResult wrapper to wrap the results for a more flexibily accessible result set
      */
     public function __call($name, $args) {
 

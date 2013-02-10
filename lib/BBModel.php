@@ -18,18 +18,22 @@
 class BBModel extends BBSimpleModel {
 
     /**
-     * We're storing values in this array to allow us to handle intercept an attempt to load a value
-     * Made public for print_r, var_dump etc
+     * Public "preview" of current data values, mostly for the benefit
+     *  for var_dump, as it will always have the latest value (even pending save())
      * @var array
      */
     public $data = array();
 
     /**
-     * Each time a setting is changed, we store the new setting here, so we know
-     * which values to send to the API, instead of dumping everything and sending it all
-     * @var array
+     * Array of original data that we can use later if we need to 
+     *  revert changed
      */
-    protected $new_data = array();
+    public $current_data = array();
+
+    /**
+     * Stores JUST values that have been changed and are pending the next save()
+     */
+    public $new_data = array();
 
     //Should be defined by children classes to let us know which property to use as the unique ID for this instance
     //For example for a tournament, this value should be tourney_id, so we can refer to $this->tourney_id dynamically
@@ -92,23 +96,26 @@ class BBModel extends BBSimpleModel {
         }
     }
 
-
     /**
-     * Use the main BinaryBeast library class to send an API service request to BinaryBeast.com
+     * Whenever we'd like to change a setting, we use this method to do two things:
+     *  1) Add it to new_data
+     *  2) Update or add it to the public $data array
      * 
-     * Overloads the simple model's call() to set the default value of 
-     * $wrapped to false
-     * 
-     * 
-     * @see BBSimpleModel::call();
-     * 
-     * @param string $svc
-     * @param array $args
-     * @return object
+     * @param string $key
+     * @param mixed $value
      */
-    protected function call($svc, $args, $wrapped = false) {
-        //Let BBSimpleModel::call() handle it
-        return parent::call($svc, $args, $wrapped);
+    protected function set_new_data($key, $value) {
+        //If it's the same, then don't flag it a change
+        if(isset($this->current_data[$key])) {
+            if($this->current_data[$key] == $value) return;
+        }
+
+        //Add it to both $new_data and $data
+        $this->data[$key]       = $value;
+        $this->new_data[$key]   = $value;
+
+        //Flag unsaved changes
+        $this->changed = true;
     }
 
     /**
@@ -124,9 +131,8 @@ class BBModel extends BBSimpleModel {
      * $bb->load returns BBTournament::load()
      * 
      * Priority of returned value:
-     *      $new_data
      *      $data
-     *      $default_data (new objects only)
+     *      $new_data
      *      {$method}()
      *      $id as ${$id_property}
      * 
@@ -134,51 +140,28 @@ class BBModel extends BBSimpleModel {
      * @return mixed
      */
     public function &__get($name) {
-        
+
         /**
-         * I want __get to return references in most cases, like BBTournament::load()|rounds|teams, etc etc
-         * but I also need to be able to return values without sending references, because I also don't want 
-         * developers directly editing references to the internal value arrays, because that would
-         * circum-vent the __save method, and we would therefore not know to send changes to the API
+         * VERY first step is to try $data, which hosts a combination depending on the state of this object
+         *  For new objects, it's a combination of new_data + default_values
+         *  For real objects, it's a combination of new_data + current_data
          * 
-         * So if we find the value locally, we use BBModel::ref() to save the value to a temporary
-         * reference, and to return THAT
-         * 
-         * 
-         * Regardless of wether or not this object has an ID, we'll first check new_data
+         * Since &__get is defined as returning a reference, we return the result through BinaryBeast::ref()
          */
-        if(isset($this->new_data[$name])) {
-            return $this->bb->ref($this->new_data[$name]);
+        if(isset($this->data[$name])) {
+            return $this->bb->ref($this->data[$name]);
         }
 
         /**
-         * Nothing in new_data, so next we need to figure out if this is a new object, or if we are creating a new one
-         */
-        if(is_null($this->id)) {
-            /**
-             * New object, now we can safely return from default_values if set
-             */
-            if(isset($this->default_values[$name])) {
-                return $this->bb->ref($this->default_values[$name]);
-            }
-        }
-
-        /**
-         * So at this point we know it's an existing object (it has an ID to load), so the last thing
-         * we can try is to actually ask BinaryBeast for the information of this object
+         * Next thing to try depends on whether this is a new tournament yet to be created,
+         *  or an existing one
          * 
-         * So next: load() (if we haven't already), and try again
+         * It exists, do we need to call the load() method to get the current values?
          */
-        else {
-            //We need to load the data first
-            if(sizeof($this->data) === 0) {
+        if(!is_null($this->id)) {
+            if(sizeof($this->current_data) === 0) {
                 $this->load();
                 return $this->__get($name);
-            }
-
-            //Data already exists, see if our $name is in there
-            else if(isset($this->data[$name])) {
-                return $this->bb->ref($this->data[$name]);
             }
         }
 
@@ -196,7 +179,7 @@ class BBModel extends BBSimpleModel {
         /**
          * Invalid property / method - return null (through the stupid ref() function)
          */
-        else return $this->bb->ref(null);
+        return $this->bb->ref(null);
     }
 
     /**
@@ -219,17 +202,19 @@ class BBModel extends BBSimpleModel {
             return false;
         }
 
-        //Very simply assign the new value into the new values array
-        $this->new_data[$name] = $value;
+        //Load first if we can
+        if(!is_null($this->id) && sizeof($this->current_data) == 0) {
+            $this->load();
+        }
 
-        //Flag changes have been made
-        $this->changed = true;
+        //Let set_new_data handle this
+        $this->set_new_data($name, $value);
     }
 
     /**
      * Handle attempts to directly echo / print this model
      * 
-     * What we do is just return the result of var_dump of get_sync_values,
+     * What we do is just return the result of var_dump of $data,
      * and add the id (if available)
      * 
      * We can do so by creating an output buffer, performing a var_dump, and
@@ -241,16 +226,16 @@ class BBModel extends BBSimpleModel {
         /**
          * Compile the values to dump
          */
-        $data = $this->get_sync_values();
+        $out = $this->data;
         if(!is_null($this->id)) {
-            $data[$this->id_property] = $this->id;
+            $out[$this->id_property] = $this->id;
         }
 
         /**
          * Get the string result of var_dump by using an output buffer
          */
         ob_start();
-            var_dump($this->$data);
+            var_dump($out);
         return ob_end_flush();
     }
 
@@ -261,16 +246,19 @@ class BBModel extends BBSimpleModel {
      * @return void
      */
     public function reset() {
+        //Revert changes
         $this->new_data = array();
+
+        //Reset the live data "view"
+        $this->data = $this->get_sync_values();
 
         //We no longer have any unsaved changes
         $this->changed = false;
     }
-    
+
     /**
-     * Copy all new changes into $this->data
-     * This is used primarily by models that perform batch updates on 
-     * child models (like BBTournament on an array of rounds)
+     * Update internal value arrays to merge any 
+     *  new values in with the current_values and the live data "view" array
      * 
      * So we can tell each round to import the changes without 
      * calling the update server for every single one of them
@@ -311,16 +299,20 @@ class BBModel extends BBSimpleModel {
         //Cast it as an array now
         $data = (array)$data;
 
-        //Extract a sub value if requested if the child class defines the key
+        /**
+         * If the child defined a key for extraction, attempt to use that 
+         *  value from the input now, instead of the entire $data input
+         */
         if(!is_null($this->data_extraction_key)) {
-            //Found it! extract it and cast it as an array again
+            //Found it! extract it and cast it as an array
             if(isset($data[$this->data_extraction_key])) {
                 $data = (array)$data[$this->data_extraction_key];
             }
         }
 
-        //Cast as an array for standardization and compatability
-        $this->data             = (array)$data;
+        //This will be our new current_value set, update our public $data to match, and empty changed data array
+        $this->data             = $data;
+        $this->current_data     = $data;
         $this->new_data         = array();
     }
 
@@ -342,21 +334,15 @@ class BBModel extends BBSimpleModel {
 
         /**
          * If defining an ID manually, go ahead make sure that we 
-         * completely wipe everything that may have changed, and THEN save it
+         * completely wipe everything that may have changed, and THEN load it
          */
         if(!is_null($id)) {
             $this->reset();
             $this->set_id($id);
         }
-        /**
-         * Otherwise, make sure we actually HAVE an id to load
-         */
-        else {
-            $id = $this->get_id();
-        }
 
         //No ID to load
-        if(is_null($id)) {
+        if(is_null($this->id)) {
             return $this->bb->ref(
                 $this->set_error('No ' . $this->id_property . ' was provided, there is nothing to load!')
             );
@@ -366,13 +352,13 @@ class BBModel extends BBSimpleModel {
         $svc = $this->get_service('LOAD');
         if(is_null($svc)) {
             return $this->bb->ref(
-                $this->set_error('Unable to determine which service to request for this object, please contact a BinaryBeast administrator for assistance')
+                $this->set_error(get_called_class() . 'does not seem to have defined a loading service, BBModel::save expects a constant value for SERVICE_LOAD')
             );
         }
 
         //GOGOGO!
         $result = $this->call($svc, array_merge(array(
-            $this->id_property => $this->{$this->id_property}
+            $this->id_property => $this->id
         ), $child_args) );
 
         //If successful, import it now
@@ -414,11 +400,10 @@ class BBModel extends BBSimpleModel {
 
         //Update
         if(!is_null($id) ) {
-
-            //Nothing has changed! Save an error, but since we dind't exactly fail, return true
+            //Nothing has changed! Save an warning, but since we dind't exactly fail, return true
             if(!$this->changed) {
-                $this->set_error('You have not changed any values to submit!');
-                return true;
+                $this->set_error('Warning: save() saved no changes, since nothing has changed');
+                return $this->id;
             }
 
             //GOGOGO! determine the service name, and save the id
@@ -442,7 +427,7 @@ class BBModel extends BBSimpleModel {
         $result = $this->call($svc, $args);
 
         /*
-         * Saved successfully - reset some local values and return true
+         * Saved successfully - update some local values and return true
          */
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
 
@@ -557,7 +542,7 @@ class BBModel extends BBSimpleModel {
     public function get_changed_values() {
         return $this->new_data;
     }
-    
+
     /**
      * This method returns a combination of current values + new values
      * But the trick is that it's sensitive to wether or not this object is new..
@@ -577,9 +562,9 @@ class BBModel extends BBSimpleModel {
             return array_merge($this->default_values, $this->new_data);
         }
         /**
-         * Existing object: existing + new
+         * Existing object: current + new
          */
-        return array_merge($this->data, $this->new_data);
+        return array_merge($this->current_data, $this->new_data);
     }
 
 }

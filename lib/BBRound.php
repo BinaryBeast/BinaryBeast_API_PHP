@@ -118,9 +118,9 @@ class BBRound extends BBModel {
      */
     public function save($return_result = false, $child_args = null) {
 
-        //Nothing to do - set an error but return true since we didn't actually fail
+        //Nothing has changed! Save an warning, but since we dind't exactly fail, return true
         if(!$this->changed) {
-            $this->set_error('You have not changed any values to submit!');
+            $this->set_error('Warning: save() saved no changes, since nothing has changed');
             return true;
         }
 

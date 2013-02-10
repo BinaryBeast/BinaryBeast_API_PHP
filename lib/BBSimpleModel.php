@@ -64,18 +64,16 @@ class BBSimpleModel {
      * Calls the BinaryBeast API using the given service name and arguments, 
      * and grabs the result code so we can locally stash it 
      * 
-     * Unlike BBModel, we actually DO want our results to be automatically wrapped in a BBResult
-     * 
      * @param string $svc
      * @param array $args
      * @return object
      */
-    protected function call($svc, $args, $wrapped = true) {
+    protected function call($svc, $args) {
         //First, clear out any errors that may have existed before this call
         $this->clear_error();
 
         //Use BinaryBeast library to make the actual call
-        $response = $this->bb->call($svc, $args, $wrapped);
+        $response = $this->bb->call($svc, $args);
 
         //Store the result code in the model itself, to make debuggin as easy as possible for developers
         $this->set_result($response->result);
@@ -193,11 +191,8 @@ class BBSimpleModel {
      */
     protected function get_list($svc, $args, $list_name, $wrap_class = null) {
 
-        //If a wrap_class is defined, disable auto_wrapping in BBResult in BinaryBeast::call();
-        $auto_wrap = is_null($wrap_class);
-
         //GOGOGO!
-        $response = $this->bb->call($svc, $args, $auto_wrap);
+        $response = $this->bb->call($svc, $args);
 
         //Success!! - return the array only
         if($response->result == BinaryBeast::RESULT_SUCCESS) {

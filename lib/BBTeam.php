@@ -40,6 +40,18 @@ class BBTeam extends BBModel {
     protected $data_extraction_key = 'team_info';
 
     /**
+     * The BBTeam of this team's current opponent
+     * @var BBTeam
+     */
+    private $opponent;
+
+    /**
+     * For group rounds, this team may currently have several opponents available to play against
+     * @var array
+     */
+    private $opponents;
+
+    /**
      * Default values for a new participant, also a useful reference for developers
      * @var array
      */
@@ -171,6 +183,57 @@ class BBTeam extends BBModel {
         if(is_null($this->tourney_team_id)) {
             $this->set_id($tourney_team_id);
         }
+    }
+
+    /**
+     * Returns the BBTeam object of this team's current opponent
+     * Null if he has no opponent waiting
+     * 
+     * IMPORTANT NOTE: If this tournament is configured to use group_rounds,
+     *      there may be several opponents currently waiting to play agains this team,
+     * 
+     * If that's the case, then the this method will simply return the first one found
+     * 
+     * @return BBTeam (null if no opponent available)
+     */
+    public function &opponent() {
+        //Already figured it out
+        if(!is_null($this->opponent)) return $this->opponent;
+
+        //Tournament is not active, can't possibly have an opponent - derp
+        if(!BBHelper::tournament_is_active($this->tournament)) {
+            return $this->bb->ref(
+                $this->set_error('Tournament is not even active yet, impossible to determine a team\'s current opponent!')
+            );
+        }
+
+        /**
+         * For round robin, we use opponents() to load a list of opponents left to play first,
+         *   then return the first one in the array
+         */
+        if(BBHelper::tournament_in_group_rounds($this->tournament)) {
+            /**
+             * 
+             * 
+             * 
+             * 
+             * 
+             * TODO: This
+             * 
+             * 
+             * 
+             * 
+             */
+        }
+
+        /**
+         * If tournament currently has brackets, all we have to do is ask the API to send us
+         * the tourney_team_id of our current opponent
+         */
+        if(BBHelper::tournament_in_brackets($this->tournament)) {
+            bb_debug('here BBTeam::opponent() - after tour in brackets');
+        }
+        
     }
 }
 
