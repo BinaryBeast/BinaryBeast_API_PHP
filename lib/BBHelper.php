@@ -344,6 +344,43 @@ class BBHelper {
     }
 
     /**
+     * Helps us figure out which stage is next for the tournament
+     * 
+     * Returns null already "Complete"
+     * 
+     * Biggest reason for putting this into a separate method is again.. BinaryBeast will undoubtedly
+     *      be revisiting the way it handles transitions between phases in order to allow administrators to
+     *      actually define every stage, with unlimited flexibility - so this logic will have to change soon
+     * 
+     * @param BBTournament $tournament
+     * @return string
+     */
+    public static function get_next_tournament_stage(BBTournament &$tournament) {
+        if(!self::tournament_is_active($tournament)) {
+            //Next step for cups - group rounds
+            if($tournament->type_id == BinaryBeast::TOURNEY_TYPE_CUP) {
+                return 'Active-Groups';
+            }
+
+            //Next step for elimination - brackets
+            return 'Active';
+        }
+
+        //For group rounds - brackets
+        if($tournament->status == 'Active-Groups') {
+            return 'Active-Brackets';
+        }
+
+        //For brackets - Complete
+        if($tournament->status == 'Active' || $tournament->status == 'Active-Brackets') {
+            return 'Complete';
+        }
+
+        //Tournament is already finished, nowhere left to go
+        return null;
+    }
+
+    /**
      * Returns the standardized (all lower case) value for the provided $seeding value
      * 
      * For groups, your only options are 'random', and 'manual'
