@@ -34,7 +34,6 @@ class BBCountry extends BBSimpleModel {
         //GOGOGO!
         return $this->get_list('Country.CountrySearch.Search', array('country' => $filter), 'countries');
     }
-    
 }
 
 ?>
