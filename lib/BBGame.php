@@ -63,6 +63,16 @@ class BBGame extends BBSimpleModel {
         //Let get_list do the work
         return $this->get_list('Game.GameSearch.Top', array('limit' => $limit));
     }
+    /**
+     * Alias for BBGame::list_top()
+     * @see BBGame::list_top()
+     * 
+     * @param int $limit
+     * @return array
+     */
+    public function list_popular($limit = 10) {
+        return $this->list_top($limit);
+    }
 
     /**
      * Does the actual work for search and get_top, all we need to know is
