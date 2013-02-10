@@ -55,7 +55,12 @@ class BBHelper {
      * @var array
      */
     private static $tournament_types = array(0 => 'Elimination Brackets', 1 => 'Cup');
-    
+
+    /**
+     * Simple array of group names / labels
+     */
+    private static $group_labels = array('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+
     /**
      * There are many "translation" methods in this class
      * To keep the code dry, they all utilize this for the actual grunt work
@@ -378,6 +383,36 @@ class BBHelper {
 
         //Tournament is already finished, nowhere left to go
         return null;
+    }
+    
+    /**
+     * Returns an array of empty groups, keyed by group name
+     * 
+     * Convenient if you'd like to use it to arrange your teams into groups before starting your tournament
+     * 
+     * @param BBTournament $tournament
+     */
+    public static function get_empty_groups(BBTournament &$tournament) {
+        //Initialize the output array
+        $groups = array();
+
+        //to avoid calculating sizeof within a loop, just calculate it once now
+        $labels_count = sizeof(self::$group_labels);
+
+        //For each group configured, create an empty array keyed by the group label
+        for($x = 0; $x < $tournament->group_count; $x++) {
+            //If we've exceeded our list of labels, just start doubling up (AA, AB, AC, not going to even bother trying to move beyond A)
+            if($x >= $labels_count) {
+                $x2 = $x - $labels_count;
+                $label = self::$group_labels[$x] . self::$group_labels[$x2];
+            }
+            else $label = self::$group_labels[$x];
+
+            $groups[$label] = array();
+        }
+
+        //Success!
+        return $groups;
     }
 
     /**
