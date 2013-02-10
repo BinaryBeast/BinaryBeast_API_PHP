@@ -42,16 +42,6 @@ class BBGame extends BBSimpleModel {
         //Let get_list do the work
         return $this->get_list('Game.GameSearch.Search', array('game' => $filter), 'games');
     }
-    /**
-     * Alias for search();
-     * @see BBGame::search()
-     * 
-     * @param string $filter
-     * @return array
-     */
-    public function filter($filter) {
-        return $this->search($filter);
-    }
 
     /**
      * Returns a list of the currently most popular tournament at BinaryBeast
@@ -62,16 +52,6 @@ class BBGame extends BBSimpleModel {
     public function list_top($limit = 10) {
         //Let get_list do the work
         return $this->get_list('Game.GameSearch.Top', array('limit' => $limit), 'games');
-    }
-    /**
-     * Alias for BBGame::list_top()
-     * @see BBGame::list_top()
-     * 
-     * @param int $limit
-     * @return array
-     */
-    public function list_popular($limit = 10) {
-        return $this->list_top($limit);
     }
 }
 
