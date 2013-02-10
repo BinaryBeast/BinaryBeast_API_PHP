@@ -24,7 +24,7 @@ class BBHelper {
      * human-readable string
      * @var array
      */
-    public static $results_codes = array(
+    public static $result_codes = array(
         '200'               => 'Success',
         '401'               => 'Login Failed',
         '403'               => 'Authentication error - you are not allowed to delete / update that object',
@@ -55,6 +55,22 @@ class BBHelper {
      * @var array
      */
     private static $tournament_types = array(0 => 'Elimination Brackets', 1 => 'Cup');
+    
+    /**
+     * There are many "translation" methods in this class
+     * To keep the code dry, they all utilize this for the actual grunt work
+     * 
+     * @param mixed $value
+     * @param array $translation
+     * @param mixed     
+     */
+    private static function translate($value, $translations) {
+        //Invalid value type - just send it back
+        if(!is_string($value) && !is_numeric($value)) return $value;
+
+        //Return the translation, the original input if it's not defined
+        return isset($translations[$value]) ? $translations[$value] : $value;
+    }
 
     /**
      * Given a bracket integer, return the string description, 
@@ -79,7 +95,7 @@ class BBHelper {
             'Bronze Bracket (3rd place)',
         );
 
-        return $labels[$bracket];
+        return self::translate($bracket, $labels);
     }
 
     /**
@@ -142,17 +158,18 @@ class BBHelper {
      * @param string $result
      */
     public static function translate_result($result) {
-        //Only bother if it's a string/number
-        if(is_string($result) || is_numeric($result)) {
-            if(key_exists($result, self::$results_codes)) {
-                return self::$results_codes[$result];
-            }
-        }
-        
-        //If unable to find af riendly version, just pass back the original input
-        return $result;
+        return self::translate($result, self::$result_codes);
     }
-    
+
+    /**
+     * Attempts to return the string value of a tournament's type_id
+     * 
+     * @param int $type_id
+     */
+    public static function translate_tournament_type_id($type_id) {
+        return self::translate($type_id, self::$tournament_types);
+    }
+
     /**
      * Translate the integer of replay_downloads into a readable string value
      * 
@@ -161,10 +178,10 @@ class BBHelper {
      * @return string
      */
     public static function translate_replay_downloads($replay_downloads, $short = false) {
-        if($replay_downloads == BinaryBeast::REPLAY_DOWNLOADS_DISABLED)         return 'Disabled';
-        if($replay_downloads == BinaryBeast::REPLAY_DOWNLOADS_ENABLED)          return 'Enabled';
-        if($replay_downloads == BinaryBeast::REPLAY_DOWNLOADS_POST_COMPLETE)    return 'Post-Complete (Downloads enabled after tournament is complete)';
-        return $replay_downloads;
+        return self::translate($replay_downloads, array(
+            0 => 'Disabled', 1 => 'Enabled',
+            2 => $short ? 'Post-Complete' : 'Post-Complete (Downloads enabled after tournament is complete)'
+        ));
     }
     /**
      * Translate the integer of replay_uploads into a readable string value
@@ -173,10 +190,23 @@ class BBHelper {
      * @return string
      */
     public static function translate_replay_uploads($replay_uploads) {
-        if($replay_uploads == BinaryBeast::REPLAY_UPLOADS_DISABLED)         return 'Disabled';
-        if($replay_uploads == BinaryBeast::REPLAY_UPLOADS_MANDATORY)        return 'Mandatory';
-        if($replay_uploads == BinaryBeast::REPLAY_UPLOADS_OPTIONAL)         return 'Optional';
-        return $replay_uploads;
+        return self::translate($replay_uploads, array(0 => 'Disabled', 1 => 'Optional', 2 => 'Mandatory'));
+    }
+    /**
+     * Translate a tournament team's integer "status" value into a readable string value
+     * @param int $status
+     * @return string
+     */
+    public static function translate_team_status($status) {
+        return self::translate($status, array(-1 => 'Banned', 0 => 'Unconfirmed', 1 => 'Confirmed'));
+    }
+    /**
+     * Translates tournament elimination int to readable string
+     * @param int $elimination
+     * @return string
+     */
+    public function translate_elimination($elimination) {
+        return self::translate($elimination, array(1 => 'Single', 2 => 'Double'));
     }
 
     /**
@@ -193,18 +223,6 @@ class BBHelper {
         return $best_of + ($best_of %2 == 0 ? 1 : 0);
     }
 
-    /**
-     * Attempts to return the string value of a tournament's type_id
-     * 
-     * @param int $type_id
-     */
-    public static function tournament_type_id_to_string($type_id) {
-        if(isset(self::$tournament_types[$type_id])) {
-            return self::$tournament_types[$type_id];
-        }
-        return null;
-    }
-    
     /**
      * Simply reduces several status options down to a simple: active | not active
      * 
