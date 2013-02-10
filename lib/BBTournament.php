@@ -17,11 +17,21 @@
  */
 class BBTournament extends BBModel {
 
-    //Service names for the parent class to use for common tasks
-    const SERVICE_LOAD   = 'Tourney.TourneyLoad.Info';
-    const SERVICE_CREATE = 'Tourney.TourneyCreate.Create';
-    const SERVICE_UPDATE = 'Tourney.TourneyUpdate.Settings';
-    const SERVICE_DELETE = 'Tourney.TourneyDelete.Delete';
+    /** Model services / Tournament manipulation **/
+    const SERVICE_LOAD          = 'Tourney.TourneyLoad.Info';
+    const SERVICE_CREATE        = 'Tourney.TourneyCreate.Create';
+    const SERVICE_UPDATE        = 'Tourney.TourneyUpdate.Settings';
+    const SERVICE_DELETE        = 'Tourney.TourneyDelete.Delete';
+    /** Listing / searching **/
+    const SERVICE_LIST          = 'Tourney.TourneyList.Creator';
+    const SERVICE_LIST_POPULAR  = 'Tourney.TourneyList.Popular';
+    //const SERVICE_LIST_SEARCH     = 'Tourney.TourneyList.Creator'; //Coming soon - search public tournaments
+    //const SERVICE_LIST_SEARCH_MY   = 'Tourney.TourneyList.Creator'; //Coming soon - search tournaments made by you
+    /** Child listing / manipulation**/
+    const SERVICE_LOAD_TEAMS    = 'Tourney.TourneyLoad.Teams';
+    const SERVICE_LOAD_ROUNDS   = 'Tourney.TourneyLoad.Rounds';
+    const SERVICE_UPDATE_ROUNDS = 'Tourney.TourneyRound.BatchUpdate';
+    const SERVICE_UPDATE_TEAMS  = 'Tourney.TourneyTeam.BatchUpdate';
 
     /**
      * Array of participants within this tournament
@@ -132,7 +142,7 @@ class BBTournament extends BBModel {
      * This method takes advantage of BBModel's __get, which allows us to emulate public values that we can
      * intercept access attempts, so we can execute an API request to get the values first
      * 
-     * @return boolean      False if it fails for any reason
+     * @return boolean      False if it fails for any reason - it will only return false for API / validation errors, never for an empty array set
      */
     public function &teams() {
 
@@ -147,7 +157,7 @@ class BBTournament extends BBModel {
         }
 
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
-        $result = $this->call('Tourney.TourneyLoad.Teams', array('tourney_id' => $this->tourney_id));
+        $result = $this->call(self::SERVICE_LOAD_TEAMS, array('tourney_id' => $this->tourney_id));
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
@@ -211,7 +221,7 @@ class BBTournament extends BBModel {
         }
 
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
-        $result = $this->call('Tourney.TourneyLoad.Rounds', array('tourney_id' => $this->tourney_id));
+        $result = $this->call(self::SERVICE_LOAD_ROUNDS, array('tourney_id' => $this->tourney_id));
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
@@ -394,7 +404,7 @@ class BBTournament extends BBModel {
             ));
 
             //GOGOGO! store the result each time
-            $result = $this->call('Tourney.TourneyRound.BatchUpdate', $args);
+            $result = $this->call(self::SERVICE_UPDATE_ROUNDS, $args);
 
             //OH NOES!
             if($result->result != BinaryBeast::RESULT_SUCCESS) {
@@ -463,7 +473,7 @@ class BBTournament extends BBModel {
         }
 
         //Send the compiled arrays to BinaryBeast
-        $result = $this->call('Tourney.TourneyTeam.BatchUpdate', array(
+        $result = $this->call(self::SERVICE_UPDATE_TEAMS, array(
             'tourney_id'        => $this->tourney_id,
             'teams'             => $teams,
             'new_teams'         => $new_teams
@@ -504,22 +514,40 @@ class BBTournament extends BBModel {
      * Note: each tournament is actually instantiated as a new BBTournament class, so you 
      * can update / delete them in iterations etc etc
      * 
-     * @param 
+     * @param string $filter        Optionally search through your tournaments using a simple filter
+     * @param int    $limit         Number of results returned
+     * @param bool   $private       false by default - set this to true if you want your private tournaments included
+     * @return array<BBTournament>
      */
     public function list_my($filter = null, $limit = 30, $private = true) {
-        $result = $this->call('Tourney.TourneyList.Creator', array(
+        return $this->get_list(self::SERVICE_LIST, array(
             'filter'    => $filter,
             'page_size' => $limit,
             'private'   => $private,
-        ));
+        ), 'list', 'BBTournament');
+    }
 
-        //OH NOES!
-        if($result->result != BinaryBeast::RESULT_SUCCESS) {
-            return $this->set_error($result);
-        }
-
-        //Success! Cast each returned tournament as a local BBTournament instance and return the array
-        return $this->wrap_list($result->list);
+    /**
+     * Returns a list of popular tournaments
+     * 
+     * However since this service is loading public tournaments, that means we likely
+     *      won't have access to edit any of them
+     * 
+     * Therefore, all tournaments returned by this service are simplly BBResult wrapped values, they are not
+     *  full BBTournament models
+     * 
+     * @param string $game_code
+     *      You have the option of limiting the tournaments returned by context of a specific game,
+     *      In otherwords for example game_code QL will ONLY return the most popular games that are using
+     *      Quake Live
+     * @param int $limit            Defaults to 10, cannot exceed 100
+     * @return BBResult
+     */
+    public function list_popular($game_code = null, $limit = 10) {
+        return $this->get_list(self::SERVICE_LIST_POPULAR, array(
+            'game_code'     => $game_code,
+            'limit'         => $limit
+        ), 'list');
     }
 
     /**
@@ -597,13 +625,43 @@ class BBTournament extends BBModel {
      * 2) $bb->save_teams();
      * 3) $bb->save();
      * 
+     * 
+     * 
+     * The secondary use of this method is for retrieving a reference to the BBTeam object of
+     *      team that you know the ID of, just pass in the tourney_team_id
+     * 
+     * 
+     * 
+     * @param int $id       Optionally attempt to retrieve a reference to the BBTeam of an existing team
+     * 
      * @return BBTeam
      */
-    public function &team() {
+    public function &team($id = null) {
 
         //We can't add new players to an active-tournament
         if(BBHelper::tournament_is_active($this)) {
             return $this->bb->ref($this->set_error('You cannot add players to active tournaments!!'));
+        }
+
+        //Insure that the local teams array is up to date according to BinaryBeast
+        if(!$this->teams()) return $this->bb->ref(false);
+
+
+        /**
+         * If they provided an $id, that means they we need to return a 
+         * reference to a specific team that should already exist
+         */
+        if(!is_null($id)) {
+            //Simply have to iterate through until we find it
+            foreach($this->teams as $key => &$team) {
+                if($team->id == $id) {
+                    return $this->teams[$key];
+                }
+                //Invalid team id
+                $this->set_error('Tournament (' . $this->id . ') does not have a team by that id (' . $id . ')');
+                return $this->ref(null);
+            }
+            
         }
 
         //Instantiate a blank Team, and give it a reference to this tournament
@@ -613,13 +671,9 @@ class BBTournament extends BBModel {
         /**
          * Add it to the local lists and return a reference to it
          * 
-         * First step though is to intialize the teams array, so we can
-         * safely add the new team without flagging the teams array as intialized when it really hasn't been
-         * 
          * We'll also have to determine the next key for its position in teams, so we can save it,
          * and then return a reference to it
          */
-        $this->teams();
         //If teams is still null, that means this is a new tournament, so let's manually initalize teams()
         if(is_null($this->teams)) $this->teams = array();
         
