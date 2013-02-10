@@ -235,7 +235,7 @@ class BBHelper {
     public static function tournament_is_active(&$tournament) {
         return in_array($tournament->status, array('Active', 'Active-Groups', 'Active-Brackets', 'Complete'));
     }
-    
+
     /**
      * Evaluates the given tournament to see if it's currently in the group rounds stage
      * returns true if in group rounds, false otherwise
@@ -265,7 +265,7 @@ class BBHelper {
     public static function tournament_in_brackets(&$tournament) {
         return $tournament->status == 'Active' || $tournament->status == 'Active-Brackets';
     }
-    
+
     /**
      * This method can tell us wether or not the provided tournament is 
      * currently in the position to be started
@@ -304,6 +304,30 @@ class BBHelper {
          * if the API would let us know anyway - so from this point, we assume green lights
          */
         return true;
+    }
+
+    /**
+     * Returns the standardized (all lower case) value for the provided $seeding value
+     * 
+     * For groups, your only options are 'random', and 'manual'
+     * For brackets, your options are 'random', 'manual', 'balanced', 'sports'
+     * 
+     * Determining whether or not the value is valid is sensitive to the tournament type and status
+     * 
+     * @param BBTournament  $tournament     A reference to the tournament, so we can check the status and tournament type
+     * @param string        $seeding        The seeding value you're trying to use
+     * @return string   (null if invalid)
+     */
+    public static function validate_seeding_type(BBTournament &$tournament, $seeding) {
+        $seeding = strtolower($seeding);
+
+        //If tourney type is cup, and groups haven't started yet, we know next stage is groups, which means only random and manual are valid
+        if($tournament->type_id == BinaryBeast::TOURNEY_TYPE_CUP && !self::tournament_is_active($tournament)) {
+            return in_array($seeding, array('random','manual')) ? $seeding : null;
+        }
+
+        //If we're starting brackets, all seeding methods are available
+        return in_array($seeding, array('random','manual','balanced','sports')) ? $seeding : null;
     }
 
 }
