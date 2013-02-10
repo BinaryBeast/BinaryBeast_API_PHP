@@ -338,6 +338,24 @@ class BBResult implements ArrayAccess, Iterator {
         return $this->length;
     }
 
+    /**
+     * Necessary to allow performing isset() against values
+     * that don't necessary publicly exist
+     * 
+     * @return boolean
+     */
+    public function __isset($name) {
+        //EZ!
+        if(!isset($this->result_values[$name])) {
+            //Standardize
+            $key = $this->get_standard_key($name);
+            if(!isset($this->values[$key])) return false;
+        }
+
+        //Success!
+        return true;
+    }
+
 }
 
 ?>
