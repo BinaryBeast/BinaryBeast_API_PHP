@@ -40,7 +40,7 @@ class BBGame extends BBSimpleModel {
         if(strlen($filter) < 2) return $this->set_error('"' . $filter . '" is too short, $filter must be at least 2 characters long');
 
         //Let get_list do the work
-        return $this->get_list('Game.GameSearch.Search', array('game' => $filter), 'games');
+        return $this->get_list(self::SERVICE_SEARCH, array('game' => $filter), 'games');
     }
 
     /**
@@ -51,7 +51,7 @@ class BBGame extends BBSimpleModel {
      */
     public function list_top($limit = 10) {
         //Let get_list do the work
-        return $this->get_list('Game.GameSearch.Top', array('limit' => $limit), 'games');
+        return $this->get_list(self::SERVICE_LIST_POPULAR, array('limit' => $limit), 'games');
     }
 }
 

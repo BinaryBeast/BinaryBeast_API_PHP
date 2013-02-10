@@ -25,14 +25,14 @@ class BBCountry extends BBSimpleModel {
     /**
      * Returns a list of countries that match the given $filter value
      * 
-     * @param type $filter
+     * @param string $filter
      */
     public function search($filter) {
         //Don't even bother trying if filter is too short
         if(strlen($filter) < 2) return $this->set_error('"' . $filter . '" is too short, $filter must be at least 2 characters long');
 
         //GOGOGO!
-        return $this->get_list('Country.CountrySearch.Search', array('country' => $filter), 'countries');
+        return $this->get_list(self::SERVICE_SEARCH, array('country' => $filter), 'countries');
     }
 }
 
