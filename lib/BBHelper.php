@@ -247,6 +247,46 @@ class BBHelper {
     public static function tournament_in_brackets(&$tournament) {
         return $tournament->status == 'Active' || $tournament->status == 'Active-Brackets';
     }
+    
+    /**
+     * This method can tell us wether or not the provided tournament is 
+     * currently in the position to be started
+     * 
+     * If the value returned is a string, it's the error message that can be used with set_error,
+     * 
+     * The only returned value that could indicate the tournament is ready, is (boolean) true
+     * 
+     * @param BBTournament $tournament
+     * @return string|boolean
+     */
+    public static function tournament_can_start(&$tournament) {
+
+        //Doens't even exist!
+        if(is_null($tournament->id)) {
+            return 'Tournament does not have a tourney_id, save it first!';
+        }
+
+        //Tournament is already complete
+        if($tournament->status == 'Complete') {
+            return 'This tournament is already finished';
+        }
+
+        //Currently in the final stages
+        if($tournament->status == 'Active-Brackets' || $tournament->status == 'Active') {
+            return 'This tournament is currently in it\'s final bracket stage, there\'s nothing left to start (consider executing $tournament->close(), or $tournament->reopen())';
+        }
+
+        //Tournament has unsaved changes
+        if(sizeof($tournament->get_changed_values() > 0)) {
+            return 'Tournament currently has unsaved changes, you must save doing something as drastic as starting the tournament';
+        }
+
+        /**
+         * Honestly any other errors at this point require more work, and ther'e no point
+         * if the API would let us know anyway - so from this point, we assume green lights
+         */
+        return true;
+    }
 
 }
 
