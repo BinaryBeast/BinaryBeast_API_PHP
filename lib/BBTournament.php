@@ -158,7 +158,7 @@ class BBTournament extends BBModel {
         if(!is_null($this->teams)) return $this->teams;
 
         //New tournaments must be saved before we can start saving child data
-        if(is_null($this->tourney_id)) {
+        if(is_null($this->id)) {
             return $this->bb->ref(
                 $this->set_error('Please execute save() before manipulating rounds or teams')
             );

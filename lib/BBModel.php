@@ -28,12 +28,12 @@ class BBModel extends BBSimpleModel {
      * Array of original data that we can use later if we need to 
      *  revert changed
      */
-    public $current_data = array();
+    protected $current_data = array();
 
     /**
      * Stores JUST values that have been changed and are pending the next save()
      */
-    public $new_data = array();
+    protected $new_data = array();
 
     //Should be defined by children classes to let us know which property to use as the unique ID for this instance
     //For example for a tournament, this value should be tourney_id, so we can refer to $this->tourney_id dynamically
