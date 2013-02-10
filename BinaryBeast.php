@@ -373,7 +373,7 @@ class BinaryBeast {
         $response = $this->decode($this->call_raw($svc, $args));
 
         //Store the latest result code, so developers can have easy access to it in $bb->result[_friendly]
-        $this->set_result($response);
+        $this->set_result($response, $svc, $args);
 
         //Success!  Now return it either raw, or wrapped in a new BBResult()
         return $wrapped ? new BBResult($response) : $response;
@@ -436,15 +436,17 @@ class BinaryBeast {
      * always access the latest result in $bb->result, or $bb->result(), or $bb->result_friendly etc
      * 
      * @param object $result    A reference to the API's response
+     * @param string $svc       Service name called
+     * @param array  $args      Arguments used
      * @return void
      */
-    private function set_result(&$result) {
+    private function set_result(&$result, $svc, $args) {
         //Stash the new values, and try to translate the result code to be more readable
         $this->last_result = isset($result->result) ? $result->result : false;
         $this->last_friendly_result = BBHelper::translate_result($this->last_result);
 
         //Store it in the result history array too
-        $this->result_history[] = array('result' => $this->last_result, 'friendly' => $this->last_friendly_result);
+        $this->result_history[] = array('result' => $this->last_result, 'friendly' => $this->last_friendly_result, 'svc' => $svc, 'args' => $args);
     }
 
     /**
