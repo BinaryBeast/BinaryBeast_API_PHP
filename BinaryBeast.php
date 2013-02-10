@@ -51,7 +51,7 @@ class BinaryBeast {
     /**
      * URL to send API Requests
      */
-    private $url = 'https://api.binarybeast.com/';
+    private static $url = 'https://api.binarybeast.com/';
 
     /**
      * BinaryBeast API Key
@@ -91,8 +91,7 @@ class BinaryBeast {
     public $result_history  = array();
 
     /**
-     * Store an instance of BBLegacy, it's only even
-     * included() on demand
+     * Store an instance of BBLegacy, since it's loaded on-demand
      * @var BBLegacy
      */
     private $legacy = null;
@@ -103,10 +102,25 @@ class BinaryBeast {
     private $models_cache = array();
 
     /**
-     * Really stupid way of getting around the ridiculous error when trying
-     * to return null in &__get, so we use ref() to set this value and return it
+     * List of dependent models to auto-load when we load
+     * a library that needs them
      */
-    protected $ref = null;
+    private static $auto_load_libraries = array(
+        'BBTournament'  => array('BBTeam', 'BBRound', 'BBMatch'),
+        'BBMatch'       => array('BBMatchGame')
+    );
+    
+    /**
+     * The first time this class is instantiated, we'll auto-load 
+     * some libraries, but skip that step if another instance is created
+     */
+    private static $first = true;
+
+    /**
+     * Really stupid way of getting around the ridiculous error when trying
+     * to return null in &__get, so we use $bb->ref() to set this value and return it
+     */
+    private $ref = null;
 
     /**
      * A few constants to make a few values a bit easier to read / use
@@ -189,14 +203,30 @@ class BinaryBeast {
          */
         self::$server_ready = self::check_server();
 
-        /**
-         * Make sure some of the core libraries are pre-loaded, like
-         * BBHelper and BBResult, and the model classes
-         */
-        $this->load_library('BBHelper');
-        $this->load_library('BBResult');
-        $this->load_library('BBSimpleModel');
-        $this->load_library('BBModel');
+        //Execute the static "constructor", but only for the first instantiation
+        if(self::$first) self::init($this);
+    }
+
+    /**
+     * Psuedo-static constructor, this method only once,
+     * only the first time this class is instantiated
+     * 
+     * It's used to pre-load some of the core library classes that
+     * we are most likely to use - most other libraries (for example BBLegacy, BBTournament),
+     *  are only loaded as they are used
+     * 
+     * @param BinaryBeast $bb       Since it's a static method, we need a reference to the instance
+     * 
+     * @return void
+     */
+    private static function init(&$bb) {
+        $bb->load_library('BBHelper');
+        $bb->load_library('BBResult');
+        $bb->load_library('BBSimpleModel');
+        $bb->load_library('BBModel');
+
+        //Next instantiation will know not to call this method
+        self::$first = false;
     }
 
     /**
@@ -288,7 +318,7 @@ class BinaryBeast {
 
         //Add the service to the arguments, and the return type
         if(is_null($args)) $args = array();
-        $args['api_return']     = is_null($return_type) ? $this->return : $return_type;
+        $args['api_return']     = is_null($return_type) ? 'json' : $return_type;
         $args['api_service']    = $svc;
 
         /*
@@ -360,29 +390,37 @@ class BinaryBeast {
      * decided to reformat it / add to it, so that model classes
      * can be sure to stash the same error set here
      * 
-     * @param mixed $error
+     * @param mixed     $error          Error value to save
+     * @param string    $class          Name of the class setting this error
      * @return array
      */
-    public function set_error($error = null) {
-        
-        //Convert objecst into arrays
+    public function set_error($error = null, $class = null) {
+
+        //Convert objects into arrays
         if(is_object($error)) $error = (array)$error;
 
-        /*
-         * If it's already an array - save it as-is
-         * Otherwise, save an error containing the value provided as the property 'error_message'
-         */
+        //Either store it into a new array, or add some values to the input
         if(!is_null($error)) {
-            $this->last_error = is_array($error)
-                ? $error
-                : array('error_message' => $error);
+            //Use default values if not provided
+            if(is_null($class)) $class = get_called_class();
+
+            //Compile an array using the input
+            $details = array('class' => $class);
+
+            //For existing arrays, simply add our details
+            if(is_array($error)) $error = array_merge($details, $error);
+
+            //For everything else, add the input into a new array
+            else                 $error = array_merge($details, array('error_message' => $error));
         }
-        //Sent a blank error, so we'll delete any previous errors now
-        else $this->last_error = null;
 
-        //Store it in the error history array too
-        $this->error_history[] = $this->last_error;
+        //Stash it!
+        $this->last_error = $error;
 
+        //Add it to our error history log
+        if(!is_null($error)) $this->error_history[] = $this->last_error;
+
+        //Return the new value we came up with so that models store it the same way we did here
         return $this->last_error;
     }
     /**
@@ -433,7 +471,7 @@ class BinaryBeast {
         $curl = curl_init();
 
         //Set the standard curl options
-        curl_setopt($curl, CURLOPT_URL, $this->url);
+        curl_setopt($curl, CURLOPT_URL, self::$url);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, $this->verify_ssl);
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, $this->verify_ssl ? 2 : 0);
         //
@@ -538,19 +576,25 @@ class BinaryBeast {
      * @return boolean      False if the library name is invalid
      */
     private function load_library($library) {
-
+        
         //require(), only if the class isn't already defined
         if(!class_exists($library)) {
             //Does the file even exist??
             if(file_exists("lib/$library.php")) {
                 require("lib/$library.php");
-                return true;
             }
 
             //Invalid library name
             else {
                 $this->set_error("Unable to load file \"lib/$library.php\" - file does not exist");
                 return false;
+            }
+        }
+
+        //Auto load any dependent libraries
+        if(isset(self::$auto_load_libraries[$library])) {
+            foreach(self::$auto_load_libraries[$library] as $child_library) {
+                if(!$this->load_library($child_library)) return false;
             }
         }
 
@@ -643,7 +687,7 @@ class BinaryBeast {
      * Call a legacy wrapper method
      * 
      * Intercept attempts to call missing methods that may have previous been
-     * defined in 2.7.7- or earlier version of this library
+     * defined in 2.7.2- or earlier version of this library
      * 
      * In which case, we'll use BBLegacy to do the work, since I want to keep this class 
      * as clean as possible
@@ -706,10 +750,13 @@ class BinaryBeast {
      * Therefore this method can be used to return a raw value as a reference
      * It stores the provided value in $this->ref, and returns a reference to it
      * 
+     * This method was made public so that Model classes could take advantage of it, without
+     * having to re-define ref() in BBModel or BBSimpleModel
+     * 
      * @param mixed $value
      * @return mixed
      */
-    protected function &ref($value) {
+    public function &ref($value) {
         $this->ref = $value;
         return $this->ref;
     }
