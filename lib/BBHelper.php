@@ -152,6 +152,32 @@ class BBHelper {
         //If unable to find af riendly version, just pass back the original input
         return $result;
     }
+    
+    /**
+     * Translate the integer of replay_downloads into a readable string value
+     * 
+     * @param int $replay_downloads
+     * @param bool $short               The value for post_complete is lengthy, set $short to false to shorten it
+     * @return string
+     */
+    public static function translate_replay_downloads($replay_downloads, $short = false) {
+        if($replay_downloads == BinaryBeast::REPLAY_DOWNLOADS_DISABLED)         return 'Disabled';
+        if($replay_downloads == BinaryBeast::REPLAY_DOWNLOADS_ENABLED)          return 'Enabled';
+        if($replay_downloads == BinaryBeast::REPLAY_DOWNLOADS_POST_COMPLETE)    return 'Post-Complete (Downloads enabled after tournament is complete)';
+        return $replay_downloads;
+    }
+    /**
+     * Translate the integer of replay_uploads into a readable string value
+     * 
+     * @param int $replay_downloads
+     * @return string
+     */
+    public static function translate_replay_uploads($replay_uploads) {
+        if($replay_uploads == BinaryBeast::REPLAY_UPLOADS_DISABLED)         return 'Disabled';
+        if($replay_uploads == BinaryBeast::REPLAY_UPLOADS_MANDATORY)        return 'Mandatory';
+        if($replay_uploads == BinaryBeast::REPLAY_UPLOADS_OPTIONAL)         return 'Optional';
+        return $replay_uploads;
+    }
 
     /**
      * If the provided best_of value is invalid, we'll 
