@@ -141,7 +141,7 @@ class BBTournament extends BBModel {
 
         //New tournaments must be saved before we can start saving child data
         if(is_null($this->tourney_id)) {
-            return $this->ref(
+            return $this->bb->ref(
                 $this->set_error('Please execute save() before manipulating rounds or teams')
             );
         }
@@ -151,7 +151,7 @@ class BBTournament extends BBModel {
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
-             return $this->ref($this->set_error($result));
+             return $this->bb->ref($this->set_error($result));
         }
 
         //Initalize the teams array, and start importing instantiated BBTeam instances into it
@@ -205,7 +205,7 @@ class BBTournament extends BBModel {
 
         //New tournaments must be saved before we can start saving child data
         if(is_null($this->tourney_id)) {
-            return $this->ref(
+            return $this->bb->ref(
                 $this->set_error('Please execute save() before manipulating rounds or teams')
             );
         }
@@ -215,7 +215,7 @@ class BBTournament extends BBModel {
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
-            return $this->ref($this->set_error($result));
+            return $this->bb->ref($this->set_error($result));
         }
 
         //Initalize the rounds property, and start importing instantiated BBRounds into it
@@ -603,7 +603,7 @@ class BBTournament extends BBModel {
 
         //We can't add new players to an active-tournament
         if(BBHelper::tournament_is_active($this)) {
-            return $this->ref($this->set_error('You cannot add players to active tournaments!!'));
+            return $this->bb->ref($this->set_error('You cannot add players to active tournaments!!'));
         }
 
         //Instantiate a blank Team, and give it a reference to this tournament
