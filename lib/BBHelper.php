@@ -191,6 +191,36 @@ class BBHelper {
     public static function tournament_is_active(&$tournament) {
         return in_array($tournament->status, array('Active', 'Active-Groups', 'Active-Brackets', 'Complete'));
     }
+    
+    /**
+     * Evaluates the given tournament to see if it's currently in the group rounds stage
+     * returns true if in group rounds, false otherwise
+     * 
+     * The biggest reason for moving this to BBHelper is that in the future, BinaryBeast may
+     *  change the way it handles different tournament stages / phases, hopefully for the better
+     * 
+     * @param BBTournament $tournament
+     * @return boolean
+     */
+    public static function tournament_in_group_rounds(&$tournament) {
+        return $tournament->status == 'Active-Groups';
+    }
+
+    /**
+     * Evaluates the given tournament to see if it has active brackets
+     * 
+     * The biggest reason for moving this to BBHelper is that in the future, BinaryBeast may
+     *  change the way it handles different tournament stages / phases, hopefully for the better
+     * 
+     * Warning: if will return false even if the tournament is complete, it STRICTLY returns
+     *      true for tournaments with ACTIVE brackets
+     * 
+     * @param BBTournament $tournament
+     * @return boolean
+     */
+    public static function tournament_in_brackets(&$tournament) {
+        return $tournament->status == 'Active' || $tournament->status == 'Active-Brackets';
+    }
 
 }
 
