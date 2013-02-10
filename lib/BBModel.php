@@ -108,7 +108,7 @@ class BBModel extends BBSimpleModel {
      */
     protected function call($svc, $args, $wrapped = false) {
         //Let BBSimpleModel::call() handle it
-        parent::call($svc, $args, $wrapped);
+        return parent::call($svc, $args, $wrapped);
     }
 
     /**
@@ -148,7 +148,7 @@ class BBModel extends BBSimpleModel {
          * Regardless of wether or not this object has an ID, we'll first check new_data
          */
         if(isset($this->new_data[$name])) {
-            return $this->ref($this->new_data[$name]);
+            return $this->bb->ref($this->new_data[$name]);
         }
 
         /**
@@ -159,7 +159,7 @@ class BBModel extends BBSimpleModel {
              * New object, now we can safely return from default_values if set
              */
             if(isset($this->default_values[$name])) {
-                return $this->ref($this->default_values[$name]);
+                return $this->bb->ref($this->default_values[$name]);
             }
         }
 
@@ -178,7 +178,7 @@ class BBModel extends BBSimpleModel {
 
             //Data already exists, see if our $name is in there
             else if(isset($this->data[$name])) {
-                return $this->ref($this->data[$name]);
+                return $this->bb->ref($this->data[$name]);
             }
         }
 
@@ -196,7 +196,7 @@ class BBModel extends BBSimpleModel {
         /**
          * Invalid property / method - return null (through the stupid ref() function)
          */
-        else return $this->ref(null);
+        else return $this->bb->ref(null);
     }
 
     /**
@@ -224,6 +224,34 @@ class BBModel extends BBSimpleModel {
 
         //Flag changes have been made
         $this->changed = true;
+    }
+
+    /**
+     * Handle attempts to directly echo / print this model
+     * 
+     * What we do is just return the result of var_dump of get_sync_values,
+     * and add the id (if available)
+     * 
+     * We can do so by creating an output buffer, performing a var_dump, and
+     * then ending the buffer and returning the values queued within it
+     * 
+     * @return string       Value to print / echo
+     */
+    public function __toString() {
+        /**
+         * Compile the values to dump
+         */
+        $data = $this->get_sync_values();
+        if(!is_null($this->id)) {
+            $data[$this->id_property] = $this->id;
+        }
+
+        /**
+         * Get the string result of var_dump by using an output buffer
+         */
+        ob_start();
+            var_dump($this->$data);
+        return ob_end_flush();
     }
 
     /**
@@ -329,7 +357,7 @@ class BBModel extends BBSimpleModel {
 
         //No ID to load
         if(is_null($id)) {
-            return $this->ref(
+            return $this->bb->ref(
                 $this->set_error('No ' . $this->id_property . ' was provided, there is nothing to load!')
             );
         }
@@ -337,7 +365,7 @@ class BBModel extends BBSimpleModel {
         //Determine which sevice to use, return false if the child failed to define one
         $svc = $this->get_service('LOAD');
         if(is_null($svc)) {
-            return $this->ref(
+            return $this->bb->ref(
                 $this->set_error('Unable to determine which service to request for this object, please contact a BinaryBeast administrator for assistance')
             );
         }
@@ -358,7 +386,7 @@ class BBModel extends BBSimpleModel {
          * However we'll leave it up to set_error to translate the code for us
          */
         else {
-            return $this->ref($this->set_error($result));
+            return $this->bb->ref($this->set_error($result));
         }
     }
 
@@ -406,13 +434,13 @@ class BBModel extends BBSimpleModel {
             $args = array_merge($this->data, $this->new_data);
             $svc = $this->get_service('CREATE');
         }
-        
+
         //If child defined additonal arguments, merge them in now
         if(is_array($child_args)) $args = array_merge($args, $child_args);
 
         //GOGOGO
         $result = $this->call($svc, $args);
-        
+
         /*
          * Saved successfully - reset some local values and return true
          */
