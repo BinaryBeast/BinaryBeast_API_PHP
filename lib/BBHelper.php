@@ -295,7 +295,7 @@ class BBHelper {
         }
 
         //Tournament has unsaved changes
-        if(sizeof($tournament->get_changed_values() > 0)) {
+        if($tournament->changed) {
             return 'Tournament currently has unsaved changes, you must save doing something as drastic as starting the tournament';
         }
 

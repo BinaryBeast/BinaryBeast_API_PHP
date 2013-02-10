@@ -50,6 +50,11 @@ class BBTeam extends BBModel {
      * @var array
      */
     private $opponents;
+    
+    /**
+     * If removed from the parent, this object will become an orphan without hope of recovery
+     */
+    private $orphan = false;
 
     /**
      * Default values for a new participant, also a useful reference for developers
@@ -116,7 +121,49 @@ class BBTeam extends BBModel {
         parent::__set($name, $value);
     }
     
-    
+    /**
+     * Delete this team!!!!!!!
+     * If a new unsaved team, this method removes itself from the tournament
+     * 
+     * 
+     * WARNING - DANGEROUS SERVICE METHOD!
+     * 
+     * There is no undoing this method if it works
+     * 
+     * 
+     * 
+     * However that being said, it's necessary for unsaved new teams too, so we can remove
+     *      them from the tournament save queue
+     * 
+     * @return boolean
+     */
+    public function delete() {
+
+        /**
+         * For a new unsaved team, all we have to do is remove it
+         *  from the tournament, and then flag this object as an orphan
+         */
+        if(is_null($this->id)) {
+            $this->tournament->remove_team($this);
+        }
+
+        /**
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * 
+         * Build the API logic
+         * 
+         * 
+         * 
+         * 
+         */
+    }
+
     /**
      * 
      * 

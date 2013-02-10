@@ -121,6 +121,7 @@ class BBTournament extends BBModel {
     /**
      * An array of value keys that we would like
      * to prevent developers from changing
+     * Not that it honestly really matters, the API only changes acceptable values submitted anyway
      */
     protected $read_only = array('status', 'tourney_id');
 
@@ -585,6 +586,9 @@ class BBTournament extends BBModel {
         if(!in_array($child, $this->{$property})) {
             $this->{$property}[] = &$child;
         }
+
+        //Flag the entire tournament has having unsaved changes
+        $this->changed = true;
     }
     /**
      * Removes any references to a child class (team/round etc), so we know that
@@ -600,6 +604,31 @@ class BBTournament extends BBModel {
         //If it's currently being tracked, remove it now
         if(in_array($child, $this->{$property})) {
             unset($this->{$property}[ array_search($child, $this->{$property}) ]);
+        }
+
+        //Recalculate the changed flag
+        $this->changed = sizeof($this->new_data) > 0 || sizeof($this->teams_changed) > 0 || sizeof($this->rounds_changed) > 0;
+    }
+
+    /**
+     * Remove a team from this tournament's teams lists
+     * Warning: this method does NOT perform any API requests, it's strictly
+     * used to disassociate a BBTeam object from this tournament
+     * 
+     * The most likely use of this method is from BBTeam::delete() to remove itself from this
+     *  tournament
+     * 
+     * @param BBTeam $team
+     * @return void
+     */
+    public function remove_team(BBTeam &$team) {
+        //First - run the unflag method to remove from teams_changed
+        //It also has the nice side-effect of recalculating the local $changed flag
+        $this->unflag_child_changed($team);
+
+        //Finally, remove it from the teams array 
+        if(in_array($team, $this->teams)) {
+            unset($this->teams[ array_search($team, $this->teams) ]);
         }
     }
 
@@ -703,6 +732,9 @@ class BBTournament extends BBModel {
         $this->teams[$key] = $team;
         $this->teams_changed[] = &$this->teams[$key];
 
+        //Flag the entire tournament as having unsaved changes
+        $this->changed = true;
+
         //Success! return a reference to the new team
         return $this->teams[$key];
     }
@@ -798,7 +830,7 @@ class BBTournament extends BBModel {
             return $this->set_error($error);
         }
 
-        bb_debug('start!');
+        bb_debug(['start!', $this->teams, $this->teams_changed, $this]);
     }
     /**
      * When starting a tournament, this method is used to make sure that
