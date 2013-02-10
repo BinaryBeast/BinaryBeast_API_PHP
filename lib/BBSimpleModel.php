@@ -175,6 +175,29 @@ class BBSimpleModel {
 
         return $out;
     }
+
+    /**
+     * Used by SimpleModel classes for simple list service requests, like searching games / countries
+     * 
+     * @param string $svc               Service name (like Game.GameSearch.Search)
+     * @param array $args               Array of arguments to submit
+     * @param string $list_name         Name of the array we should expect to be returned containing the list (example games, or tournies)
+     * @return array  - false if it failed
+     */
+    protected function get_list($svc, $args, $list_name) {
+        $response = $this->bb->call($svc, $args);
+
+        //Success!! - return the array only
+        if($response->result == BinaryBeast::RESULT_SUCCESS) {
+            //If the requested $property doesn't exist, return false
+            if(isset($response->$list_name)) {
+                return $response->$list_name;
+            }
+        }
+
+        //Fail!
+        return false;
+    }
 }
 
 

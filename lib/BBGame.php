@@ -24,7 +24,7 @@ class BBGame extends BBSimpleModel {
     const SERVICE_LIST_POPULAR  = 'Game.GameSearch.Top';
 
     /**
-     * Returns a list of games available on BinaryBeast
+     * Returns a list of games available on BinaryBeast that match the given $filter value
      * 
      * Necessary because in order to associate a particular game with a tournament,
      *      you need to know its game_code
@@ -40,7 +40,7 @@ class BBGame extends BBSimpleModel {
         if(strlen($filter) < 2) return $this->set_error('"' . $filter . '" is too short, $filter must be at least 2 characters long');
 
         //Let get_list do the work
-        return $this->get_list('Game.GameSearch.Search', array('game' => $filter));
+        return $this->get_list('Game.GameSearch.Search', array('game' => $filter), 'games');
     }
     /**
      * Alias for search();
@@ -61,7 +61,7 @@ class BBGame extends BBSimpleModel {
      */
     public function list_top($limit = 10) {
         //Let get_list do the work
-        return $this->get_list('Game.GameSearch.Top', array('limit' => $limit));
+        return $this->get_list('Game.GameSearch.Top', array('limit' => $limit), 'games');
     }
     /**
      * Alias for BBGame::list_top()
@@ -73,27 +73,6 @@ class BBGame extends BBSimpleModel {
     public function list_popular($limit = 10) {
         return $this->list_top($limit);
     }
-
-    /**
-     * Does the actual work for search and get_top, all we need to know is
-     * which service to call, and which arguments to send
-     * 
-     * @param string $svc
-     * @param array $args
-     * @return array  - false if it failed
-     */
-    private function get_list($svc, $args) {
-        $response = $this->bb->call($svc, $args);
-
-        //Success!! - return the array only
-        if($response->result == BinaryBeast::RESULT_SUCCESS) {
-            return $response->games;
-        }
-
-        //Fail!
-        return false;
-    }
-    
 }
 
 ?>
