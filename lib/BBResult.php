@@ -140,6 +140,22 @@ class BBResult implements ArrayAccess, Iterator {
     }
 
     /**
+     * Handle attempts to directly echo / print this object
+     * 
+     * What we do is just return the result of var_dump as a string
+     * 
+     * We can do so by creating an output buffer, performing a var_dump, and
+     * then ending the buffer and returning the values queued within it
+     * 
+     * @return string       Value to print / echo
+     */
+    public function __toString() {
+        ob_start();
+            var_dump($this->result_values);
+        return ob_end_flush();
+    }
+
+    /**
      * Check for the existance of a virtual array property
      * 
      * Implemented from ArrayAccess
