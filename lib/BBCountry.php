@@ -20,6 +20,20 @@
  * @author Brandon Simmons
  */
 class BBCountry extends BBSimpleModel {
+    const SERVICE_SEARCH    = 'Country.CountrySearch.Search';
+
+    /**
+     * Returns a list of countries that match the given $filter value
+     * 
+     * @param type $filter
+     */
+    public function search($filter) {
+        //Don't even bother trying if filter is too short
+        if(strlen($filter) < 2) return $this->set_error('"' . $filter . '" is too short, $filter must be at least 2 characters long');
+
+        //GOGOGO!
+        return $this->get_list('Country.CountrySearch.Search', array('country' => $filter), 'countries');
+    }
     
 }
 
