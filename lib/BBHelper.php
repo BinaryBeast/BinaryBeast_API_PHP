@@ -145,7 +145,44 @@ class BBHelper {
         return $this->get_winner_rounds($players)
                 + $this->get_winner_rounds($players / 2) - 1;
     }
-    
+
+    /**
+     * Calculate the number of teams that will be in each group, based on
+     *  the tournament's group_count, and the number of confirmed teams
+     * 
+     * Warning: This method should only be used before groups have started, because
+     *      Afterwards it will no longer necessarily be accurate
+     * 
+     * Also beware that it's based on the number of teams currently confirmed in the tournament,
+     *  so it will change if you add / remove any teams before starting
+     * 
+     * If you get a value of 0 back, it means that you don't have enough teams to fill
+     *  the groups, you should either add more teams or lower the $tournament->group_count value 
+     * 
+     * @param BBTournament $tournament
+     * 
+     * @return int
+     */
+    public static function get_group_size(BBTournament &$tournament) {
+        //Just grab a list of confirmed team ids, and count how many we get
+        $confirmed_teams = $tournament->get_confirmed_team_ids();
+        $teams = sizeof($confirmed_teams);
+
+        //Derp
+        if($tournament->group_count == 0) return 0;
+
+        //Simply divide teams by groups
+        $size = $teams / $tournament->group_count;
+
+        //Not enough teams, we need at LEAST 2 teams per group
+        if($size < 2) {
+            return 0;
+        }
+
+        //Success! return the rounded (up) value
+        return ceil($size);
+    }
+
     /**
      * Attempts to return a human-friendly readable explanation 
      * for the given result code
@@ -232,7 +269,7 @@ class BBHelper {
      * @param BBTournament $tournament
      * @return boolean
      */
-    public static function tournament_is_active(&$tournament) {
+    public static function tournament_is_active(BBTournament &$tournament) {
         return in_array($tournament->status, array('Active', 'Active-Groups', 'Active-Brackets', 'Complete'));
     }
 
@@ -246,7 +283,7 @@ class BBHelper {
      * @param BBTournament $tournament
      * @return boolean
      */
-    public static function tournament_in_group_rounds(&$tournament) {
+    public static function tournament_in_group_rounds(BBTournament &$tournament) {
         return $tournament->status == 'Active-Groups';
     }
 
@@ -262,7 +299,7 @@ class BBHelper {
      * @param BBTournament $tournament
      * @return boolean
      */
-    public static function tournament_in_brackets(&$tournament) {
+    public static function tournament_in_brackets(BBTournament &$tournament) {
         return $tournament->status == 'Active' || $tournament->status == 'Active-Brackets';
     }
 
@@ -277,7 +314,7 @@ class BBHelper {
      * @param BBTournament $tournament
      * @return string|boolean
      */
-    public static function tournament_can_start(&$tournament) {
+    public static function tournament_can_start(BBTournament &$tournament) {
 
         //Doens't even exist!
         if(is_null($tournament->id)) {
