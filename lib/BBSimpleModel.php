@@ -64,8 +64,7 @@ class BBSimpleModel {
      * Calls the BinaryBeast API using the given service name and arguments, 
      * and grabs the result code so we can locally stash it 
      * 
-     * Also unlike BBModel, we actually DO want our results to be automatically 
-     * wrapped in BBResult
+     * Unlike BBModel, we actually DO want our results to be automatically wrapped in a BBResult
      * 
      * @param string $svc
      * @param array $args
@@ -113,7 +112,7 @@ class BBSimpleModel {
      */
     protected function set_error($error) {
         //Send to the main BinaryBeast API Library, and locally save whatever is sent back (a standardized format)
-        $this->last_error = $this->bb->set_error($error);
+        $this->last_error = $this->bb->set_error($error, get_called_class());
 
         //Allows return this directly to return false, saves a line of code - don't have to set_error then return false
         return false;
