@@ -175,6 +175,7 @@ class BinaryBeast {
     const INVALID_BRACKET_NUMBER                = 465;
     const RESULT_DUPLICATE_ENTRY                = 470;
     const RESULT_ERROR                          = 500;
+    const RESULT_SEARCH_FILTER_TOO_SHORT        = 601;
     const RESULT_INVALID_USER_ID                = 604;
     const RESULT_TOURNAMENT_NOT_FOUND           = 704;
     const TEAM_NOT_IN_TOURNEY_ID                = 705;

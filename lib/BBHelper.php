@@ -40,6 +40,7 @@ class BBHelper {
         '465'               => 'Invalid bracket number, use the BinaryBeast::BRACKET_* constants for available options',
         '470'               => 'Duplicate entry',
         '500'               => 'Generic error, likely something wrong on BinaryBeast\'s end',
+        '601'               => 'The "$filter" value provided is too short',
         '604'               => 'Invalid user_id',
         '705'               => 'Proivded tourney_team_id and tourney_id do not match!',        
         '704'               => 'Tournament not found / invalid tourney_id',
