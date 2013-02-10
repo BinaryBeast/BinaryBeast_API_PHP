@@ -159,6 +159,10 @@ class BBSimpleModel {
      *  }
      * 
      * @param array $list
+     * @param string $class
+     *      By default this method will use cast each object into whatever the current class is
+     *      However, this can be overridden by defining the class manually here by setting <$class>
+     *      Just beware that it must be a Model class
      * @return array<BBTournament> $class
      */
     protected function wrap_list($list, $class = null) {
@@ -179,19 +183,31 @@ class BBSimpleModel {
     /**
      * Used by SimpleModel classes for simple list service requests, like searching games / countries
      * 
-     * @param string $svc               Service name (like Game.GameSearch.Search)
-     * @param array $args               Array of arguments to submit
-     * @param string $list_name         Name of the array we should expect to be returned containing the list (example games, or tournies)
+     * @param string    $svc                Service name (like Game.GameSearch.Search)
+     * @param array     $args               Array of arguments to submit
+     * @param string    $list_name          Name of the array we should expect to be returned containing the list (example games, or tournies)
+     * @param string    $wrap_class
+     *          Disabled by default.  Use this value if you want items in the resulting array to be cast
+     *          into a certain class (for example, casting a list of tournaments into BBTournament)
      * @return array  - false if it failed
      */
-    protected function get_list($svc, $args, $list_name) {
-        $response = $this->bb->call($svc, $args);
+    protected function get_list($svc, $args, $list_name, $wrap_class = null) {
+
+        //If a wrap_class is defined, disable auto_wrapping in BBResult in BinaryBeast::call();
+        $auto_wrap = is_null($wrap_class);
+
+        //GOGOGO!
+        $response = $this->bb->call($svc, $args, $auto_wrap);
 
         //Success!! - return the array only
         if($response->result == BinaryBeast::RESULT_SUCCESS) {
             //If the requested $property doesn't exist, return false
             if(isset($response->$list_name)) {
-                return $response->$list_name;
+
+                //Return it wrapped if requested, directly otherwise
+                return is_null($wrap_class)
+                    ? $response->$list_name
+                    : $this->wrap_list($response->$list_name, $wrap_class);
             }
         }
 
