@@ -34,18 +34,20 @@ class BBMap extends BBSimpleModel {
      * Please note: If you were kind enough to submit maps for us on the site, they won't
      *  show up here until we approve them
      * 
+     * @param string $game_code
      * @param string $filter
      * @return array
      */
-    public function game_list($game_code) {
+    public function game_list($game_code, $filter = null) {
+        if(!is_null($filter)) return $this->game_search($game_code, $filter);
         return $this->get_list(self::SERVICE_LIST, array('game_code' => $game_code), 'list');
     }
 
     /**
      * Return a filtered set of maps associated with the given game_code
      * 
-     * @param string $filter
      * @param string $game_code
+     * @param string $filter
      * @return array
      */
     public function game_search($game_code, $filter) {
