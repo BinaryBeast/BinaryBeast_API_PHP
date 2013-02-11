@@ -28,7 +28,7 @@ class BBTeam extends BBModel {
      * Keep a reference to the tournament that instantiated this class
      * @var BBTournament
      */
-    private $tournament = null;
+    private $tournament;
 
     //This Team's ID, using BinaryBeast's naming convention
     public $tourney_team_id;
@@ -98,29 +98,15 @@ class BBTeam extends BBModel {
      * we'll simply use a psuedo-constructor and call it init()
      * 
      * @param BBTournament $tournament
-     * @param array $players
      * @return void
      */
     public function init(BBTournament &$tournament) {
         $this->tournament = $tournament;
+
+        //Set parent so BBModel will auto flag changes
+        $this->parent = &$this->tournament;
     }
 
-    /**
-     * Overloaded so we can let our tournament know that
-     * we now have unsaved changes
-     * 
-     * @see BBModel::__set()
-     * 
-     * @return void
-     */
-    function __set($name, $value) {
-        //Notify the tournament
-        $this->tournament->flag_child_changed($this);
-
-        //Let the default method handle the rest
-        parent::__set($name, $value);
-    }
-    
     /**
      * Delete this team!!!!!!!
      * If a new unsaved team, this method removes itself from the tournament
@@ -162,62 +148,6 @@ class BBTeam extends BBModel {
          * 
          * 
          */
-    }
-
-    /**
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * TODO: overload delete():
-     * if team is new, tell tourney to simply remove it from the list
-     * oterhwise, actually try to delete through the API
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     */
-
-    /**
-     * Overloaded so that we can let our tournament know that this
-     * class no longer has any unsaved changes
-     * 
-     * @see BBModel::reset()
-     * 
-     * @return void
-     */
-    public function reset() {
-        //Notify the tournament
-        $this->tournament->unflag_child_changed($this);
-
-        //Let the default method handle the rest
-        parent::reset();
-    }
-
-    /**
-     * Overloaded - you know the drill, let the tour know we're up to date
-     * @see BBModel::sync_changes();
-     * @param bool $skip_unflag     Allows the tournament to update all of the teams at once, and clear the array manually - it's better than calling unset and array_search for every single round!
-     * @return void
-     */
-    public function sync_changes($skip_unflag = false) {
-        //Notify the tournament we're up-to-date
-        if(!$skip_unflag) $this->tournament->unflag_child_changed($this);
-
-        //Let BBModel handle the rest
-        parent::sync_changes();
     }
 
     /**
