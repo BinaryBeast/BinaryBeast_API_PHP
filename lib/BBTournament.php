@@ -18,10 +18,14 @@
 class BBTournament extends BBModel {
 
     /** Model services / Tournament manipulation **/
-    const SERVICE_LOAD          = 'Tourney.TourneyLoad.Info';
-    const SERVICE_CREATE        = 'Tourney.TourneyCreate.Create';
-    const SERVICE_UPDATE        = 'Tourney.TourneyUpdate.Settings';
-    const SERVICE_DELETE        = 'Tourney.TourneyDelete.Delete';
+    const SERVICE_LOAD                      = 'Tourney.TourneyLoad.Info';
+    const SERVICE_CREATE                    = 'Tourney.TourneyCreate.Create';
+    const SERVICE_UPDATE                    = 'Tourney.TourneyUpdate.Settings';
+    const SERVICE_DELETE                    = 'Tourney.TourneyDelete.Delete';
+    const SERVICE_START                     = 'Tourney.TourneyStart.Start';
+    const SERVICE_REOPEN                    = 'Tourney.TourneyReopen.Reopen';
+    const SERVICE_ALLOW_CONFIRMATIONS       = 'Tourney.TourneySetStatus.Confirmation';
+    const SERVICE_DISALLOW_CONFIRMATIONS    = 'Tourney.TourneySetStatus.Building';
     /** Listing / searching **/
     const SERVICE_LIST          = 'Tourney.TourneyList.Creator';
     const SERVICE_LIST_POPULAR  = 'Tourney.TourneyList.Popular';
@@ -203,6 +207,52 @@ class BBTournament extends BBModel {
      */
     public function &participants() {
         return $this->teams();
+    }
+    /**
+     * Returns am array of teams within this tournament that have have a status of 1
+     *      aka confirmed
+     * 
+     * @param boolean   $ids        False by default, set to true to return JUST the tourney_team_id instead of a reference to the BBTeam object itself
+     * 
+     * @return array
+     */
+    public function get_confirmed_teams($ids = false) {
+        //Use teams() to guarantee up to date values, and so we can return false if there are errors set by it
+        if(!$teams = $this->teams()) return false;
+
+        //Initialize the output
+        $confirmed = array();
+
+        //Simply loop through and return the confirmed teams
+        foreach($teams as &$team) {
+            if($team->status == BinaryBeast::TEAM_STATUS_CONFIRMED) {
+                $confirmed[] = $ids ? $team->id : $team;
+            }
+        }
+
+        //Qapla!
+        return $confirmed;
+    }
+    /**
+     * Returns an array of tourney_team_ids of teams  within this tournament that have have a status of 1
+     *      aka confirmed
+     * 
+     * Used internally for validating the value of $order while starting a touranment
+     * 
+     * @return array
+     */
+    public function get_confirmed_team_ids() {
+        return $this->get_confirmed_teams(true);
+    }
+    /**
+     * Used internally after a major change to refresh our list of teams, in hopes of
+     *  getting changed data
+     * 
+     * @return void
+     */
+    private function reload_teams() {
+        $this->teams = null;
+        $this->teams();
     }
 
     /**
@@ -709,7 +759,6 @@ class BBTournament extends BBModel {
                 $this->set_error('Tournament (' . $this->id . ') does not have a team by that id (' . $id . ')');
                 return $this->ref(null);
             }
-            
         }
 
         //Instantiate a blank Team, and give it a reference to this tournament
@@ -724,7 +773,7 @@ class BBTournament extends BBModel {
          */
         //If teams is still null, that means this is a new tournament, so let's manually initalize teams()
         if(is_null($this->teams)) $this->teams = array();
-        
+
         //Figure out the next key, so we can more easily return references to the new element
         $key = sizeof($this->teams);
 
@@ -751,24 +800,44 @@ class BBTournament extends BBModel {
      * If you plan to allow players to join externaly from BinaryBeast.com, 
      *  you can use this method to allow them to start confirming their positions
      * 
+     * Note that only confirmed players are included in the brackets / groups once the tournament starts
+     * 
      * @return boolean
      */
-    public function allow_player_confirmations() {
-        /**
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * Build this
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         */
+    public function enable_player_confirmations() {
+        //Make sure we're loaded first
+        if(!$this->load()) return false;
+
+        //Not even going to bother validating, let the API handle that
+        $result = $this->call(self::SERVICE_ALLOW_CONFIRMATIONS, array('tourney_id' => $this->id));
+
+        //Uh oh - likely an active tournament already
+        if(!$result) return false;
+
+        //Success - update local status value
+        $this->set_current_data('status', 'Confirmation');
+        return true;
+    }
+    /**
+     * Disable participant's option of confirming their positions
+     * 
+     * Note that only confirmed players are included in the brackets / groups once the tournament starts
+     * 
+     * @return boolean
+     */
+    public function disable_player_confirmations() {
+        //Make sure we're loaded first
+        if(!$this->load()) return false;
+
+        //Not even going to bother validating, let the API handle that
+        $result = $this->call(self::SERVICE_DISALLOW_CONFIRMATIONS, array('tourney_id' => $this->id));
+
+        //Uh oh - likely an active tournament already
+        if(!$result) return false;
+
+        //Success - update local status value
+        $this->set_current_data('status', 'Building');
+        return true;
     }
 
     /**
@@ -790,26 +859,32 @@ class BBTournament extends BBModel {
             return $this->set_error('Tournament is not currently actve (current status is ' . $this->status . ')');
         }
 
-        //Make the call
-        /*
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * Build this
-         * 
-         * 
-         * 
-         * 
-         * 
-         */
+        //Don't reopen if there are unsaved changes
+        if($this->changed) {
+            return $this->set_error(
+                'Tournament currently has unsaved changes, you must save doing something as drastic as starting the tournament'
+            );
+        }
 
-        bb_debug('reopen now');
+        /**
+         * Who you gonna call??
+         */
+        $result = $this->call(self::SERVICE_REOPEN, array('tourney_id' => $this->id));
+
+        //Uh oh
+        if($result->result != BinaryBeast::RESULT_SUCCESS) return false;
+
+        /**
+         * Reopened successfully
+         * update local status (sent by api), and reload teams
+         */
+        $this->set_current_data('status', $result->status);
+
+        //Reload all teams
+        $this->reload_teams();
+
+        //Success!
+        return true;
     }
 
     /**
@@ -819,9 +894,61 @@ class BBTournament extends BBModel {
      *      Depending on type_id and current status, the next stage could be Active, Active-Groups, or Active-Brackets
      * 
      * 
+     * If you try to call this method while the tournament has unsaved changes, it will return false, you must save changes before starting the tournament
      * 
-     * @param string $seeding       'random' by default, any of the following are accepted: 'manual', 'sports', 'balanced'
-     * @param type $order
+     * 
+     * The reason we go through so much time validating the input, is BinaryBeast actually allows you to be flexible about defining team orders, which in
+     *      My experience so far is NOT a good thing and will likely change - but for now, we'll enforce a string input, and make sure that all valid teams and ONLY
+     *      valid teams are sent
+     * 
+     * Unfortunatley due to uncertainty in inevitable changes to the way Groups are seeding through the API... this method currently does not support
+     *      manually seeeding groups, it will only allow randomized groups
+     * 
+     *      This will change soon through, as soon as the API group seeding service can get it's sh*t together
+     * 
+     * Seeding brackets however is ezpz - just give us an array of either team id's, or team models either in order of bracket position, or seed ranking
+     * 
+     * 
+     * @param string $seeding       'random' by default
+     *      How to arrange the team matches
+     *      'Random' (Groups + Brackets)        =>      Randomized positions
+     *      'Manual' (Groups + Brackets)        =>      Arranges the teams in the order you provide in $order
+     *      'Sports' (Brackets only)            =>      This is the more traditional seeding more organizers are likely used to,
+     *              @see link to example here
+     *              Top seeds are given the greatest advantage, lowest seeds the lowest
+     *              So for a 16 man bracket, seed 1 players against 32 first, 2 against 31, 3 against 30... 8 against 9 etc
+     *      'Balanced' (brackets only)          =>      BinaryBeast's own in-house algorithm for arranged team seeds, we felt 'Sports' was a bit too inbalanced,
+     *              @see link to example here
+     *              Unlike sports where the difference in seed is dynamic, favoring top seeds, in Balanced the seed different is the same for every match, basically top seed + $players_count/2
+     *              For a 16 man bracket, seed 1 is against 9, 2 against 10, 3 against 11, 4 against 12.. 8 against 16 etc
+     * 
+     * 
+     * @param array $order          If any seeding method other than 'random', use this value
+     *      to define either the team arrangements, or team seeds
+     * 
+     *      You may either provide an array of BBTeam objects, or an array of tourney_team_id integer values
+     *          Example of BBTeam array: $order = [BBTeam (seed|position 1), BBTeam (seed|position 2)...]
+     *          Example of ids array:    $order = [1234 (seed|position 1), 1235 (seed|position2)...]
+     * 
+     *      For 'Manual', the match arrangements will be determined by the order of teams in $order, 
+     *          So for [1234, 1235, 1236, 1237]... the bracket will look like this:
+     *          1234
+     *          1235
+     *          --
+     *          1236
+     *          1237
+     * 
+     *      For Sports and Balanced, the match arranagements are determined by an seed pairing algorithm,
+     *          and each team's seed is equal to his position in $order
+     * 
+     *      Please note that you may ommit teams from the $order if you wish, and they will be
+     *          randomly added to the end of the $order - which could be useful if you'd like to define
+     *          only the top $x seeds, and randomize the rest
+     * 
+     *      If you want to define freewin positions (for example when manually arranging the matches)...
+     *          Use an integer value of 0 in $order to indicate a FreeWin
+     * 
+     * @return boolean
      */
     public function start($seeding = 'random', $order = null) {
         //Use BBHelper to run verify that this touranment is ready to start
@@ -830,18 +957,100 @@ class BBTournament extends BBModel {
             return $this->set_error($error);
         }
 
-        bb_debug(['start!', $this->teams, $this->teams_changed, $this]);
-    }
-    /**
-     * When starting a tournament, this method is used to make sure that
-     * if the developer provides us with a order of teams to set when starting,
-     * that all values are valid / in this tournament
-     * 
-     * @param array $teams
-     * @return boolean
-     */
-    private function validate_teams(&$teams) {
-        
+        //Make sure the seeding type is valid, use BBHelper - returned value of null indicates invalid seeding type
+        if(is_null($seeding = BBHelper::validate_seeding_type($this, $seeding))) {
+            return $this->set_error("$seeding is not a valid seeding method value! Valid values: 'random', 'manual', 'balanced', 'sports' for brackets, 'random' and 'manual' for groups");
+        }
+
+        //Initialize the real $teams value we send to the API - $order is just temporary
+        $teams = array();
+
+        /**
+         * If we need an order or teams / seeds, we need to make sure that 
+         *      all confirmed teams are provided, and nothing more
+         */
+        if($seeding != 'random') {
+            /**
+             * Will be supported in the future, however for now we don't allow
+             *      seeding groups with this class
+             */
+            if(BBHelper::get_next_tournament_stage($this) == 'Active-Groups') {
+                return $this->set_error('Unfortunately for the time being, seeding groups has been disabled.  It will be supported in the future.  However for now, only "random" is supported for group rounds');
+            }
+            
+
+            /**
+             * First grab a list of teams that need to be included
+             *  As we move through each team provided in $order, we'll add the team 
+             *  to the new array $teams, which is what we'll actually send to BinaryBeast
+             * 
+             * This let's us first check to make sure he's valid (confirmed + in this tour)..
+             *  and then let's us check at the end to make sure there are no teams left over that
+             *  shouldn't be there
+             */
+            $confirmed_team = $this->get_confirmed_team_ids();
+
+            //Start looping through each team provided, adding it to $teams only if it's in $confirmed_teams
+            foreach($order as &$team) {
+                //If this is an actual BBTeam object, all we want is its id
+                if($team instanceof BBTeam) {
+                    $team = $team->id;
+                }
+
+                //Now make sure that this team is supposed to be here
+                if(!in_array($team, $confirmed_team) && intval($team) !== 0) {
+                    return $this->set_error("Team {$team} is a valid tourney_team_id of any team in this tournament, please include only valid team ids, or 0's to indicate a FreeWin");
+                }
+
+                /**
+                 * Valid team! Now we need to do two things:
+                 *  1) Remove the team from confirmed_teams (so we can randomize + add any remaining teams after we're finished)
+                 *  2) Add its tourney_team_id to $teams, which is the actual value sent to BinaryBeast
+                 */
+                $teams[] = $team;
+                unset($confirmed_team[array_search($team, $confirmed_team)]);
+            }
+
+            /*
+             * If there are any teams left over, randomize them and add them to the end of the teams array
+             */
+            if(sizeof($confirmed_team) > 0) {
+                shuffle($teams);
+                array_push($teams, $confirmed_team);
+            }
+        }
+        //For random tournaments, just send null for $order
+        else $order = null;
+
+        //GOGOGO!
+        $result = $this->call(self::SERVICE_START, array(
+            'tourney_id'        => $this->id,
+            'seeding'           => $seeding,
+            'teams'             => $teams
+        ));
+
+        //oh noes!
+        if($result->result !== BinaryBeast::RESULT_SUCCESS) {
+            return false;
+        }
+
+        /**
+         * Started successfully!
+         * Now we update our status value, and reload the teams arary,
+         * because teams will now have position / group values etc
+         * 
+         * Directly update the actual current value, no need to sync / flag any changes
+         * 
+         * Conveniently the API actually sends back the new status, so we'll use that to update our local values
+         */
+        $this->current_data['status']   = $result->status;
+        $this->data['status']           = $result->status;
+
+        //Reload the teams array (so the api sends us positions, wins, lbwins, etc etc etc)
+        $this->reload_teams();
+
+        //Success!
+        return true;
     }
 }
 
