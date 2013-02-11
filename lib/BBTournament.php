@@ -11,8 +11,8 @@
  *   http://www.opensource.org/licenses/mit-license.php
  *   http://www.gnu.org/licenses/gpl.html
  * 
- * @version 1.0.2
- * @date 2013-02-08
+ * @version 1.0.3
+ * @date 2013-02-10
  * @author Brandon Simmons
  */
 class BBTournament extends BBModel {
@@ -27,15 +27,16 @@ class BBTournament extends BBModel {
     const SERVICE_ALLOW_CONFIRMATIONS       = 'Tourney.TourneySetStatus.Confirmation';
     const SERVICE_DISALLOW_CONFIRMATIONS    = 'Tourney.TourneySetStatus.Building';
     /** Listing / searching **/
-    const SERVICE_LIST          = 'Tourney.TourneyList.Creator';
-    const SERVICE_LIST_POPULAR  = 'Tourney.TourneyList.Popular';
+    const SERVICE_LIST                      = 'Tourney.TourneyList.Creator';
+    const SERVICE_LIST_POPULAR              = 'Tourney.TourneyList.Popular';
+    const SERVICE_LIST_OPEN_MATCHES         = 'Tourney.TourneyLoad.OpenMatches';
     //const SERVICE_LIST_SEARCH     = 'Tourney.TourneyList.Creator'; //Coming soon - search public tournaments
     //const SERVICE_LIST_SEARCH_MY   = 'Tourney.TourneyList.Creator'; //Coming soon - search tournaments made by you
     /** Child listing / manipulation**/
-    const SERVICE_LOAD_TEAMS    = 'Tourney.TourneyLoad.Teams';
-    const SERVICE_LOAD_ROUNDS   = 'Tourney.TourneyLoad.Rounds';
-    const SERVICE_UPDATE_ROUNDS = 'Tourney.TourneyRound.BatchUpdate';
-    const SERVICE_UPDATE_TEAMS  = 'Tourney.TourneyTeam.BatchUpdate';
+    const SERVICE_LOAD_TEAMS                = 'Tourney.TourneyLoad.Teams';
+    const SERVICE_LOAD_ROUNDS               = 'Tourney.TourneyLoad.Rounds';
+    const SERVICE_UPDATE_ROUNDS             = 'Tourney.TourneyRound.BatchUpdate';
+    const SERVICE_UPDATE_TEAMS              = 'Tourney.TourneyTeam.BatchUpdate';
 
     /**
      * Array of participants within this tournament
@@ -58,6 +59,9 @@ class BBTournament extends BBModel {
 
     //This tournament's ID, using BinaryBeast's naming convention
     public $tourney_id;
+
+    //Cache results from loading open matches from the API
+    private $open_matches;
 
     //So BBModal knows which property use as the unique id
     protected $id_property = 'tourney_id';
@@ -128,18 +132,6 @@ class BBTournament extends BBModel {
      * Not that it honestly really matters, the API only changes acceptable values submitted anyway
      */
     protected $read_only = array('status', 'tourney_id');
-
-    /**
-     * An array of rounds with unsaved changes, so we know
-     * to save them when save() is invoked
-     */
-    private $rounds_changed = array();
-
-    /**
-     * An array of rounds with unsaved changes, so we know
-     * to save them when save() is invoked
-     */
-    private $teams_changed = array();
 
     /**
      * Returns an array of players/teams/participants within this tournament
@@ -248,11 +240,14 @@ class BBTournament extends BBModel {
      * Used internally after a major change to refresh our list of teams, in hopes of
      *  getting changed data
      * 
+     * Refresh our teams array, and deletes our cache of open_matches
+     * 
      * @return void
      */
-    private function reload_teams() {
+    private function reload() {
         $this->teams = null;
         $this->teams();
+        $this->open_matches = null;
     }
 
     /**
@@ -431,8 +426,11 @@ class BBTournament extends BBModel {
             return $this->set_error('Can\t save teams before saving the tournament!');
         }
 
+        //Get a list of changed rounds
+        $rounds = $this->get_changed_children('BBRound');
+
         //Nothing has changed, just return true
-        if(sizeof($this->rounds_changed) == 0) return true;
+        if(sizeof($rounds) == 0) return true;
 
         /**
          * We have to compile all of the values into separate arrays, keyed by round,
@@ -444,7 +442,7 @@ class BBTournament extends BBModel {
          */
         $format = array();
 
-        foreach($this->rounds_changed as &$round) {
+        foreach($rounds as &$round) {
             //Bracket value initailized?
             if(!isset($format[$round->bracket])) $format[$round->bracket] = array(
                 'maps'      => array(),
@@ -461,9 +459,9 @@ class BBTournament extends BBModel {
         }
 
         //Loop through the results, and call the API once for each bracket with any values in it
-        foreach($format as $bracket => &$rounds) {
+        foreach($format as $bracket => &$bracket_rounds) {
             //Determine the arguments for this bracket
-            $args = array_merge($rounds, array(
+            $args = array_merge($bracket_rounds, array(
                 'tourney_id'    => $this->tourney_id,
                 'bracket'       => $bracket,
             ));
@@ -484,12 +482,12 @@ class BBTournament extends BBModel {
          * We waited to do this because we wouldn't want to clear the queue
          * before insuring that we submitted the changes successfully
          */
-        foreach($this->rounds_changed as &$round) {
-            $round->sync_changes(true);
+        foreach($rounds as &$round) {
+            $round->sync_changes();
         }
 
         //Reset our list of changed rounds, and return true, yay!
-        $this->rounds_changed = array();
+        $this->reset_changed_children('BBRound');
         return true;
     }
 
@@ -510,8 +508,11 @@ class BBTournament extends BBModel {
             return $this->set_error('Can\t save teams before saving the tournament!');
         }
 
+        //Get a list of changed teams
+        $teams = $this->get_changed_children('BBTeam');
+
         //Nothing has changed, just return true
-        if(sizeof($this->teams_changed) == 0) return true;
+        if(sizeof($teams) == 0) return true;
 
         /**
          * Using the array of tracked / changed teams, let's compile
@@ -519,13 +520,13 @@ class BBTournament extends BBModel {
          * 
          * Initialize the two team arrays: new + update
          */
-        $teams = array();
+        $update_teams = array();
         $new_teams = array();
 
         /**
          * GOGOGO!
          */
-        foreach($this->teams_changed as &$team) {
+        foreach($teams as &$team) {
             /**
              * New team - get all default + new values and add to $new_teams
              */
@@ -536,14 +537,14 @@ class BBTournament extends BBModel {
              * Existing team - get only values that are new, and key by team id
              */
             else {
-                $teams[$team->tourney_team_id] = $team->get_changed_values();
+                $update_teams[$team->tourney_team_id] = $team->get_changed_values();
             }
         }
 
         //Send the compiled arrays to BinaryBeast
         $result = $this->call(self::SERVICE_UPDATE_TEAMS, array(
             'tourney_id'        => $this->tourney_id,
-            'teams'             => $teams,
+            'teams'             => $update_teams,
             'new_teams'         => $new_teams
         ));
         //Oh noes!
@@ -555,10 +556,10 @@ class BBTournament extends BBModel {
          * Tell all team instances to synchronize their settings
          */
         $new_id_index = 0;
-        foreach($this->teams_changed as &$team) {
-            
+        foreach($teams as &$team) {
+
             //Tell the tournament to merge all unsaved changed into $data
-            $team->sync_changes(true);
+            $team->sync_changes();
 
             /**
              * For new tournaments, make sure they get the new team_id
@@ -570,7 +571,7 @@ class BBTournament extends BBModel {
         }
 
         //Clear the list of teams with changes
-        $this->teams_changed = array();
+        $this->reset_changed_children('BBTeam');
 
         //Success!
         return true;
@@ -618,49 +619,6 @@ class BBTournament extends BBModel {
     }
 
     /**
-     * Save a reference a child round/match etc that has unsaved chnages, so that we can
-     * update all rounds that have any changes once save() is invoked
-     * 
-     * It stores a reference to the child with changes in rounds|teams_changed, which
-     * makes iterating through them much much easier when we decide to submit
-     * the changes
-     * 
-     * @param BBModel $child - a reference to child object to be tracked
-     * @return void
-     */
-    public function flag_child_changed(BBModel &$child) {
-        //Determine property name based on the child object type
-        $property = get_class($child) == 'BBTeam' ? 'teams_changed' : 'rounds_changed';
-
-        //If it isn't already being tracked, add it now
-        if(!in_array($child, $this->{$property})) {
-            $this->{$property}[] = &$child;
-        }
-
-        //Flag the entire tournament has having unsaved changes
-        $this->changed = true;
-    }
-    /**
-     * Removes any references to a child class (team/round etc), so we know that
-     * the child has no unsaved changes
-     * 
-     * @param BBModel $child - a reference to the Round calling
-     * @return void
-     */
-    public function unflag_child_changed(BBModel &$child) {
-        //Determine property name based on the child object type
-        $property = get_class($child) == 'BBTeam' ? 'teams_changed' : 'rounds_changed';
-
-        //If it's currently being tracked, remove it now
-        if(in_array($child, $this->{$property})) {
-            unset($this->{$property}[ array_search($child, $this->{$property}) ]);
-        }
-
-        //Recalculate the changed flag
-        $this->changed = sizeof($this->new_data) > 0 || sizeof($this->teams_changed) > 0 || sizeof($this->rounds_changed) > 0;
-    }
-
-    /**
      * Remove a team from this tournament's teams lists
      * Warning: this method does NOT perform any API requests, it's strictly
      * used to disassociate a BBTeam object from this tournament
@@ -703,6 +661,11 @@ class BBTournament extends BBModel {
      * Either returns a new BBTeam to add to the tournament, or returns a reference to an existing one
      * 
      * This method will return a value of false if the tournament is already active!
+     * 
+     * The secondary use of this method is to validate a team argument value, allowing either
+     *      the team's id or the team object itself to be used
+     *      this method will convert the id to a BBTeam if necessary, and verify that
+     *      it belongs to this tournament
      * 
      * A cool tip: this method can actually be used to pre-define a list of players in a new tournaemnt, before
      *      you even create it :)
@@ -748,8 +711,17 @@ class BBTournament extends BBModel {
         /**
          * If they provided an $id, that means they we need to return a 
          * reference to a specific team that should already exist
+         * 
+         * It could also be a method allowing argument values to be both ids, and teams, 
+         *      therefore relying on BBTournament::team() to make sure that either way,
+         *      it ends up being a BBTeam, and that it's part of this tournament
          */
         if(!is_null($id)) {
+            //If given a BBTeam directly, make sure it's part of this tournament
+            if($id instanceof BBTeam) {
+                return in_array($id, $this->teams);
+            }
+
             //Simply have to iterate through until we find it
             foreach($this->teams as $key => &$team) {
                 if($team->id == $id) {
@@ -880,8 +852,8 @@ class BBTournament extends BBModel {
          */
         $this->set_current_data('status', $result->status);
 
-        //Reload all teams
-        $this->reload_teams();
+        //Reload all data that would likely change from a major update like this (open matches, teams)
+        $this->reload();
 
         //Success!
         return true;
@@ -1046,11 +1018,47 @@ class BBTournament extends BBModel {
         $this->current_data['status']   = $result->status;
         $this->data['status']           = $result->status;
 
-        //Reload the teams array (so the api sends us positions, wins, lbwins, etc etc etc)
-        $this->reload_teams();
+        //Reload all data that would likely change from a major update like this (open matches, teams)
+        $this->reload();
 
         //Success!
         return true;
+    }
+
+    /**
+     * Returns an array of matches that still need to be played
+     * 
+     * Each item in the array will be an instance of BBMatch, which you can use 
+     *      to submit the results
+     * 
+     * @return array
+     */
+    public function &list_open_matches() {
+        //Derp
+        if(!BBHelper::tournament_is_active($this)) {
+            return $this->bb->ref(
+                set_error('Tournament is not active, there are no matches to list')
+            );
+        }
+
+        //Already cached
+        if(!is_null($this->open_matches)) return $this->open_matches;
+
+        //Ask the api
+        $result = $this->call(self::SERVICE_LIST_OPEN_MATCHES, array('tourney_id' => $this->id));
+
+        //Uh oh
+        if(!$result) return $this->bb->ref(false);
+
+        //Cast each match into BBMatch
+        foreach($result->matches as $match) {
+            $match = new BBMatch($this->bb, $match);
+            $match->init($this);
+            $this->open_matches[] = $match;
+        }
+
+        //Success!
+        return $this->open_matches;
     }
 }
 
