@@ -164,20 +164,6 @@ class BBRound extends BBModel {
             return $this->set_error($result);
         }
     }
-
-    /**
-     * Overloaded - you know the drill, let the tour know we're up to date
-     * @see BBModel::sync_changes();
-     * @param bool $skip_unflag     Allows the tournament to update all of the rounds at once, and clear the array manually - it's better than calling unset and array_search for every single round!
-     * @return void
-     */
-    public function sync_changes($skip_unflag = false) {
-        //Notify the tournament we're up-to-date
-        if(!$skip_unflag) $this->tournament->unflag_child_changed($this);
-
-        //Let BBModel handle the rest
-        parent::sync_changes();
-    }
 }
 
 ?>
