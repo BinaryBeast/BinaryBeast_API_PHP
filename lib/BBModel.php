@@ -117,6 +117,17 @@ class BBModel extends BBSimpleModel {
         //Flag unsaved changes
         $this->changed = true;
     }
+    /**
+     * Update a current value without flagging changes, just direclty change it
+     * 
+     * @param string $key       Value name
+     * @param string $value     New value
+     * @return void
+     */
+    protected function set_current_data($key, $value) {
+        $this->data[$key]           = $value;
+        $this->current_data[$key]   = $value;
+    }
 
     /**
      * Intercept attempts to load values from this object
@@ -333,10 +344,10 @@ class BBModel extends BBSimpleModel {
     public function &load($id = null, $child_args = array()) {
 
         /**
-         * If defining an ID manually, go ahead make sure that we 
+         * If defining a new ID manually, go ahead make sure that we 
          * completely wipe everything that may have changed, and THEN load it
          */
-        if(!is_null($id)) {
+        if(!is_null($id) && $id != $this->id) {
             $this->reset();
             $this->set_id($id);
         }
@@ -347,6 +358,9 @@ class BBModel extends BBSimpleModel {
                 $this->set_error('No ' . $this->id_property . ' was provided, there is nothing to load!')
             );
         }
+
+        //Already loaded
+        if(sizeof($this->current_data) > 0) return $this;
 
         //Determine which sevice to use, return false if the child failed to define one
         $svc = $this->get_service('LOAD');
