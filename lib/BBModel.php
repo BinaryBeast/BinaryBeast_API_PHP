@@ -67,6 +67,23 @@ class BBModel extends BBSimpleModel {
     public $changed = false;
 
     /**
+     * Keep track of child model classes that have unsaved changes
+     */
+    protected $changed_children = array();
+    protected $changed_children_count = 0;
+
+    /**
+     * Allows models to define their parent class, so that we can 
+     *  execute the parent's flag_child_changed() method when appropriate
+     * 
+     * Moved this here once I realized that half of my models were overriding everything so that
+     *  they could flag changes
+     * 
+     * @var BBModel
+     */
+    protected $parent = null;
+
+    /**
      * Constructor
      * Stores a reference to the main BinaryBeast library class, 
      * and imports any data or id provided
@@ -142,9 +159,9 @@ class BBModel extends BBSimpleModel {
      * $bb->load returns BBTournament::load()
      * 
      * Priority of returned value:
+     *      {$method}()
      *      $data
      *      $new_data
-     *      {$method}()
      *      $id as ${$id_property}
      * 
      * @param string $name
@@ -153,7 +170,18 @@ class BBModel extends BBSimpleModel {
     public function &__get($name) {
 
         /**
-         * VERY first step is to try $data, which hosts a combination depending on the state of this object
+         * If a method exists with this name, execute it now and return the result
+         * Nice for a few reasons - but most importantly, child classes
+         * 
+         * can now define methods for properties that may require an API Request before
+         * returning (like BBTournament->rounds for example)
+         */
+        if(method_exists($this, $name)) {
+            return $this->{$name}();
+        }
+
+        /**
+         * Next step is to try $data, which hosts a combination depending on the state of this object
          *  For new objects, it's a combination of new_data + default_values
          *  For real objects, it's a combination of new_data + current_data
          * 
@@ -174,17 +202,6 @@ class BBModel extends BBSimpleModel {
                 $this->load();
                 return $this->__get($name);
             }
-        }
-
-        /**
-         * If a method exists with this name, execute it now and return the result
-         * Nice for a few reasons - but most importantly, child classes
-         * 
-         * can now define methods for properties that may require an API Request before
-         * returning (like BBTournament->rounds for example)
-         */
-        if(method_exists($this, $name)) {
-            return $this->{$name}();
         }
 
         /**
@@ -220,6 +237,9 @@ class BBModel extends BBSimpleModel {
 
         //Let set_new_data handle this
         $this->set_new_data($name, $value);
+
+        //Children_changed flag in parent
+        $this->on_change();
     }
 
     /**
@@ -265,6 +285,9 @@ class BBModel extends BBSimpleModel {
 
         //We no longer have any unsaved changes
         $this->changed = false;
+
+        //Unflag child-changes in parent
+        $this->on_change(false);
     }
 
     /**
@@ -579,6 +602,117 @@ class BBModel extends BBSimpleModel {
          * Existing object: current + new
          */
         return array_merge($this->current_data, $this->new_data);
+    }
+
+    /**
+     * Allows models to keep track of changes that their child objects make
+     * 
+     * For example for a tournament, we want to make sure that when we save(), we know
+     *      if there are any rounds or teams that need to be saved too
+     * 
+     * When a child is flagged as having unsaved changes, we store a reference
+     *      to the child in $this->changed_children['type'][], and also update
+     *      the integer changed_children_count
+     * 
+     * @param BBModel $child - a reference to child object to be tracked
+     * @return void
+     */
+    public function flag_child_changed(BBModel &$child) {
+        //Store changed children into the changed_children array, but in sub_arrays keyed by class name
+        $class = get_class($child);
+
+        //Initialize the sub-array for the child's class if necessary
+        if(!isset($this->changed_children[$class])) $this->changed_children[$class] = array();
+
+        //If it isn't already being tracked, add it now and increment the changed_children counter
+        if(!in_array($child, $this->changed_children[$class])) {
+            $this->changed_children[$class][] = &$child;
+            ++$this->changed_children_count;
+        }
+
+        //Flag the entire model has having unsaved changes
+        $this->changed = true;
+
+        //Flag for parents too, propogate all the way up (ie changing MatchGame flags MatchGame->Match->Tournament)
+        $this->on_change();
+    }
+    /**
+     * Removes any references to a child class (team/round for tournaments.. etc), so we know that
+     * the child has no unsaved changes
+     * 
+     * @param BBModel $child - a reference to the Round calling
+     * @return void
+     */
+    public function unflag_child_changed(BBModel &$child) {
+        //Store changed children into the changed_children array, but in sub_arrays keyed by class name
+        $class = get_class($child);
+
+        //Try to find the child's index within the changed_children array
+        if(($key = array_search($child, $this->changed_children[$class])) !== false) {
+            unset($this->changed_children[$class][$key]);
+            --$this->changed_children_count;
+        }
+
+        //Recalculate the changed parent's flag
+        $this->changed = sizeof($this->new_data) > 0 || $this->changed_children_count > 0;
+
+        //If we determined local changed flag to be false, then unflag ourselves from our parent too if appropriate
+        if(!$this->changed) $this->on_change(false);
+    }
+    /**
+     * Retrieve an array of children of the provided $class name, that have been flagged
+     *  as having unsaved changes
+     * 
+     * @param string $class
+     * @return array
+     */
+    protected function get_changed_children($class) {
+        if(!isset($this->changed_children[$class])) $this->changed_children[$class] = array();
+        return $this->changed_children[$class];
+    }
+    /**
+     * Empties the lists of children being tracked as having changes
+     * 
+     * If no $class is provided, ALL children will be removed
+     * 
+     * @param string $class
+     */
+    protected function reset_changed_children($class = null) {
+        //clear them all
+        if(is_null($class)) {
+            $this->changed_children = array();
+            $this->changed_children_count = 0;
+        }
+
+        //Specific child type
+        else {
+            /**
+             * First decrement the count by the number of children in this array
+             * Use get_changed_children, just to be sure that an array of this class will exist
+             */
+            $this->changed_children_count -= sizeof($this->get_changed_children($class));
+
+            //Empty it out!
+            $this->changed_children[$class] = array();
+        }
+    }
+
+    /**
+     * Called when something changes, so that we can decide
+     *  notify parent classes of unsaved changes when appropriate
+     * 
+     * @param bool $flag    true by default, set to false for unflagging instead of flagging
+     * @return void
+     */
+    protected function on_change($flag = true) {
+        if(!is_null($this->parent)) {
+            if($flag) {
+                $this->parent->flag_child_changed($this);
+            }
+            else {
+                $this->parent->unflag_child_changed($this);
+            }
+        }
     }
 
 }
