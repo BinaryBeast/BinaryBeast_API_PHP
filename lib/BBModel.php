@@ -133,6 +133,7 @@ class BBModel extends BBSimpleModel {
 
         //Flag unsaved changes
         $this->changed = true;
+        $this->on_change();
     }
     /**
      * Update a current value without flagging changes, just direclty change it

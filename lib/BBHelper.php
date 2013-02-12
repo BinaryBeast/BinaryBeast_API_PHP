@@ -43,7 +43,7 @@ class BBHelper {
         '601'               => 'The "$filter" value provided is too short',
         '604'               => 'Invalid user_id',
         '705'               => 'Proivded tourney_team_id and tourney_id do not match!',        
-        '704'               => 'Tournament not found / invalid tourney_id',
+        '704'               => 'Tournament not found / invalid tourney_id (or.. invalid map_id)',
         '706'               => 'Team not found / invalid tourney_team_id',
         '708'               => 'Match not found / invalid tourney_match_id',
         '709'               => 'Match Game not found / invalid tourney_match_game_id',
@@ -170,7 +170,7 @@ class BBHelper {
      */
     public static function get_group_size(BBTournament &$tournament) {
         //Just grab a list of confirmed team ids, and count how many we get
-        $confirmed_teams = $tournament->get_confirmed_team_ids();
+        $confirmed_teams = $tournament->confirmed_team_ids();
         $teams = sizeof($confirmed_teams);
 
         //Derp

@@ -64,6 +64,14 @@ class BBMatchGame extends BBModel {
         'map_id'                => null,
         //Optionally you can provide the map name instead of map_id
         'map'                   => null,
+        //race_id of the winner - you can find this value in $bb->race->game_list($game_code)
+        'race_id'               => null,
+        //race_of of the loser
+        'o_race_id'             => null,
+        //Optionally define the winner's race without using a race_id
+        'race'                  => null,
+        //Optionally define the loser's race without using a race_id
+        'o_race'                => null,
         //General description / notes on the match
         'notes'                 => null,
         //This will be updated soon to be more flexible, but for now - all this value serves as is as a URL to the replay of this match
@@ -71,9 +79,9 @@ class BBMatchGame extends BBModel {
     );
 
     /**
-     * winner's id is read-only, developers shoudl use set_winner to change it
+     * A few settings that shouldn't be changed manually
      */
-    protected $read_only = array('tourney_team_id');
+    protected $read_only = array('tourney_team_id', 'o_tourney_team_id', 'tourney_match_id', 'tourney_id');
 
     /**
      * Since PHP doens't allow overloading the constructor with a different paramater list,
@@ -92,6 +100,20 @@ class BBMatchGame extends BBModel {
     }
 
     /**
+     * Overloads BBModel::save so we can make sure that the match
+     *  is saved before trying to update any games
+     * 
+     * @return boolean
+     */
+    public function save($return_result = false, $child_args = null) {
+        //If the match hasn't been saved yet, stop now
+        if(is_null($this->match->id)) {
+            return $this->set_error("Can't save game detaisl before the match itself has been saved - please execute \$match->save() first");
+        }
+        parent::save($return_result, $child_args);
+    }
+
+    /**
      * Returns the BBTeam object of the winner of this game
      * 
      * @return BBTeam
@@ -102,7 +124,7 @@ class BBMatchGame extends BBModel {
 
         //No winner defined
         if(is_null($id = $this->data['tourney_team_id'])) {
-            $this->set_error('No tourney_team_id defined in this game, unable to retrieve winner\'s BBTeam');
+            $this->set_error('Winner/Loser not defined for this game');
             return $this->bb->ref(null);
         }
 
@@ -120,24 +142,14 @@ class BBMatchGame extends BBModel {
         //Already cached
         if(!is_null($this->loser)) return $this->loser;
 
-        //We need to know the winner first, so if that's unavailable then stop now
-        if( is_null($winner = $this->winner()) ) {
-            return $winner;
+        //No loser defined
+        if(is_null($id = $this->data['o_tourney_team_id'])) {
+            $this->set_error('Winner/Loser not defined for this game');
+            return $this->bb->ref(null);
         }
 
-        /**
-         * Game's only record winners for some reason (why, I don't remember)
-         * So we must deduce the loser by comparing this game's winner to the match's winner
-         * 
-         * Go ahead and use the match's loser, we'll be calling loser() anyway
-         *  and then change it if we determine otherwise
-         */
-        $this->loser = $this->match->winner();
-        if($winner == $this->match->winner()) {
-            $this->loser = $this->match->loser();
-        }
-
-        //Return a reference to the cache
+        //Try to load from the tournament, return directly since null is returned if the id is invalid anyway
+        $this->loser = $this->tournament->team($id);
         return $this->loser;
     }
 
@@ -158,16 +170,18 @@ class BBMatchGame extends BBModel {
             return $this->set_error('Invalid team selected for this game\'s winner');
         }
 
-        /**
-         * Let's store this as the new winner, and then set the loser to null, so next time it's accessed 
-         *      the correct team will be returned, and not a cached value
-         */
+        //Update the winner property
         $this->winner = $winner;
-        $this->loser = null;
 
-        //Flag changes, and let parents know
-        $this->changed = true;
-        $this->match->flag_child_changed($this);
+        //Figure out which team lost so that we can update the loser value
+        if($this->winner == $this->match->winner()) {
+            $this->loser = $this->match->loser();
+        }
+        else $this->loser = $this->match->winner();
+
+        //Update the team id values
+        $this->set_new_data('tourney_team_id', $this->winner->id);
+        $this->set_new_data('o_tourney_team_id', $this->loser->id);
 
         //Success!
         return true;

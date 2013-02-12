@@ -184,22 +184,9 @@ class BBTournament extends BBModel {
         //Success! return the result
         return $this->teams;
     }
-    /**
-     * Alias for BBTournament::teams()
-     * Returns an array of players/teams/participants within this tournament
-     * @return array
-     */
-    public function &players() {
-        return $this->teams();
-    }
-    /**
-     * Alias for BBTournament::teams()
-     * Returns an array of players/teams/participants within this tournament
-     * @return array
-     */
-    public function &participants() {
-        return $this->teams();
-    }
+    public function &players() { return $this->teams(); }
+    public function &participants() { return $this->teams(); }
+
     /**
      * Returns am array of teams within this tournament that have have a status of 1
      *      aka confirmed
@@ -208,7 +195,7 @@ class BBTournament extends BBModel {
      * 
      * @return array
      */
-    public function get_confirmed_teams($ids = false) {
+    public function confirmed_teams($ids = false) {
         //Use teams() to guarantee up to date values, and so we can return false if there are errors set by it
         if(!$teams = $this->teams()) return false;
 
@@ -233,8 +220,8 @@ class BBTournament extends BBModel {
      * 
      * @return array
      */
-    public function get_confirmed_team_ids() {
-        return $this->get_confirmed_teams(true);
+    public function confirmed_team_ids() {
+        return $this->confirmed_teams(true);
     }
     /**
      * Used internally after a major change to refresh our list of teams, in hopes of
@@ -696,11 +683,6 @@ class BBTournament extends BBModel {
      */
     public function &team($id = null) {
 
-        //We can't add new players to an active-tournament
-        if(BBHelper::tournament_is_active($this)) {
-            return $this->bb->ref($this->set_error('You cannot add players to active tournaments!!'));
-        }
-
         /**
          * Insure that the local teams array is up to date according to BinaryBeast
          * Wouldn't want to risk adding a new player to make teams() look initilaized,
@@ -719,18 +701,24 @@ class BBTournament extends BBModel {
         if(!is_null($id)) {
             //If given a BBTeam directly, make sure it's part of this tournament
             if($id instanceof BBTeam) {
-                return in_array($id, $this->teams);
+                if(($key = array_search($id, $this->teams)) !== false) return $this->teams[$key];
+                $this->bb->ref(false);
             }
 
             //Simply have to iterate through until we find it
-            foreach($this->teams as $key => &$team) {
+            foreach($this->teams as &$team) {
                 if($team->id == $id) {
-                    return $this->teams[$key];
+                    return $team;
                 }
-                //Invalid team id
-                $this->set_error('Tournament (' . $this->id . ') does not have a team by that id (' . $id . ')');
-                return $this->ref(null);
             }
+            //Invalid team id
+            $this->set_error('Tournament (' . $this->id . ') does not have a team by that id (' . $id . ')');
+            return $this->bb->ref(null);
+        }
+
+        //We can't add new players to an active-tournament
+        if(BBHelper::tournament_is_active($this)) {
+            return $this->bb->ref($this->set_error('You cannot add players to active tournaments!!'));
         }
 
         //Instantiate a blank Team, and give it a reference to this tournament
@@ -953,24 +941,19 @@ class BBTournament extends BBModel {
 
             /**
              * First grab a list of teams that need to be included
-             *  As we move through each team provided in $order, we'll add the team 
-             *  to the new array $teams, which is what we'll actually send to BinaryBeast
              * 
-             * This let's us first check to make sure he's valid (confirmed + in this tour)..
-             *  and then let's us check at the end to make sure there are no teams left over that
-             *  shouldn't be there
+             * Any teams not specifically provided in $order will be random
+             *  added to the end
              */
-            $confirmed_team = $this->get_confirmed_team_ids();
+            $confirmed_teams = $this->confirmed_team_ids();
 
             //Start looping through each team provided, adding it to $teams only if it's in $confirmed_teams
             foreach($order as &$team) {
                 //If this is an actual BBTeam object, all we want is its id
-                if($team instanceof BBTeam) {
-                    $team = $team->id;
-                }
+                if($team instanceof BBTeam) $team = $team->id;
 
                 //Now make sure that this team is supposed to be here
-                if(!in_array($team, $confirmed_team) && intval($team) !== 0) {
+                if(!in_array($team, $confirmed_teams) && intval($team) !== 0) {
                     return $this->set_error("Team {$team} is a valid tourney_team_id of any team in this tournament, please include only valid team ids, or 0's to indicate a FreeWin");
                 }
 
@@ -980,15 +963,15 @@ class BBTournament extends BBModel {
                  *  2) Add its tourney_team_id to $teams, which is the actual value sent to BinaryBeast
                  */
                 $teams[] = $team;
-                unset($confirmed_team[array_search($team, $confirmed_team)]);
+                unset($confirmed_teams[array_search($team, $confirmed_teams)]);
             }
 
             /*
              * If there are any teams left over, randomize them and add them to the end of the teams array
              */
-            if(sizeof($confirmed_team) > 0) {
+            if(sizeof($confirmed_teams) > 0) {
                 shuffle($teams);
-                array_push($teams, $confirmed_team);
+                array_push($teams, $confirmed_teams);
             }
         }
         //For random tournaments, just send null for $order
@@ -1008,15 +991,11 @@ class BBTournament extends BBModel {
 
         /**
          * Started successfully!
-         * Now we update our status value, and reload the teams arary,
-         * because teams will now have position / group values etc
-         * 
-         * Directly update the actual current value, no need to sync / flag any changes
+         * Now we update our status value, and reload the teams arary
          * 
          * Conveniently the API actually sends back the new status, so we'll use that to update our local values
          */
-        $this->current_data['status']   = $result->status;
-        $this->data['status']           = $result->status;
+        $this->set_current_data('status', $result->status);
 
         //Reload all data that would likely change from a major update like this (open matches, teams)
         $this->reload();
@@ -1026,31 +1005,22 @@ class BBTournament extends BBModel {
     }
 
     /**
-     * Returns an array of matches that still need to be played
+     * Returns an array of matches that still need to be reported
      * 
      * Each item in the array will be an instance of BBMatch, which you can use 
      *      to submit the results
      * 
      * @return array
      */
-    public function &list_open_matches() {
-        //Derp
-        if(!BBHelper::tournament_is_active($this)) {
-            return $this->bb->ref(
-                set_error('Tournament is not active, there are no matches to list')
-            );
-        }
-
+    public function &open_matches() {
         //Already cached
         if(!is_null($this->open_matches)) return $this->open_matches;
 
         //Ask the api
         $result = $this->call(self::SERVICE_LIST_OPEN_MATCHES, array('tourney_id' => $this->id));
-
-        //Uh oh
         if(!$result) return $this->bb->ref(false);
 
-        //Cast each match into BBMatch
+        //Cast each match into BBMatch, and call init() so it knows which tournament it belongs to
         foreach($result->matches as $match) {
             $match = new BBMatch($this->bb, $match);
             $match->init($this);
