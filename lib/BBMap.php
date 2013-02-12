@@ -38,8 +38,7 @@ class BBMap extends BBSimpleModel {
      * @param string $filter
      * @return array
      */
-    public function game_list($game_code, $filter = null) {
-        if(!is_null($filter)) return $this->game_search($game_code, $filter);
+    public function game_list($game_code) {
         return $this->get_list(self::SERVICE_LIST, array('game_code' => $game_code), 'list');
     }
     /**
