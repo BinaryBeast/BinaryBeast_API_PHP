@@ -18,7 +18,7 @@
  *   http://www.gnu.org/licenses/gpl.html
  * 
  * @version 1.0.0
- * @date 2013-02-08
+ * @date 2013-02-11
  * @author Brandon Simmons
  */
 class BBMap extends BBSimpleModel {
@@ -42,7 +42,15 @@ class BBMap extends BBSimpleModel {
         if(!is_null($filter)) return $this->game_search($game_code, $filter);
         return $this->get_list(self::SERVICE_LIST, array('game_code' => $game_code), 'list');
     }
-
+    /**
+     * Alias for game_list, or search() if you define a filter
+     * @param string $game_code
+     * @param string $filter
+     */
+    public function load_list($game_code, $filter = null) {
+        if(is_null($filter)) return $this->game_list($game_code);
+        return $this->search($game_code, $filter);
+    }
     /**
      * Return a filtered set of maps associated with the given game_code
      * 
