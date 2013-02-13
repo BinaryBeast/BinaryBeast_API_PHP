@@ -59,54 +59,73 @@ class BinaryBeast {
     private $verify_ssl = true;
 
     /**
+     * Store an instance of BBCache
+     * @var BBCache;
+     */
+    private $cache;
+
+	/**
+	 * Public error history
+	 */
+	public $error_history = array();
+
+    /**
      * A few constants to make a few values a bit easier to read / use
      */
 
     const API_VERSION = '2.7.4';
     //
-    const BRACKET_GROUPS = 0;
-    const BRACKET_WINNERS = 1;
-    const BRACKET_LOSERS = 2;
-    const BRACKET_FINALS = 3;
-    const BRACKET_BRONZE = 4;
+    const BRACKET_GROUPS	= 0;
+    const BRACKET_WINNERS	= 1;
+    const BRACKET_LOSERS	= 2;
+    const BRACKET_FINALS	= 3;
+    const BRACKET_BRONZE	= 4;
     //
     const ELIMINATION_SINGLE = 1;
     const ELIMINATION_DOUBLE = 2;
     //
     const TOURNEY_TYPE_BRACKETS = 0;
-    const TOURNEY_TYPE_CUP = 1;
+    const TOURNEY_TYPE_CUP		= 1;
     //
-    const SEEDING_RANDOM = 'random';
-    const SEEDING_SPORTS = 'sports';
-    const SEEDING_BALANCED = 'balanced';
-    const SEEDING_MANUAL = 'manual';
+    const SEEDING_RANDOM		= 'random';
+    const SEEDING_SPORTS		= 'sports';
+    const SEEDING_BALANCED		= 'balanced';
+    const SEEDING_MANUAL		= 'manual';
     //
-    const REPLAY_DOWNLOADS_DISABLED = 0;
-    const REPLAY_DOWNLOADS_ENABLED = 1;
-    const REPLAY_DOWNLOADS_POST_COMPLETE = 2;
+    const REPLAY_DOWNLOADS_DISABLED			= 0;
+    const REPLAY_DOWNLOADS_ENABLED			= 1;
+    const REPLAY_DOWNLOADS_POST_COMPLETE	= 2;
     //
-    const REPLAY_UPLOADS_DISABLED = 0;
-    const REPLAY_UPLOADS_OPTIONAL = 1;
-    const REPLAY_UPLOADS_MANDATORY = 2;
+    const REPLAY_UPLOADS_DISABLED	= 0;
+    const REPLAY_UPLOADS_OPTIONAL	= 1;
+    const REPLAY_UPLOADS_MANDATORY	= 2;
     /**
      * Result code values
      */
-    const RESULT_SUCCESS = 200;
-    const RESULT_NOT_LOGGED_IN = 401;
-    const RESULT_AUTH = 403;
-    const RESULT_NOT_FOUND = 404;
-    const RESULT_API_NOT_ALLOWED = 405;
-    const RESULT_LOGIN_EMAIL_INVALID = 406;
-    const RESULT_EMAIL_UNAVAILABLE = 415;
-    const RESULT_INVALID_EMAIL_FORMAT = 416;
-    const RESULT_PENDING_ACTIVIATION = 418;
-    const RESULT_LOGIN_USER_BANNED = 425;
-    const RESULT_PASSWORD_INVALID = 450;
-    const RESULT_DUPLICATE_ENTRY = 470;
-    const RESULT_ERROR = 500;
-    const RESULT_INVALID_USER_ID = 604;
-    const RESULT_TOURNAMENT_NOT_FOUND = 704;
-    const RESULT_TOURNAMENT_STATUS = 715;
+    const RESULT_SUCCESS                        = 200;
+    const RESULT_NOT_LOGGED_IN                  = 401;
+    const RESULT_AUTH                           = 403;
+    const RESULT_NOT_FOUND                      = 404;
+    const RESULT_API_NOT_ALLOWED                = 405;
+    const RESULT_LOGIN_EMAIL_INVALID            = 406;
+    const RESULT_EMAIL_UNAVAILABLE              = 415;
+    const RESULT_INVALID_EMAIL_FORMAT           = 416;
+    const RESULT_PENDING_ACTIVIATION            = 418;
+    const RESULT_LOGIN_USER_BANNED              = 425;
+    const RESULT_PASSWORD_INVALID               = 450;
+    const GAME_CODE_INVALID                     = 461;
+    const INVALID_BRACKET_NUMBER                = 465;
+    const RESULT_DUPLICATE_ENTRY                = 470;
+    const RESULT_ERROR                          = 500;
+    const RESULT_SEARCH_FILTER_TOO_SHORT        = 601;
+    const RESULT_INVALID_USER_ID                = 604;
+    const RESULT_TOURNAMENT_NOT_FOUND           = 704;
+    const TEAM_NOT_IN_TOURNEY_ID                = 705;
+    const TOURNEY_TEAM_ID_INVALID               = 706;
+    const RESULT_MATCH_ID_INVALID               = 708;
+    const RESULT_MATCH_GAME_ID_INVALID          = 709;
+    const RESULT_NOT_ENOUGH_TEAMS_FOR_GROUPS    = 711;
+    const RESULT_TOURNAMENT_STATUS              = 715;
 
     /**
      * Constructor - sets up the local email and password
@@ -124,6 +143,16 @@ class BinaryBeast {
         $this->init_return();
         $this->init_method();
     }
+	
+	/**
+	 * Allows BBCache to give us errors to keep track of
+	 */
+	public function set_error($error, $class = null) {
+		$this->error_history[] = array(
+			'error_message'	=> $error, 
+			'class'			=> $class
+		);
+	}
 
     /**
      * Alternative method of authentication - allow them to use a simple email / password combination
@@ -205,25 +234,60 @@ class BinaryBeast {
 
     /**
      * Make a service call to the remote BinaryBeast API
-     * 
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_call
+	 * 
+     * @param string $svc    		Service to call (ie Tourney.TourneyCreate.Create)
+     * @param array $args     		Arguments to send
+	 * @param int $ttl				If you configured the BBCache class, use this to define how many minutes this result should be cached
+	 * @param int $object_type		For caching objects: see BBCache::type_ constants
+     * @param mixed $object_id		For caching objects: The id of this the object, like tourney_id or tourney_team_id
      *
-     * @param string Service to call (ie Tourney.TourneyCreate.Create)
-     * @param array  Arguments to send
-     *
-     * @return int result
+     * @return object
      */
-    public function call($svc, $args = null) {
+    public function call($svc, $args = null, $ttl = null, $object_type = null, $object_id = null) {
         //This server does not support curl or fopen
         if (!$this->method) {
             return $this->get_method_error();
         }
+
+		//Use BBCache?
+		if(!is_null($ttl)) {
+			if($this->cache() !== false) {
+				return $this->cache->call($svc, $args, $ttl, $object_type, $object_id);
+			}
+		}
 
         //Determine which method is needed to parse the returned value
         $method = 'get_' . $this->return;
 
         //Return a parsed value of call_raw
         return $this->$method($this->call_raw($svc, $args));
+    }
+
+    /**
+     * Returns a cached instance of BBCache
+     *  returns null if BBCache could not connect to the database, or had
+     *  any authentication ererors
+     * 
+     * @return BBCache
+     */
+    public function &cache() {
+        //Already instantiated
+        if(!is_null($this->cache) || $this->cache === false) return $this->cache;
+
+		//Get the class
+		if(!class_exists('BBCache')) {
+			if(file_exists('lib/BBCache.php')) {
+				include('lib/BBCache.php');
+			}
+			else return false;
+		}
+
+        //Instantiate a new BBCache objec into $this->cache (will automatically try to connect)
+        $this->cache = new BBCache($this);
+
+        //If BBCache can't connect, simply set it to false
+        if(!$this->cache->connected()) $this->cache = false;
+        return $this->cache;
     }
 
     /**
