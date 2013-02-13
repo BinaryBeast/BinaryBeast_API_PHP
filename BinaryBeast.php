@@ -374,11 +374,12 @@ class BinaryBeast {
 
     /**
      * Make a service call to the remote BinaryBeast API
-     * 
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_call
-     * 
-     * @param string    Service to call (ie Tourney.TourneyCreate.Create)
-     * @param array     Arguments to send
+	 * 
+     * @param string $svc    		Service to call (ie Tourney.TourneyCreate.Create)
+     * @param array $args     		Arguments to send
+	 * @param int $ttl				If you configured the BBCache class, use this to define how many minutes this result should be cached
+	 * @param int $object_type		For caching objects: see BBCache::type_ constants
+     * @param mixed $object_id		For caching objects: The id of this the object, like tourney_id or tourney_team_id
      *
      * @return object
      */
@@ -627,9 +628,9 @@ class BinaryBeast {
      *  returns null if BBCache could not connect to the database, or had
      *  any authentication ererors
      * 
-     * @return BBLegacy
+     * @return BBCache
      */
-    private function &cache() {
+    public function &cache() {
         //Already instantiated
         if(!is_null($this->cache) || $this->cache === false) return $this->cache;
 
