@@ -2,7 +2,30 @@
 
 /**
  * Entry point for the BinaryBeast PHP API Library
- * Relies on everything included in lib/*.php
+ * 
+ * *********************** READ ME! ***********************
+ * 
+ * Developers: If you want to take advantage of the BBCache library, you must
+ *      set a few things up first:
+ * 
+ *      1) Make sure that your PHP installation has PDO_{your-database-library} available
+ *          For MySQL, you need PDO_MYSQL
+ *          For Postgres, you need PDO_PGSQL
+ *          etc, etc
+ *      2) You must define the values in the BBCache::config array (lib/BBCache.php)
+ * 
+ * 
+ * And that's all you have to do - as long as the values you set were valid, 
+ *  BBCache will handle everything for you autmoatically - each BBModel class
+ *  has a public TTL constants that BBCache uses when creating the cache, and
+ *  offers methods for manually clearing them too
+ * 
+ * 
+ * I HIGHLY recommend you take advantage of this, as it will drastically cut down
+ *  on the number of API requests that this library is forced to make, which 
+ *  means faster execution for you, and less burden on our API
+ * 
+ * *********************** READ ME! ***********************
  * 
  * This is the 3rd release of our public library written in PHP.  The biggest change from the 
  * previous being that it now takes on a more object-oriented approach in exchange for
@@ -48,9 +71,7 @@
  */
 class BinaryBeast {
 
-    /**
-     * URL to send API Requests
-     */
+    //URL to send API Requests
     private static $url = 'https://api.binarybeast.com/';
 
     /**
@@ -95,6 +116,12 @@ class BinaryBeast {
      * @var BBLegacy
      */
     private $legacy = null;
+
+    /**
+     * Store an instance of BBCache
+     * @var BBCache;
+     */
+    private $cache;
 
     /**
      * Cache of simple models
@@ -224,6 +251,7 @@ class BinaryBeast {
         $bb->load_library('BBHelper');
         $bb->load_library('BBSimpleModel');
         $bb->load_library('BBModel');
+        $bb->load_library('BBCache');
 
         //Next instantiation will know not to call this method
         self::$first = false;
@@ -354,10 +382,17 @@ class BinaryBeast {
      *
      * @return object
      */
-    public function call($svc, $args = null) {
+    public function call($svc, $args = null, $ttl = null, $object_type = null, $object_id = null) {
         //This server does not support curl or fopen
         if (!self::$server_ready) {
             return self::get_server_ready_error();
+        }
+
+        //Cache?
+        if(!is_null($ttl)) {
+            if($this->cache() !== false) {
+                return $this->cache->call($svc, $args, $ttl, $object_type, $object_id);
+            }
         }
 
         //GOGOGO! grab the raw result (call_raw), and parse it through decode for json decoding + (object) casting
@@ -415,6 +450,7 @@ class BinaryBeast {
         //Return the new value we came up with so that models store it the same way we did here
         return $this->last_error;
     }
+
     /**
      * Modal classes call this to clear out any prior error results
      * @return void
@@ -422,6 +458,7 @@ class BinaryBeast {
     public function clear_error() {
         $this->set_error(null);
     }
+
     /**
      * Stores the result code from the latest API Request, so developers can
      * always access the latest result in $bb->result, or $bb->result(), or $bb->result_friendly etc
@@ -507,31 +544,31 @@ class BinaryBeast {
      * 
      * @param string $name
      */
-    public function __get($name) {
-        
+    public function &__get($name) {
+        //Define a list of acceptable methods that are allowed to be called as property
+        if(in_array($name, array('tournament', 'map', 'country', 'map', 'race', 'legacy', 'cache'))) {
+            return $this->{$name}();
+        }
+
         //Convert to a model name, and try loading it as such
         $model_name = $this->full_library_name($name);
 
-        /**
-         * Try treating as a SimpleModel
-         */
+        //Try treating as a SimpleModel
         $simple_model = $this->get_simple_model($model_name);
         if($simple_model) return $simple_model;
 
-        /**
-         * Try treating this as a full model
-         */
+        //Try treating this as a full model
         $model = $this->get_model($model_name);
         if($model) return $model;
 
         //Invalid access
-        return $this->set_error('Attempted to access invalid property "' . $name . '"');
+        return $this->ref($this->set_error('Attempted to access invalid property "' . $name . '"'));
     }
+
     /**
      * Returns a new BBTournament model class
-     * You can optionally pre-define the tourney_id in the constructor
-     * It's nice to have this be a real public method, to avoid the slight
-     * overhead of having to go through __get and __call
+     * Use this to create a new tournament with save(), or load an existing
+     *      tournament by providing the id now, or when you call load()
      * 
      * @param string $tourney_id    Optionally pre-define the tournament to load
      * @return BBTournament
@@ -540,27 +577,70 @@ class BinaryBeast {
         return $this->get_model('BBTournament', $tourney_id);
     }
     /**
-     * Returns a new BBMap simple_model class
+     * Returns a BBMap simple_model class
      * @return BBMap
      */
     public function &map() {
         return $this->get_simple_model('BBMap');
     }
     /**
-     * Returns a new BBCountry simple_model class
+     * Returns a BBCountry simple_model class
      * @return BBCountry
      */
     public function &country() {
         return $this->get_simple_model('BBCountry');
     }
     /**
-     * Returns a new BBGame simple_model class
+     * Returns a BBGame simple_model class
      * @return BBGame
      */
     public function &game() {
         return $this->get_simple_model('BBGame');
     }
-    
+    /**
+     * Returns a BBRace simple_model class
+     * @return BBGame
+     */
+    public function &race() {
+        return $this->get_simple_model('BBRace');
+    }
+    /**
+     * Returns a cached instance of BBLegacy, for calling old 
+     *  service wrappers that were defined in version 2.7.2 of this API Library
+     * 
+     * @return BBLegacy
+     */
+    private function &legacy() {
+        //Already instantiated
+        if(!is_null($this->legacy)) return $this->legacy;
+
+        //Make sure that BBLegacy.php is included
+        $this->load_library('BBLegacy');
+
+        //Return a reference to a newly instantated BBLegacy class
+        $this->legacy = new BBLegacy($this);
+        return $this->legacy;
+    }
+
+    /**
+     * Returns a cached instance of BBCache
+     *  returns null if BBCache could not connect to the database, or had
+     *  any authentication ererors
+     * 
+     * @return BBLegacy
+     */
+    private function &cache() {
+        //Already instantiated
+        if(!is_null($this->cache) || $this->cache === false) return $this->cache;
+
+        //Instantiate a new BBCache objec into $this->cache (will automatically try to connect)
+        $this->cache = new BBCache($this);
+
+        //If BBCache can't connect, simply set it to false
+        if(!$this->cache->connected()) $this->cache = false;
+        return $this->cache;
+    }
+
     /**
      * To avoid the overhead of include|require_once.. we use this method
      * to load libraries on demand, but we use class_exists first to see
@@ -570,7 +650,7 @@ class BinaryBeast {
      * @return boolean      False if the library name is invalid
      */
     private function load_library($library) {
-        
+
         //require(), only if the class isn't already defined
         if(!class_exists($library)) {
             //Does the file even exist??
@@ -601,11 +681,7 @@ class BinaryBeast {
      * @param string $library
      */
     private function full_library_name($library) {
-        /*
-         * First replace underscores with spaces, so that ucwords
-         * will capitalize each word.. then return it
-         * with BB prepended, and the spaces removed
-         */
+        //replace underscores with spaces, capitalize each word, then "implode" 
         return 'BB' . str_replace(' ', '', ucwords(
             str_replace('_', ' ', (
                 strtolower($library)
@@ -617,10 +693,9 @@ class BinaryBeast {
      * returns a reference to a locally cached instance of a simple model
      * 
      * Simple models do not have exclusive data / offer methods for saving data
-     * to the API - all they do is wrap services
+     *      to the API - all they do is wrap services
      * 
-     * Therefore there's no point in wasting the time in returning a new instance each time, we'll
-     * just store a copy of the first instance we create, and return that each time
+     * Therefore we can afford to keep returning a cached version
      * 
      * Returns false if either the library could not be loaded, or it was an instance of BBModel
      * 
@@ -630,7 +705,6 @@ class BinaryBeast {
      * @return BBSimpleModel
      */
     private function &get_simple_model($model) {
-
         //Already cached
         if(isset($this->models_cache[$model])) return $this->models_cache[$model];
 
@@ -659,15 +733,7 @@ class BinaryBeast {
         //Load it first, so we can test it to make sure it's actually a model (we only want to return models)
         $instance = new $model($this, $data);
 
-        /*
-         * If it's not a model, don't return it as one, return false
-         * Note: My benchmarks have shown the instanceof operator to be DRASTICALLY faster
-         * than any other method of determine if an object inherits from a certain class
-         * 
-         * The performance of is_subclass_of and is_a were nearly identical, typeof was BY FAR infinitely faster than either
-         * 
-         * (7 * faster than subclasss using a string, 32 * faster than subclass without using string)
-         */
+        //Only return valid model classes
         if(!($instance instanceof BBSimpleModel)) {
             $this->set_error("$model is not a BBModel class! Only classes that extend BBModel or BBSimpleModel can be returned from get_model");
             return false;
@@ -689,7 +755,7 @@ class BinaryBeast {
     public function __call($name, $args) {
 
         //Get the legacy API class in hopes that this method is an old wrapper method from an older library version
-        $legacy = $this->get_legacy();
+        $legacy = $this->legacy();
 
         /**
          * This method exists in BBLegacy, call it, store the result code,
@@ -707,42 +773,8 @@ class BinaryBeast {
     }
 
     /**
-     * Returns a reference to the locally stored version of BBLegacy
-     * The reason we setup a method for this, is we want to be able to quickly
-     * grab a reference if already stored.. 
-     * 
-     * and if it isn't already stored: include the file, instantiate it with the local
-     * api_key or username and email, save a reference, then return that reference
-     * 
-     * That allows us to keep BBLegacy as a load-on-demand class only
-     * 
-     * aka this returns the version 2.7.2 API Library 
-     * 
-     * @return BBLegacy
-     */
-    private function &get_legacy() {
-        //Already instantiated
-        if(!is_null($this->legacy)) return $this->legacy;
-
-        //Make sure that BBLegacy.php is included
-        $this->load_library('BBLegacy');
-
-        //Return a reference to a newly instantated BBLegacy class
-        $this->legacy = new BBLegacy($this);
-        return $this->legacy;
-    }
-
-    /**
-     * BBModel defined __get as returning a reference, which is nice in most cases...
-     * however for example we can't return directly null, false etc.. and we don't want
-     * to return references to $data elements, because we don't want those to be 
-     * editable
-     * 
-     * Therefore this method can be used to return a raw value as a reference
-     * It stores the provided value in $this->ref, and returns a reference to it
-     * 
-     * This method was made public so that Model classes could take advantage of it, without
-     * having to re-define ref() in BBModel or BBSimpleModel
+     * Allows us to return directly values (such as null / false) from
+     *  within methods that return references
      * 
      * @param mixed $value
      * @return mixed
