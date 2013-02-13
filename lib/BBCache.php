@@ -25,12 +25,12 @@ class BBCache {
      * Database type, currently supported values: 'mysql' ('postgresql' next probably)
      * @var string
      */
-    private $type = 'mysql';//null;
+    private $type = null;
     /**
      * Server to connect to, ie 'localhost', 'mydb.site.com', etc
      * @var string
      */
-    private $server = 'localhost';//null;
+    private $server = null;
     /**
      * Optional port to use when connecting to $server
      *      If not provided, we will use the default port
@@ -42,7 +42,7 @@ class BBCache {
      * Database name
      * @var string
      */
-    private $database = 'test';//null;
+    private $database = null;
     /**
      * Name of the table to use
      *      This class will create the table, since we expect it to be in a certain format
@@ -53,12 +53,12 @@ class BBCache {
      * Username for logging into the database
      * @var string
      */
-    private $username = 'test_user';//null;
+    private $username = null;
     /**
      * Password for logging into the database
      * @var string
      */
-    private $password = 'test';//null;
+    private $password = null;
 
     /************************* DEVELOPERS: SET THE VALUES ABOVE! ********************
      ********************************************************************************
