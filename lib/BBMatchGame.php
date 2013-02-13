@@ -64,13 +64,9 @@ class BBMatchGame extends BBModel {
         'map_id'                => null,
         //Optionally you can provide the map name instead of map_id
         'map'                   => null,
-        //race_id of the winner - you can find this value in $bb->race->game_list($game_code)
-        'race_id'               => null,
-        //race_of of the loser
-        'o_race_id'             => null,
-        //Optionally define the winner's race without using a race_id
+        //Winner's race - can be the race_id or race name (use $bb->race->game_list($game_code) for race_ids)
         'race'                  => null,
-        //Optionally define the loser's race without using a race_id
+        //Loser's race - can be the race_id or race name (use $bb->race->game_list($game_code) for race_ids)
         'o_race'                => null,
         //General description / notes on the match
         'notes'                 => null,
