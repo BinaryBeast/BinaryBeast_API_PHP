@@ -22,6 +22,10 @@
 class BBCountry extends BBSimpleModel {
     const SERVICE_SEARCH    = 'Country.CountrySearch.Search';
 
+    //not likely to EVER chance, cache for a week
+    const CACHE_TTL_LIST        = 10080;
+    const CACHE_OBJECT_TYPE     = BBCache::TYPE_COUNTRY;
+
     /**
      * Returns a list of countries that match the given $filter value
      * 

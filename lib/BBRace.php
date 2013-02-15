@@ -20,6 +20,10 @@ class BBRace extends BBSimpleModel {
     const SERVICE_SEARCH    = 'Game.GameRace.Search';
     const SERVICE_LIST      = 'Game.GameRace.LoadList';
 
+    //Cache setup (cache for 1 day)
+    const CACHE_OBJECT_ID       = BBCache::TYPE_RACE;
+    const CACHE_TTL_LIST        = 1440;
+
     /**
      * Returns an array of races configured for the given $game_code
      * 

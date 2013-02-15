@@ -39,6 +39,13 @@ class BBTournament extends BBModel {
     const SERVICE_UPDATE_TEAMS              = 'Tourney.TourneyTeam.BatchUpdate';
 
     /**
+     * Caching settings
+     */
+    const CACHE_OBJECT_TYPE     = BBCache::TYPE_TOURNAMENT;
+    const CACHE_TTL_TEAMS       = 30;
+    const CACHE_TTL_ROUNDS      = 60;
+
+    /**
      * Array of participants within this tournament
      * @var array
      */
@@ -162,7 +169,7 @@ class BBTournament extends BBModel {
         }
 
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
-        $result = $this->call(self::SERVICE_LOAD_TEAMS, array('tourney_id' => $this->tourney_id));
+        $result = $this->call(self::SERVICE_LOAD_TEAMS, array('tourney_id' => $this->tourney_id), self::CACHE_TTL_TEAMS, self::CACHE_OBJECT_TYPE);
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
@@ -232,6 +239,11 @@ class BBTournament extends BBModel {
      * @return void
      */
     private function reload() {
+        //Clear all teams and rounds cache
+        $this->clear_service(array(self::SERVICE_LOAD_ROUNDS, self::SERVICE_LOAD_TEAMS));
+
+        //GOGOGO!
+        $this->rounds = null;
         $this->teams = null;
         $this->teams();
         $this->open_matches = null;
@@ -262,7 +274,7 @@ class BBTournament extends BBModel {
         }
 
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
-        $result = $this->call(self::SERVICE_LOAD_ROUNDS, array('tourney_id' => $this->tourney_id));
+        $result = $this->call(self::SERVICE_LOAD_ROUNDS, array('tourney_id' => $this->tourney_id), self::CACHE_TTL_ROUNDS, self::CACHE_OBJECT_TYPE);
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {

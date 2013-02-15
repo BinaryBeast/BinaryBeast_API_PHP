@@ -24,6 +24,10 @@
 class BBMap extends BBSimpleModel {
     const SERVICE_LIST      = 'Game.GameMap.LoadList';
     const SERVICE_SEARCH    = 'Game.GameMap.Search';
+    
+    //Cache setup (1 day cache)
+    const CACHE_OBJECT_TYPE      = BBCache::TYPE_MAP;
+    const CACHE_TTL_LIST         = 1440;
 
     /**
      * Returns a full list of all maps available within the given $game_code

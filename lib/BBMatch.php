@@ -21,6 +21,11 @@ class BBMatch extends BBModel {
     const SERVICE_UPDATE = 'Tourney.TourneyMatch.Update';
     const SERVICE_DELETE = 'Tourney.TourneyMatch.Delete';
 
+    //Cache setup (cache for 10 minutes)
+    const CACHE_OBJECT_ID       = BBCache::TYPE_TOURNAMENT;
+    const CACHE_TTL_LIST        = 10;
+    const CACHE_TTL_LOAD        = 10;
+
     /**
      * Keep a reference to the tournament that instantiated this class
      * @var BBTournament

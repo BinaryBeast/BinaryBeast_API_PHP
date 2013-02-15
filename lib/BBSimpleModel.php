@@ -23,7 +23,7 @@
  * 
  * 
  * @version 1.0.0
- * @date 2013-02-9
+ * @date 2013-02-14
  * @author Brandon Simmons
  */
 class BBSimpleModel {
@@ -49,6 +49,15 @@ class BBSimpleModel {
      * @var array
      */
     protected $last_error = null;
+    /**
+     * Allows child classes to define the object_type when caching api responses, and
+     *  ttls for certain tasks (listing / loading)
+     * 
+     * cache all results for 10 minutes by default
+     */
+    const CACHE_OBJECT_TYPE = null;
+    const CACHE_TTL_LIST    = 10;
+    const CACHE_TTL_LOAD    = 10;
 
     /**
      * Constructor
@@ -64,11 +73,14 @@ class BBSimpleModel {
      * Calls the BinaryBeast API using the given service name and arguments, 
      * and grabs the result code so we can locally stash it 
      * 
-     * @param string $svc
-     * @param array $args
+     * @param string $svc    		Service to call (ie Tourney.TourneyCreate.Create)
+     * @param array $args     		Arguments to send
+	 * @param int $ttl				If you configured the BBCache class, use this to define how many minutes this result should be cached
+	 * @param int $object_type		For caching objects: see BBCache::type_ constants
+     * @param mixed $object_id		For caching objects: The id of this the object, like tourney_id or tourney_team_id
      * @return object
      */
-    protected function call($svc, $args) {
+    protected function call($svc, $args = null, $ttl = null, $object_type = null, $object_id = null) {
         //First, clear out any errors that may have existed before this call
         $this->clear_error();
 
@@ -143,6 +155,18 @@ class BBSimpleModel {
     protected function get_service($svc) {
         return constant(get_called_class() . '::' . 'SERVICE_' . strtoupper($svc));
     }
+    /**
+     * Looks for a class constant for cache settings, and falls back on
+     *  BBSimpleModel values
+     * @param string $setting  (for CACHE_OBJECT_TYPE, use "object_type")
+     * @return string
+     */
+    protected function get_cache_setting($setting) {
+        $setting = strtoupper($setting);
+        $value = constant('selt::CACHE_' . $setting);
+        if(is_null($value)) $value = constant(get_called_class() . '::' . $setting);
+        return $value;
+    }
 
     /**
      * Iterates through a list of returned objects form the API, and "casts" them as
@@ -191,8 +215,18 @@ class BBSimpleModel {
      */
     protected function get_list($svc, $args, $list_name, $wrap_class = null) {
 
+        //Try to determine cache settings
+        $ttl            = $this->get_cache_setting('ttl_list');
+        $object_type    = $this->get_cache_setting('object_type');
+
+        //For lists, the "ID" will be a json encoded string of the arguments used to query the list
+        if(!is_null($args) && sizeof($args) > 0) {
+            $object_id = '';
+            foreach($args as $key => $val) $object_id .= "$key:$val";
+        } else $object_id = null;
+
         //GOGOGO!
-        $response = $this->bb->call($svc, $args);
+        $response = $this->bb->call($svc, $args, $ttl, $object_type, $object_id);
 
         //Success!! - return the array only
         if($response->result == BinaryBeast::RESULT_SUCCESS) {
@@ -208,6 +242,42 @@ class BBSimpleModel {
 
         //Fail!
         return false;
+    }
+
+    /**
+     * Clears all cache stored for any services defined
+     *  in this class, that contain the word 'LIST'
+     */
+    public function clear_list_cache() {
+        $object_type = $this->get_cache_setting('object_type');
+        $constants = get_defined_constants();
+        foreach($constants as $constant) {
+            if(strpos($constant, '_LIST') !== false || strpos($constant, '_SEARCH') !== false) {
+                $this->bb->cache->clear($constant, $object_type);
+            }
+        }
+    }
+    /**
+     * Clear specific services associated with this cache_type
+     * 
+     * @param string|array $services
+     */
+    public function clear_service($services) {
+        if(!is_array($services)) $services = array($services);
+
+        $object_type = $this->get_cache_setting('object_type');
+        if(!is_null($object_type)) foreach($services as $svc) {
+            $this->bb->cache->clear($svc, $object_type);
+        }
+    }
+    /**
+     * Clears ALL cache associated with this object_type
+     *      For example calling this against a BBTournament, will deletel
+     *      ALL cache for EVERY tournament in your database
+     */
+    public function clear_cache() {
+        $object_type = $this->get_cache_setting('object_type');
+        if(!is_null($object_type)) $this->bb->cache->clear(null, $object_type);
     }
 }
 

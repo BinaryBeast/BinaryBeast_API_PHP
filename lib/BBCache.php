@@ -108,6 +108,10 @@ class BBCache {
      */
     const TYPE_TOURNAMENT           = 0;
     const TYPE_TEAM                 = 1;
+    const TYPE_COUNTRY              = 2;
+    const TYPE_GAME                 = 3;
+    const TYPE_RACE                 = 4;
+    const TYPE_MAP                  = 5;
 
     /**
      * Constructor
@@ -235,7 +239,7 @@ class BBCache {
             `id`                int(10)         unsigned NOT NULL AUTO_INCREMENT,
             `service`           varchar(100)    NOT NULL,
             `object_type`       int(4)          unsigned NULL DEFAULT NULL,
-            `object_id`         varchar(50)     NULL DEFAULT NULL,
+            `object_id`         varchar(100)    NULL DEFAULT NULL,
             `result`            text            NOT NULL,
             `expires`           datetime        NOT NULL,
             PRIMARY KEY         (`id`),
