@@ -380,7 +380,6 @@ class BinaryBeast {
 	 * @param int $ttl				If you configured the BBCache class, use this to define how many minutes this result should be cached
 	 * @param int $object_type		For caching objects: see BBCache::type_ constants
      * @param mixed $object_id		For caching objects: The id of this the object, like tourney_id or tourney_team_id
-     *
      * @return object
      */
     public function call($svc, $args = null, $ttl = null, $object_type = null, $object_id = null) {
@@ -550,17 +549,6 @@ class BinaryBeast {
         if(in_array($name, array('tournament', 'map', 'country', 'map', 'race', 'legacy', 'cache'))) {
             return $this->{$name}();
         }
-
-        //Convert to a model name, and try loading it as such
-        $model_name = $this->full_library_name($name);
-
-        //Try treating as a SimpleModel
-        $simple_model = $this->get_simple_model($model_name);
-        if($simple_model) return $simple_model;
-
-        //Try treating this as a full model
-        $model = $this->get_model($model_name);
-        if($model) return $model;
 
         //Invalid access
         return $this->ref($this->set_error('Attempted to access invalid property "' . $name . '"'));
