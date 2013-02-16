@@ -275,15 +275,15 @@ class BBCache {
      * 
      * If nothing at all was provided, ALL cache will be deleted
      * 
-     * @param string    $svc			Can be an array of services
-     * @param int       $object_type
-     * @param string    $object_id
+     * @param string|array		$svc			Can be an array of services
+     * @param int				$object_type
+     * @param string			$object_id
      * @return boolean
      */
     public function clear($svc = null, $object_type = null, $object_id = null) {
         //Build the WHERE query
         $where = $this->build_where($svc, $object_type, $object_id);
-
+		
         //GOGOGO!!!
         return $this->db->exec("
             DELETE FROM {$this->table} $where

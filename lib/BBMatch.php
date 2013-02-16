@@ -25,7 +25,7 @@ class BBMatch extends BBModel {
 
 
     //Cache setup (cache for 10 minutes)
-    const CACHE_OBJECT_ID       = BBCache::TYPE_TOURNAMENT;
+    const CACHE_OBJECT_TYPE		= BBCache::TYPE_TOURNAMENT;
     const CACHE_TTL_LIST        = 10;
     const CACHE_TTL_LOAD        = 10;
 

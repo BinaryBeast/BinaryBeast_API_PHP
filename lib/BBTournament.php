@@ -222,8 +222,8 @@ class BBTournament extends BBModel {
      * @return void
      */
     private function reload() {
-        //Clear all teams and rounds cache
-        $this->clear_service(array(self::SERVICE_LOAD_ROUNDS, self::SERVICE_LOAD_TEAMS));
+        //Clear ALL cache for this specific tournament
+        $this->clear_id_cache();
 
         //GOGOGO!
         $this->rounds = null;
@@ -256,7 +256,7 @@ class BBTournament extends BBModel {
         }
 
         //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
-        $result = $this->call(self::SERVICE_LOAD_ROUNDS, array('tourney_id' => $this->tourney_id), self::CACHE_TTL_ROUNDS, self::CACHE_OBJECT_TYPE);
+        $result = $this->call(self::SERVICE_LOAD_ROUNDS, array('tourney_id' => $this->tourney_id), self::CACHE_TTL_ROUNDS, self::CACHE_OBJECT_TYPE, $this->id);
 
         //Error - return false and save the result 
         if($result->result != BinaryBeast::RESULT_SUCCESS) {
@@ -345,8 +345,11 @@ class BBTournament extends BBModel {
         if(!$result) return false;
 
 		//Now save any new/changed teams and rounds
-		if(!$this->save_rounds()) return false;
-		if(!$this->save_teams()) return false;
+		if(!$this->save_rounds())	return false;
+		if(!$this->save_teams())	return false;
+
+		//clear ALL cache for this tournament id
+		$this->clear_id_cache();
 
         //Success! Return the original save() result (if this tour is new, it'll give us the tourney_id)
         return $result;
@@ -375,6 +378,9 @@ class BBTournament extends BBModel {
         $this->import_values($result);
         $this->set_id($result->tourney_id);
 
+		//Clear cache
+		$this->clear_service($services);
+
         //Success!
         return $this->id;
     }
@@ -393,19 +399,12 @@ class BBTournament extends BBModel {
         if(is_null($this->id)) return $this->set_error('Can\t save teams before saving the tournament!');
 
         //Get a list of changed rounds
-        $rounds = $this->get_changed_children('BBRound');
-
+        $rounds = &$this->get_changed_children('BBRound');
+		
         //Nothing has changed, just return true
         if(sizeof($rounds) == 0) return true;
 
-        /**
-         * We have to compile all of the values into separate arrays, keyed by round,
-         * and we'll call one service for each bracket with any rounds changed
-         * 
-         * BinaryBeast expects 1 array for maps, bestofs, etc.. keyed by round,
-         * and we'll have to call the service once for each bracket that has
-         * any changes in it
-         */
+        //Compile values into the format expected by the API - one array for each value, keyed by bracket, indexed by round
         $format = array();
 
         foreach($rounds as &$round) {

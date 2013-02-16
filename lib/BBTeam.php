@@ -32,7 +32,7 @@ class BBTeam extends BBModel {
 	const SERVICE_LIST_OPPONENTS	= 'Tourney.TourneyTeam.GetOpponentsRemaining';
 
     //Cache setup (cache for 10 minutes)
-    const CACHE_OBJECT_ID       = BBCache::TYPE_TEAM;
+    const CACHE_OBJECT_TYPE		= BBCache::TYPE_TEAM;
     const CACHE_TTL_LIST        = 10;
     const CACHE_TTL_LOAD        = 10;
 	const CACHE_TTL_OPPONENTS	= 20;
