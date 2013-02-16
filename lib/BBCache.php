@@ -275,7 +275,7 @@ class BBCache {
      * 
      * If nothing at all was provided, ALL cache will be deleted
      * 
-     * @param string    $svc
+     * @param string    $svc			Can be an array of services
      * @param int       $object_type
      * @param string    $object_id
      * @return boolean
@@ -417,7 +417,15 @@ class BBCache {
      */
     private function build_where($svc = null, $object_type = null, $object_id = null) {
         $where = '';
-        if(!is_null($svc))          $where .= ($where ? ' AND ' : 'WHERE ') . "`service` = '$svc'";
+		//can ben an array, or a single service name
+        if(!is_null($svc)) {
+			if(is_array($svc)) {
+				$where = 'WHERE `service` IN(';
+				foreach($svc as $x => $service) $where .= ($x == 0 ? '':', ') . "'$service'";
+				$where .= ')';
+			}
+			else $where .= ($where ? ' AND ' : 'WHERE ') . "`service` = '$svc'";
+		}
         if(!is_null($object_type))  $where .= ($where ? ' AND ' : 'WHERE ') . "`object_type` = '$object_type'";
         if(!is_null($object_id))    $where .= ($where ? ' AND ' : 'WHERE ') . "`object_id` = '$object_id'";
         return $where;
