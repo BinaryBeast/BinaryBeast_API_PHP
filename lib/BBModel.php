@@ -89,12 +89,6 @@ class BBModel extends BBSimpleModel {
 	 * @var boolean
 	 */
 	protected $iterating = false;
-	
-	/**
-	 * To insure that each child is truly unique while flagging changes, we give each
-	 *		new object an arbitrary "uid"
-	 */
-	protected $uid;
 
     /**
      * Constructor
@@ -124,9 +118,6 @@ class BBModel extends BBSimpleModel {
         else if(is_numeric($data) || is_string($data)) {
             $this->set_id($data);
         }
-
-		//Set an arbitrary uid to insure that each object is unique
-		$this->uid = uniqid();
     }
 
     /**
@@ -760,7 +751,15 @@ class BBModel extends BBSimpleModel {
             else			$this->parent->unflag_child_changed($this);
         }
     }
-
+	/**
+	 * Clears all cache associated with this object_id+object_type
+	 */
+	public function clear_id_cache() {
+		$object_type = $this->get_cache_setting('object_type');
+		if(!is_null($this->id) && !is_null($object_type)) {
+			$this->bb->cache->clear(null, $object_type, $this->id);
+		}
+	}
 }
 
 ?>

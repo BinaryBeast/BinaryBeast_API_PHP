@@ -59,6 +59,17 @@ class BBSimpleModel {
     const CACHE_TTL_LIST    = 10;
     const CACHE_TTL_LOAD    = 10;
 
+	/**
+	 * To insure that each child is truly unique while flagging changes, we give each
+	 *		new object an arbitrary "uid"
+	 * 
+	 * Determined this to be necessary once we realized that when child classes attempted to 
+	 *	flag themselves as changed with their parents, it would fail to be flagged
+	 *	if there happend to be any other objects with the exact same values, setting this
+	 *	unique id prevents that from happening
+	 */
+	protected $uid;
+
     /**
      * Constructor
      * Stores a reference to the main BinaryBeast library class
@@ -67,6 +78,9 @@ class BBSimpleModel {
      */
     function __construct(BinaryBeast $bb) {
         $this->bb = $bb;
+
+		//Set an arbitrary uid to insure that each object is unique
+		$this->uid = uniqid();
     }
 
     /**
@@ -85,7 +99,7 @@ class BBSimpleModel {
         $this->clear_error();
 
         //Use BinaryBeast library to make the actual call
-        $response = $this->bb->call($svc, $args);
+        $response = $this->bb->call($svc, $args, $ttl, $object_type, $object_id);
 
         //Store the result code in the model itself, to make debuggin as easy as possible for developers
         $this->set_result($response->result);
@@ -232,12 +246,18 @@ class BBSimpleModel {
         //Try to determine cache settings
         $ttl            = $this->get_cache_setting('ttl_list');
         $object_type    = $this->get_cache_setting('object_type');
+		$object_id		= null;
+
+		//For full models, use the current ID
+		if($this instanceof BBModel) {
+			if(!is_null($this->id)) $object_id = $this->id;
+		}
 
         //For lists, the "ID" will be the arguments used to query the list, to make sure it's uniquely cached
-        if(!is_null($args) && sizeof($args) > 0) $object_id = implode('-', $args);
+        if(!is_null($args) && sizeof($args) > 0 && is_null($object_id)) $object_id = implode('-', $args);
 
         //GOGOGO!
-        $response = $this->bb->call($svc, $args, $ttl, $object_type, $object_id);
+        $response = $this->call($svc, $args, $ttl, $object_type, $object_id);
 
         //Success!! - return the array only
         if($response->result == BinaryBeast::RESULT_SUCCESS) {
@@ -261,7 +281,7 @@ class BBSimpleModel {
      */
     public function clear_list_cache() {
 		if( !is_null($svc = $this->get_cache_setting('ttl_list')) ) {
-			$this->clear_service($svc);
+			$this->clear_service_cache($svc);
 		}
     }
     /**
@@ -269,20 +289,16 @@ class BBSimpleModel {
      * 
      * @param string|array $services
      */
-    public function clear_service($services) {
-        if(!is_array($services)) $services = array($services);
-
+    public function clear_service_cache($svc) {
         $object_type = $this->get_cache_setting('object_type');
-        if(!is_null($object_type)) foreach($services as $svc) {
-            $this->bb->cache->clear($svc, $object_type);
-        }
+        if(!is_null($object_type)) $this->bb->cache->clear($svc, $object_type);
     }
     /**
      * Clears ALL cache associated with this object_type
-     *      For example calling this against a BBTournament, will deletel
+     *      For example calling this against a BBTournament, will delete
      *      ALL cache for EVERY tournament in your database
      */
-    public function clear_cache() {
+    public function clear_object_cache() {
         $object_type = $this->get_cache_setting('object_type');
         if(!is_null($object_type)) $this->bb->cache->clear(null, $object_type);
     }
