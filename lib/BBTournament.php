@@ -161,35 +161,18 @@ class BBTournament extends BBModel {
         //Already instantiated
         if(!is_null($this->teams)) return $this->teams;
 
-        //New tournaments must be saved before we can start saving child data
-        if(is_null($this->id)) {
-            return $this->bb->ref(
-                $this->set_error('Please execute save() before manipulating rounds or teams')
-            );
-        }
+		//Use BBSimpleModels' listing method, for caching etc
+		if( !($this->teams = $this->get_list(self::SERVICE_LOAD_TEAMS, array('tourney_id' => $this->tourney_id)
+			, 'teams', 'BBTeam'))) {
+			$this->set_error('Error loading the teams in this tournament! see error() for details');
+            return $this->bb->ref(null);
+		}
 
-        //Ask the API for the rounds.  By default, this service returns every an array with a value for each bracket
-        $result = $this->call(self::SERVICE_LOAD_TEAMS, array('tourney_id' => $this->tourney_id), self::CACHE_TTL_TEAMS, self::CACHE_OBJECT_TYPE);
+		//Loop through each time, and "initialize" it, telling it which tournament it belongs to
+		foreach($this->teams as &$team) $team->init($this);
 
-        //Error - return false and save the result 
-        if($result->result != BinaryBeast::RESULT_SUCCESS) {
-             return $this->bb->ref($this->set_error($result));
-        }
-
-        //Initalize the teams array, and start importing instantiated BBTeam instances into it
-        $this->teams = array();
-        foreach($result->teams as &$team) {
-
-            //Instantiate a new BBTeam, and tell it to save a reference to this tournament
-            $team = new BBTeam($this->bb, $team);
-            $team->init($this);
-
-            //Success!
-            $this->teams[] = $team;
-        }
-
-        //Success! return the result
-        return $this->teams;
+		//Success!
+		return $this->teams;
     }
     public function &players() { return $this->teams(); }
     public function &participants() { return $this->teams(); }
@@ -261,10 +244,9 @@ class BBTournament extends BBModel {
      * 
      * @return boolean      False if it fails for any reason
      */
-    protected function &rounds() {
-
+    public function &rounds() {
         //Already instantiated
-        if(!is_null($this->rounds));
+        if(!is_null($this->rounds)) return $this->rounds;
 
         //New tournaments must be saved before we can start saving child data
         if(is_null($this->tourney_id)) {
@@ -325,15 +307,14 @@ class BBTournament extends BBModel {
             else if($bracket == BinaryBeast::BRACKET_BRONZE && (!$this->bronze || $this->elimination > 1)) $load = false;
 
             //If we've determined not to load this bracket, skip to the next round loading iteration
-            if(!$load) {
-                continue;
-            }
+            if(!$load) continue;
 
             //key each round by the round label
             $bracket_label = BBHelper::get_bracket_label($bracket, true);
 
             //Now all we do is loop and instantiate
             $this->rounds->{$bracket_label} = array();
+			$this->iterating = true;
             foreach($rounds as $round => &$format) {
                 //Initialize, then give it a few extra important values
                 $new_round = new BBRound($this->bb, $format);
@@ -342,6 +323,7 @@ class BBTournament extends BBModel {
                 //Done son! now save it to the local rounds array
                 $this->rounds->{$bracket_label}[] = $new_round;
             }
+			$this->iterating = false;
         }
 
         //Success! return the result
@@ -355,27 +337,16 @@ class BBTournament extends BBModel {
      * @return int|string       The id of this tournament to indicate a successful save
      */
     public function save($return_result = false, $child_args = null) {
-        //Remember wether or not this tournament is new - because we'll want to skip teams / rounds later if it is
-        $new = is_null($this->id);
 
-        /**
-         * Before trying to save any teams or rounds, first step is to save the tournament itself
-         * Depending on new vs old, we save it and stash the result, then return
-         * the result later after updating children
-         */
         //For new tournaments - use save_new for special import instructions, otherwise use the standard save() method
-        $result = $new ? $this->save_new() : parent::save();
+        $result = is_null($this->id) ? $this->save_new() : parent::save();
 
         //Oh noes!! save failed, so return false - developer should check the value of $bb->last_error
         if(!$result) return false;
 
-        /**
-         * For existing tournaments, now we update any rounds or teams that have changed
-         */
-        if(!$new) {
-            if(!$this->save_rounds()) return false;
-            if(!$this->save_teams()) return false;
-        }
+		//Now save any new/changed teams and rounds
+		if(!$this->save_rounds()) return false;
+		if(!$this->save_teams()) return false;
 
         //Success! Return the original save() result (if this tour is new, it'll give us the tourney_id)
         return $result;
@@ -418,12 +389,8 @@ class BBTournament extends BBModel {
      */
     public function save_rounds() {
 
-        /**
-         * Can't save children before the tournament even exists!
-         */
-        if(is_null($this->id)) {
-            return $this->set_error('Can\t save teams before saving the tournament!');
-        }
+        //New tournaments must be saved before saving teams
+        if(is_null($this->id)) return $this->set_error('Can\t save teams before saving the tournament!');
 
         //Get a list of changed rounds
         $rounds = $this->get_changed_children('BBRound');
@@ -499,13 +466,9 @@ class BBTournament extends BBModel {
      * @return boolean
      */
     public function save_teams() {
-
-        /**
-         * Can't save children before the tournament even exists!
-         */
-        if(is_null($this->id)) {
-            return $this->set_error('Can\t save teams before saving the tournament!');
-        }
+		
+        //New tournaments must be saved before saving teams
+        if(is_null($this->id)) return $this->set_error('Can\t save teams before saving the tournament!');
 
         //Get a list of changed teams
         $teams = $this->get_changed_children('BBTeam');
@@ -555,6 +518,7 @@ class BBTournament extends BBModel {
          * Tell all team instances to synchronize their settings
          */
         $new_id_index = 0;
+		$this->iterating = true;
         foreach($teams as &$team) {
 
             //Tell the tournament to merge all unsaved changed into $data
@@ -564,10 +528,11 @@ class BBTournament extends BBModel {
              * For new tournaments, make sure they get the new team_id
              */
             if(is_null($team->tourney_team_id)) {
-                $team->set_tourney_team_id($result->team_ids[$new_id_index]);
+                $team->set_id($result->team_ids[$new_id_index]);
                 ++$new_id_index;
             }
         }
+		$this->iterating = false;
 
         //Clear the list of teams with changes
         $this->reset_changed_children('BBTeam');
@@ -633,10 +598,10 @@ class BBTournament extends BBModel {
         //It also has the nice side-effect of recalculating the local $changed flag
         $this->unflag_child_changed($team);
 
-        //Finally, remove it from the teams array 
-        if(in_array($team, $this->teams)) {
-            unset($this->teams[ array_search($team, $this->teams) ]);
-        }
+        //Finally, remove it from the teams array (use teams() to ensure the array is popualted first)
+		if( ($key = array_search($team, $this->teams())) !== false) {
+			unset($this->teams[$key]);
+		}
     }
 
     /**
@@ -700,7 +665,12 @@ class BBTournament extends BBModel {
          * Wouldn't want to risk adding a new player to make teams() look initilaized,
          *  when in reality it hasn't yet
          */
-        if($this->teams() === false) return $this->bb->ref(false);
+		if(!is_null($this->id)) {
+			if($this->teams() === false) {
+				return $this->bb->ref(false);
+			}
+		}
+		else if(is_null($this->teams)) $this->teams = array();
 
         /**
          * If they provided an $id, that means they we need to return a 
@@ -751,7 +721,7 @@ class BBTournament extends BBModel {
 
         //Add it our teams list, then add a reference to the changed array
         $this->teams[$key] = $team;
-        $this->teams_changed[] = &$this->teams[$key];
+		$this->flag_child_changed($this->teams[$key]);
 
         //Flag the entire tournament as having unsaved changes
         $this->changed = true;
@@ -1042,6 +1012,40 @@ class BBTournament extends BBModel {
         //Success!
         return $this->open_matches;
     }
+	/**
+	 * Alias for BBTournament::open_matches()
+	 */
+	public function &matches() {
+		return $this->open_matches();
+	}
+	/**
+	 * Given two teams / team ids, this method can be used to 
+	 *		create a new BBMatch object with the new teams
+	 * 
+	 * returns false if either team provided does not belong to this tournament
+	 * 
+	 * @param int|BBTeam	$team1
+	 * @param int|BBTeam	$team2
+	 * 
+	 * @return BBMatch
+	 */
+	public function &match($team1, $team2) {
+		if(is_null($team1 = &$this->team($team1))) return false;
+		if(is_null($team2 = &$this->team($team2))) return false;
+
+		//Return from open_matches, but make sure it's populated first
+		$this->open_matches();
+		foreach($this->open_matches as $key => &$match) {
+			if(($match->team() == $team1 && $match->team2() == $team2)
+			|| ($match->team() == $team2 && $match->team2() == $team1)) {
+				return $this->open_matches[$key];
+			}
+		}
+
+		//Invalid
+		$this->set_error("{$team1->id} vs {$team2->id} is not a valid match in this tournament, unable to createa a match object for this pair");
+		return $this->bb->ref(null);
+	}
 }
 
 ?>

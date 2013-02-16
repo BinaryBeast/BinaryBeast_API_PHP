@@ -438,6 +438,16 @@ class BBHelper {
         //If we're starting brackets, all seeding methods are available
         return in_array($seeding, array('random','manual','balanced','sports')) ? $seeding : null;
     }
+	
+	/**
+	 * Based on the provided best_of value, calculate the number
+	 *	of wins required to win the match
+	 * @param int $best_of
+	 * @return int
+	 */
+	public static function get_wins_needed($best_of) {
+		return ($best_of + 1) / 2;
+	}
 
 }
 

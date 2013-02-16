@@ -22,9 +22,9 @@
 class BBGame extends BBSimpleModel {
     const SERVICE_SEARCH        = 'Game.GameSearch.Search';
     const SERVICE_LIST_POPULAR  = 'Game.GameSearch.Top';
-    
+
     //Cache setup (cache for 1 day)
-    const CACHE_OBJECT_ID       = BBCache::TYPE_GAME;
+    const CACHE_OBJECT_TYPE     = BBCache::TYPE_GAME;
     const CACHE_TTL_LIST        = 1440;
 
     /**

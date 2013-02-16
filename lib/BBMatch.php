@@ -17,9 +17,12 @@ class BBMatch extends BBModel {
 
     //Service names for the parent class to use for common tasks
     const SERVICE_LOAD   = 'Tourney.TourneyLoad.Match'; 
-    const SERVICE_CREATE = 'Tourney.TourneyMatch.Update';
+    const SERVICE_CREATE = 'Tourney.TourneyTeam.ReportWin';
     const SERVICE_UPDATE = 'Tourney.TourneyMatch.Update';
     const SERVICE_DELETE = 'Tourney.TourneyMatch.Delete';
+	//
+	const SERVICE_UPDATE_GAMES  = 'Tourney.TourneyMatchGame.ReportBatch';
+
 
     //Cache setup (cache for 10 minutes)
     const CACHE_OBJECT_ID       = BBCache::TYPE_TOURNAMENT;
@@ -46,11 +49,6 @@ class BBMatch extends BBModel {
      * @var array<BBMatchGame>
      */
     private $games = array();
-
-    /**
-     * Flag whether or not this match is played or unplayed (thus requiring report() to save)
-     */
-    private $played = false;
 
     /**
      * For new matches, winner() and loser() won't return a value unless
@@ -93,25 +91,16 @@ class BBMatch extends BBModel {
 
         //General notes / description on the match
         'notes'                     => null,
+		
+		//Winner's score - using this is NOT recommended however, please using $match->game to defined more detailed results
+		'score'						=> 1,
+
+		//Loser's score - using this is NOT recommended however, please using $match->game to defined more detailed results
+		'o_score'					=> 0
     );
 
     //Values sent from the API that I don't want developers to accidentally change
-    protected $read_only = array('team', 'opponent');
-
-    /**
-     * Overloads the BBModel constructor so that we can check to see
-     *      if $id was set, so we can set the local $played flag, which 
-     *      tells us if this is an unplayed match (requiring report()), or an existing match
-     * 
-     * @param BinaryBeast $bb
-     * @param mixed $data
-     */
-    function __construct(BinaryBeast &$bb, $data = null) {
-        parent::__construct($bb, $data);
-
-        //If the parent constructor found the ID this is an existing match
-        $this->played = !is_null($this->id);
-    }
+    protected $read_only = array('team', 'opponent', 'tourney_team_id', 'o_tourney_team_id', 'draw');
 
     /**
      * Import parent tournament class
@@ -138,7 +127,14 @@ class BBMatch extends BBModel {
      * @return boolean
      */
     public function save($return_result = false, $child_args = null) {
-        parent::save($return_result, $child_args);
+		//Report() before saving
+		if(is_null($this->id)) return $this->report();
+
+		//Already exists - let BBModel update basic settings (notes is the only thing really that can be updated this way)
+        if(!parent::save($return_result, $child_args)) return false;
+
+		//Update all game details
+		return $this->save_games();
     }
 
     /**
@@ -148,7 +144,7 @@ class BBMatch extends BBModel {
      * 
      * @return BBRound
      */
-    protected function &round() {
+    public function &round() {
         //Already set
         if(!is_null($this->round)) return $this->round;
 
@@ -159,7 +155,7 @@ class BBMatch extends BBModel {
             $round  = $this->current_data['round'];
 
             //Found it!
-            $this->round = $this->tournament->rounds->{$bracket}[$round];
+            $this->round = &$this->tournament->rounds->{$bracket}[$round];
         }
 
         //Failure!
@@ -213,8 +209,7 @@ class BBMatch extends BBModel {
         if(!is_null($this->team)) return $this->team;
 
         //Use the internal get_team method for this, using the team property
-        if(is_null($this->team = $this->get_team('team'))) return $this->bb->ref(null);
-        return $this->team;
+        return $this->team = &$this->get_team('team');
     }
     /**
      * Returns the BBTeam object for the second player in this match
@@ -269,8 +264,8 @@ class BBMatch extends BBModel {
      */
     public function &winner() {
         //For new matches, only return the winner if it has been specifcally set, using set_winner
-        if(!$this->played) {
-            if($this->new_winner) return $this->team();
+        if(is_null($this->id)) {
+            if($this->winner_set) return $this->team();
 
             //Unplayed match, without a winner set
             $this->set_error('Cannot retrieve the winner of unreported matches, try accessing $match->team and $match->team2(or $match->opponent)');
@@ -287,11 +282,11 @@ class BBMatch extends BBModel {
      */
     public function &loser() {
         //For new matches, only return the winner if it has been specifcally set, using set_winner
-        if(!$this->played) {
-            if($this->new_winner) return $this->opponent();
+        if(is_null($this->id)) {
+            if($this->winner_set) return $this->opponent();
 
             //Unplayed match, without a winner set
-            $this->set_error('Cannot retrieve the winner of unreported matches, try accessing $match->team and $match->team2(or $match->opponent)');
+            $this->set_error('Cannot retrieve the loser of unreported matches, try accessing $match->team and $match->team2(or $match->opponent)');
             return $this->bb->ref(null);
         }
         return $this->opponent();
@@ -336,28 +331,77 @@ class BBMatch extends BBModel {
      * 
      * You can't use this method to change match results,
      *      you'll have to unreport it first using BBMatch::unreport()
+	 * 
+	 * If you'd like to skip making individual game results, you can define the score of
+	 *		the winner and loser here - it will 
+	 * 
+	 * Warning: winner_score and loser_score will be OVERWRITTEN if you define any games!!!
      * 
      * @param BBTeam|int $winner      tourney_team_id of the winner
+	 * @param int $winner_score
+	 * @param int $loser_score
      * @return boolean
      */
-    public function set_winner($winner) {
+    public function set_winner($winner, $winner_score = null, $loser_score = null) {
         //Only appropriate for new matches
-        if($this->played) return $this->set_error('Can\'t use set_winner to change the results of a match, you must unreport() first');
+        if(!is_null($this->id)) return $this->set_error('Can\'t use set_winner to change the results of a match, you must unreport() first');
+
+		//$winner = null means setting a draw, use set_draw()
+		if(is_null($winner)) return $this->set_draw();
 
         //Use team_in_match to both make sure we have a BBTeam, and to make sure it's part of this match
-        if(($winner = $this->team_in_match($winner)) == false) return false;
+        if(($winner = &$this->team_in_match($winner)) == false) {
+			return $this->set_error("Error setting winner to the provided team, team does not seem to be part of this match!");
+		}
 
-        //Figure out which team to set as the loser
-        if($winner == ($loser = $this->team())) {
-            $this->opponent = $this->opponent();
+        //If we need to swap the team / opponent, do so now
+        if($winner == $this->opponent()) {
+            $this->opponent = &$this->team();
         }
-        else $this->opponent = $this->team();
 
         //new_loser is set, now save new_winner and return 
-        $this->team         = $winner;
+        $this->team         = &$winner;
         $this->winner_set   = true;
+
+		//Set the team_ids now, the values that the API will be looking for
+		$this->set_new_data('tourney_team_id',		$this->winner->id);
+		$this->set_new_data('o_tourney_team_id',	$this->loser->id);
+		if(!is_null($winner_score)) $this->set_new_data('score', $winner_score);
+		if(!is_null($loser_score))	$this->set_new_data('o_score', $loser_score);
+		
+
         return true;
     }
+	/**
+	 * Define the winner of this match as a draw, aka no one won this match
+	 * 
+	 * Only valid for group rounds
+	 * 
+	 * @param int $winner_score
+	 * @param int $loser_score
+	 * @return boolean 
+	 */
+	public function set_draw($winner_score = null, $loser_score = null) {
+		//Draws are only valid in group rounds
+		if($this->tournament->status != 'Active-Groups') return $this->set_error('Only matches in group-rounds can be draws');
+
+		//First make sure we have a valid team and opponent
+		if(is_null($this->team()) || is_null($this->opponent())) return false;
+
+		//The API expects team ids
+		$this->set_new_data('tourney_team_id',		$this->winner->id);
+		$this->set_new_data('o_tourney_team_id',	$this->loser->id);
+		$this->set_new_data('draw',					true);
+
+		if(!is_null($winner_score)) $this->set_new_data('score', $winner_score);
+		if(!is_null($loser_score))	$this->set_new_data('o_score', $loser_score);
+
+		//So report() doens't complain about not having a winner
+		$this->winner_set = true;
+
+		//Success!
+		return true;
+	}
 
 
     /**
@@ -376,38 +420,90 @@ class BBMatch extends BBModel {
      */
     public function report() {
         //Already reported
-        if($this->played) {
+        if(!is_null($this->id)) {
             return $this->set_error('This match has already been reported, please use save() if you wish to change the details');
         }
 
         //No winner defined
-        if(is_null($this->new_winner)) {
-            return $this->set_error('You must execute the set_winner($team_id) method to define which team won the match.  You can refer to $match->team and $match->opponents for participant details');
+        if(is_null($this->winner_set)) {
+            return $this->set_error('Please define a winner before reporting ($team->set_winner($winning_team)) You can refer to $match->team and $match->opponent for participant details');
         }
+		
+		//Let BBModel handle this
+		if(!parent::save(false, array('tourney_id' => $this->tournament->id))) {
+			return false;
+		}
 
-        /**
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * TODO
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         */
-        
+		//Report all of the game details
+		if(!$this->save_games()) return false;
     }
+	/**
+	 * Perform a batch update on the games in this match
+	 * 
+	 * @return boolean
+	 */
+	public function save_games() {
+		//Update the match first
+		if(is_null($this->id)) return $this->set_error('Please report() or save() beforing saving game data');
+
+		//Start compiling the value array for the API
+		$scores			= array();
+		$o_scores		= array();
+		$races			= array();
+		$o_races		= array();
+		$maps			= array();
+		$winners		= array();
+		$notes			= array();
+
+		//Loop through each game and extact the appropriate values
+		foreach($this->games as &$game) {
+			$scores[]		= $game->score;
+			$o_scores[]		= $game->o_score;
+			$races[]		= $game->race;
+			$o_races[]		= $game->o_race;
+			$maps[]			= $game->map;
+			$winners[]		= $game->winner->id;
+			$notes[]		= $game->notes;
+		}
+
+		//Make the call!
+		$result = $this->call(self::SERVICE_UPDATE_GAMES, array(
+			'tourney_match_id'		=> $this->id,
+			'scores'				=> $scores,
+			'o_scores'				=> $o_scores,
+			'races'					=> $races,
+			'o_races'				=> $o_races,
+			'maps'					=> $maps,
+			'winners'				=> $winners,
+			'notes'					=> $notes
+		));
+		if($result->result != 200) return $this->set_error('Error saving game details! see $bb->error_history for details');
+
+		//Update each game with new id, and synchronize
+		$this->iterating = true;
+		foreach($this->games as $key => &$game) {
+			$game->set_id($result->ids[$key]);
+			$game->sync_changes();
+		}
+		$this->iterating = false;
+
+		//Clear our list of changed games
+		$this->reset_changed_children('BBMatchGame');
+
+		//Success!
+		return true;
+	}
 
     /**
      * Revert this match from the tournament
      * 
      * That means deleting the details, and removing the teams' progress in the tournament
+	 * 
+	 * Warning: you cannot unreport matches that have teams with matches AFTER this match was reported
+	 * 
+	 * aka you can only unreport if neither team has progress any further in the tournament or reported any other matches
+	 * 
+	 * That does not apply to group rounds however, only brackets - group rounds can be unreported at anytime before the brackets start
      * 
      * @return boolean
      */
@@ -474,6 +570,9 @@ class BBMatch extends BBModel {
      * @return BBGame
      */
     public function &game($winner = null) {
+		//Make sure we have any existing games first
+		if(!is_null($this->id)) $this->games();
+
         //Determine the next game_number, based on the number of games currently in the games array
         $game_number = sizeof($this->games);
 
@@ -492,8 +591,11 @@ class BBMatch extends BBModel {
         //Set the winner
         if(!is_null($winner)) $game->set_winner($winner);
 
-        //Save it locally, and return a reference
+        //Save it locally, and flag changes
         $this->games[$game_number] = $game;
+		$this->flag_child_changed($this->games[$game_number]);
+
+		//Success!
         return $this->games[$game_number];
     }
 
@@ -511,14 +613,14 @@ class BBMatch extends BBModel {
      * @return BBTeam
      */
     public function &team_in_match($team) {
-        if( is_null($team2 = $this->tournament->team($team)) ) return $this->bb->ref(false);
+        if( is_null($team = &$this->tournament->team($team)) ) return $this->bb->ref(false);
 
         //Have to return a reference, so check against team() and opponent, and return if either match
-        if( $team == ($matched_team = $this->team()) )      return $matched_team;
-        if( $team == ($matched_team = $this->opponent()) )  return $matched_team;
+        if( $team == ($matched_team = &$this->team()) )      return $matched_team;
+        if( $team == ($matched_team = &$this->opponent()) )  return $matched_team;
 
         //Failure!
-        return $this->bb->ref('asdf2');
+        return $this->bb->ref(false);
     }
 }
 

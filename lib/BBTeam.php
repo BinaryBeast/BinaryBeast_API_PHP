@@ -23,11 +23,19 @@ class BBTeam extends BBModel {
     const SERVICE_CREATE = 'Tourney.TourneyTeam.Insert';
     const SERVICE_UPDATE = 'Tourney.TourneyTeam.Update';
     const SERVICE_DELETE = 'Tourney.TourneyTeam.Delete';
+	//
+	const SERVICE_CONFIRM		= 'Tourney.TourneyTeam.Confirm';
+	const SERVICE_UNCONFIRM		= 'Tourney.TourneyTeam.Confirm';
+	const SERVICE_BAN			= 'Tourney.TourneyTeam.Ban';
+	//
+	const SERVICE_GET_OPPONENT		= 'Tourney.TourneyTeam.GetOTourneyTeamID';
+	const SERVICE_LIST_OPPONENTS	= 'Tourney.TourneyTeam.GetOpponentsRemaining';
 
     //Cache setup (cache for 10 minutes)
     const CACHE_OBJECT_ID       = BBCache::TYPE_TEAM;
     const CACHE_TTL_LIST        = 10;
     const CACHE_TTL_LOAD        = 10;
+	const CACHE_TTL_OPPONENTS	= 20;
 
     /**
      * Keep a reference to the tournament that instantiated this class
@@ -55,11 +63,23 @@ class BBTeam extends BBModel {
      * @var array
      */
     private $opponents;
-    
-    /**
-     * If removed from the parent, this object will become an orphan without hope of recovery
-     */
-    private $orphan = false;
+
+	/**
+	 * This team's current match, use current_match or match() to get
+	 * @var BBMatch
+	 */
+	private $match;
+	/**
+	 * If eliminated, store the team that eliminated us here
+	 * @var BBTeam
+	 */
+	private $eliminated_by;
+
+	/**
+	 * When a team is deleted, we flag it as an orphan, so that
+	 *		any future attempts to edit it will return an accurate error
+	 */
+	private $orphan = false;
 
     /**
      * Default values for a new participant, also a useful reference for developers
@@ -111,74 +131,145 @@ class BBTeam extends BBModel {
         //Set parent so BBModel will auto flag changes
         $this->parent = &$this->tournament;
     }
+	
+	/**
+	 * Methods that make any changes to this team use this method to first check to see
+	 *	if this team has been orphaned... aka deleted
+	 * 
+	 * returns a boolean - false if not orphaned, true if orphaned
+	 * 
+	 * It also will call set_error, so you don't have to handle the error if orphaned
+	 * 
+	 * @return boolean
+	 */
+	private function orphan_error() {
+		if($this->orphan) {
+			$this->set_error('Team has been removed from the tournament, you can no longer make changes to it');
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Overrides BBModel::save() so we can return false if trying to save an oprhaned team
+	 */
+	public function save($return_result = false, $child_args = null) {
+		//Orphaned team - don't save
+		if($this->orphan_error()) return false;
+		
+		//Tournament must be saved first
+		if(is_null($this->tournament->id)) {
+			return $this->set_error('Tournament must be saved before adding teams');
+		}
+
+		//Let BBModel handle the rest
+		return parent::save($return_result, array('tourney_id' => $this->tournament->id));
+	}
+
+	/**
+	 * Returns the BBTournament object this team belongs to
+	 * 
+	 * returns null if "orphaned", aka the team was deleted
+	 * 
+	 * @return BBTournament
+	 */
+	public function &tournament() {
+		//Already set
+		if(!is_null($this->tournament)) return $this->tournament;
+
+		//If orphaned, return null
+		if($this->orphan_error()) return $this->bb->ref(null);
+
+		//Make sure we even have an ID to load
+		if(is_null($this->id)) {
+			$this->set_error('Unable to load the tournament for this team, as this team does not have a tourney_team_id associated with it!');
+			return $this->bb->ref(null);
+		}
+	
+		//Make sure we're loaded first so we have the tour id
+		$this->load();
+		$id = $this->current_data['tourney_id'];
+		$tournament = $this->bb->tournament->load($id);
+	
+		//Did it load correctly?
+		if($tournament->id == $id) {
+			$this->tournament = $tournament;
+			return $this->tournament;
+		}
+
+		//Failure!
+		$this->set_error('Error loading tournament ' . $id);
+		return $this->bb->ref(null);
+	}
 
     /**
      * Delete this team!!!!!!!
-     * If a new unsaved team, this method removes itself from the tournament
-     * 
-     * 
-     * WARNING - DANGEROUS SERVICE METHOD!
-     * 
-     * There is no undoing this method if it works
-     * 
-     * 
-     * 
-     * However that being said, it's necessary for unsaved new teams too, so we can remove
-     *      them from the tournament save queue
+	 * WARNING - USE CAUTING! THIS IS A DANGEROUS METHOD THAT CANNOT BE REVERSED!!!!
+	 * 
+	 * If for any reason we should fail to delete the team,
+	 *		please use $team->result() and $team->error() to see why
+	 * 
+	 * 
+     * Note for new unsaved team, this method removes itself from the tournament
      * 
      * @return boolean
      */
     public function delete() {
+		//Already deleted - derp
+		if($this->orphan_error()) return false;
 
-        /**
-         * For a new unsaved team, all we have to do is remove it
-         *  from the tournament, and then flag this object as an orphan
-         */
-        if(is_null($this->id)) {
-            $this->tournament->remove_team($this);
-        }
+		/**
+		 * First ask the API to delete it from BinaryBeast, but only 
+		 *		if the team has an ID
+		 */
+		if(!is_null($this->id)) {
+			if(!parent::delete()) return false;
+		}
 
-        /**
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * Build the API logic
-         * 
-         * 
-         * 
-         * 
-         */
+		/**
+		 * At this point we either deleted from the API successfully, 
+		 *	or didn't even have a team_id to delete (new team)
+		 * 
+		 * So now we remove the tournament reference, affectively
+		 *		orphaning this object - so that it can no longer be edited
+		 */
+		$this->tournament->remove_team($this);
+		$this->tournament = null;
+		$this->orphan = true;
+
+		//Deleted successfully
+		return true;
     }
 
     /**
-     * This method is used by BBTournament to set our tourney_team_id 
-     * for new teams
+	 * Overrides BBModel's id setter so we can throw a fit if this team has been orphaned
      * 
      * @param int $tourney_team_id
      */
-    public function set_tourney_team_id($tourney_team_id) {
-        if(is_null($this->tourney_team_id)) {
-            $this->set_id($tourney_team_id);
-        }
-    }
+	public function set_id($id) {
+		//Can't change orphaned teams
+		if($this->orphan_error()) return false;
+
+		parent::set_id($id);
+	}
 
     /**
      * Returns the BBTeam object of this team's current opponent
-     * Null if he has no opponent waiting
+     * 
+	 * Returns false if this teams has been eliminated
+	 * 
+	 * returns null if this team is currently waiting on an opponent
      * 
      * IMPORTANT NOTE: If this tournament is configured to use group_rounds,
      *      there may be several opponents currently waiting to play agains this team,
-     * 
-     * If that's the case, then the this method will simply return the first one found
+     *		If that's the case, then the this method will simply return the first one found
      * 
      * @return BBTeam (null if no opponent available)
      */
     public function &opponent() {
+		//Orphaned team
+		if($this->orphan_error()) return $this->bb->ref(null);
+
         //Already figured it out
         if(!is_null($this->opponent)) return $this->opponent;
 
@@ -189,34 +280,127 @@ class BBTeam extends BBModel {
             );
         }
 
-        /**
-         * For round robin, we use opponents() to load a list of opponents left to play first,
-         *   then return the first one in the array
-         */
-        if(BBHelper::tournament_in_group_rounds($this->tournament)) {
-            /**
-             * 
-             * 
-             * 
-             * 
-             * 
-             * TODO: This
-             * 
-             * 
-             * 
-             * 
-             */
-        }
+		//Ask the API
+		$result = $this->call(self::SERVICE_GET_OPPONENT, array(
+			'tourney_team_id' => $this->id
+			), self::CACHE_TTL_OPPONENTS, self::CACHE_OBJECT_TYPE, $this->id);
 
-        /**
-         * If tournament currently has brackets, all we have to do is ask the API to send us
-         * the tourney_team_id of our current opponent
-         */
-        if(BBHelper::tournament_in_brackets($this->tournament)) {
-            bb_debug('here BBTeam::opponent() - after tour in brackets');
-        }
-        
+		//Found him!
+		if($result->result == 200) $this->opponent = &$this->tournament->team($result->o_tourney_team_id);
+
+		//Eliminated
+		else if($result->result == 735) {
+			$this->opponent = false;
+			$this->eliminated_by = &$this->tournament->team($result->victor->tourney_team_id);
+			$this->set_error('Team has been eliminated! see $team->eliminated_by to see who defeated this team');
+		}
+
+		//Waiting for an opponent
+		else if($result->result == 734) {
+			$this->set_error('Team ' . $this->id . ' is currently waiting on an opponent');
+		}
+
+		return $this->opponent;
     }
+	/**
+	 * If this team has been eliminated, this method will return the BBTeam object
+	 *	of the team that eliminated it
+	 * 
+	 * @return BBTeam
+	 */
+	public function &eliminated_by() {
+		if(!is_null($this->eliminated_by)) return $this->eliminated_by;
+
+		//Not set - try running opponent() then returning, as it will be set after opponent() is run
+		$this->opponent();
+
+		return $this->eliminated_by;
+	}
+	
+	/**
+	 * If a match is reported, this method can be called to clear any
+	 *		cached opponent results this team may have saved
+	 */
+	public function reset_opponents() {
+		$this->opponent		= null;
+		$this->opponents	= null;
+		$this->match		= null;
+	}
+
+	/**
+	 * Confirm this team's position in the tournament
+	 * 
+	 * @return boolean
+	 */
+	public function confirm() {
+		return $this->set_status(BinaryBeast::TEAM_STATUS_UNCONFIRMED, self::SERVICE_CONFIRM);
+	}
+	/**
+	 * Confirm this team's position in the tournament
+	 * 
+	 * @return boolean
+	 */
+	public function unconfirm() {
+		return $this->set_status(BinaryBeast::TEAM_STATUS_UNCONFIRMED, self::SERVICE_UNCONFIRM);
+	}
+	/**
+	 * Ban this team from the tournament
+	 */
+	public function ban() {
+		return $this->set_status(BinaryBeast::TEAM_STATUS_BANNED, self::SERVICE_BAN);
+	}
+
+	/**
+	 * Used by confirm, unconfirm, and ban to change the status of this eam
+	 * @param int $status
+	 * @param string $svc
+	 * @return boolean
+	 */
+	private function set_status($status, $svc) {
+		//Orphaned team
+		if($this->orphan_error()) return false;
+
+		//No change
+		if($this->current_data['status'] == $status) return true;
+
+		//Tournament already started
+		if(BBHelper::tournament_is_active($this->tournament)) {
+			return $this->set_error('Cannot change team status after tournament has already started!');
+		}
+
+		//Not a real team yet, just change the status to 1
+		if(is_null($this->id)) {
+			$this->set_new_data('status', $svc);
+			return true;
+		}
+
+		//Let the API handle the rest
+		$result = $this->call($svc, array('tourney_team_id' => $this->id));
+		if($result->result != BinaryBeast::RESULT_SUCCESS) {
+			return $this->set_error('Unable to set team ' . $this->id . ' status to ' . BBHelper::translate_team_status($status) );
+		}
+
+		//Success!
+		$this->set_current_data('status', $svc);
+		return true;
+	}
+
+	/**
+	 * If this team has an opponent waiting, this method can be used to get the
+	 *		BBMatch object for the match, so that it can be reported
+	 * 
+	 * @return BBMatch
+	 */
+	public function &match() {
+		//Already
+		if(!is_null($this->match)) return $this->match;
+
+		//No opponent - can't make a match
+		if(is_null($this->opponent())) return $this->bb->ref(null);
+
+		//Use tournament to create the BBModel object, cache it, and return
+		return $this->match = &$this->tournament->match($this, $this->opponent);
+	}
 }
 
 ?>

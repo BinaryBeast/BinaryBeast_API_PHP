@@ -71,9 +71,12 @@ class BBRound extends BBModel {
      * @return void
      */
     public function init(BBTournament &$tournament, $bracket, $round) {
-        $this->tournament   = $tournament;
+        $this->tournament   = &$tournament;
         $this->bracket      = $bracket;
         $this->round        = $round;
+
+		//Let BBModel know who our parent is, so changes are flagged correctly
+		$this->parent = &$this->tournament;
     }
 
     /**
@@ -123,7 +126,7 @@ class BBRound extends BBModel {
      */
     public function save($return_result = false, $child_args = null) {
 
-        //Nothing has changed! Save an warning, but since we dind't exactly fail, return true
+        //Nothing to save
         if(!$this->changed) {
             $this->set_error('Warning: save() saved no changes, since nothing has changed');
             return true;
@@ -142,32 +145,27 @@ class BBRound extends BBModel {
             'tourney_id'            => $this->tournament->tourney_id,
             'bracket'               => $this->bracket,
             'round'                 => $this->round
-        ), $this->data, $this->new_data);
+        ), $this->data);
 
         //GOGOGO!
         $result = $this->call($svc, $args);
 
-        /*
-         * Saved successfully - reset some local values and return true
-         */
+		//Success!
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
+			//Recalculate the wins_needed
+			$this->set_current_data('wins_needed', BBHelper::get_wins_needed($this->data['best_of']));
 
-            /**
-             * Let sync_changes update local data values, and to
-             * flag us as no longer having unsaved changes
-             */
+			//Manually update new_data, since sync_changes depends on new id...
+			$this->new_data = $this->data;
+
             $this->sync_changes();
-
-            //Success!
             return true;
         }
 
         /**
          * Oh noes!
          */
-        else {
-            return $this->set_error($result);
-        }
+        else return $this->set_error($result);
     }
 }
 

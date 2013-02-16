@@ -92,9 +92,9 @@ class BBMatchGame extends BBModel {
      * @param BBMatch       $match
      * @return void
      */
-    public function init(BBTournament &$tournament, BBMatch $match) {
-        $this->tournament   = $tournament;
-        $this->match        = $match;
+    public function init(BBTournament &$tournament, BBMatch &$match) {
+        $this->tournament   = &$tournament;
+        $this->match        = &$match;
 
         //Let BBModel know who our parent is, so that changes are automatically flagged in BBMatch
         $this->parent = &$this->match;
@@ -109,19 +109,21 @@ class BBMatchGame extends BBModel {
     public function save($return_result = false, $child_args = null) {
         //If the match hasn't been saved yet, stop now
         if(is_null($this->match->id)) {
-            return $this->set_error("Can't save game detaisl before the match itself has been saved - please execute \$match->save() first");
+            return $this->set_error("You must save the entire match before saving games (\$match->save() or \$match->report())");
         }
         parent::save($return_result, $child_args);
     }
 
     /**
      * Returns the BBTeam object of the winner of this game
+	 * 
+	 * If false is returned, it indicates a draw
      * 
      * @return BBTeam
      */
     public function &winner() {
         //Already cached
-        if(!is_null($this->winner)) return $this->winner;
+        if(!is_null($this->winner) || $this->winner === false) return $this->winner;
 
         //No winner defined
         if(is_null($id = $this->data['tourney_team_id'])) {
@@ -136,12 +138,14 @@ class BBMatchGame extends BBModel {
 
     /**
      * Returns the BBTeam object of this game's loser
+	 * 
+	 * If false is returned, it indicates a draw
      * 
      * @return BBTeam
      */
     public function &loser() {
         //Already cached
-        if(!is_null($this->loser)) return $this->loser;
+        if(!is_null($this->loser) || $this->loser === false) return $this->loser;
 
         //No loser defined
         if(is_null($id = $this->data['o_tourney_team_id'])) {
@@ -160,25 +164,30 @@ class BBMatchGame extends BBModel {
      * Must be a team from within the match
      * 
      * You can provide either the team's integer id, or the BBTeam object
+	 * 
+	 * Set winner to null to indiciate a draw
      * 
      * @param BBTeam|int        The winning team
      * returns false if provided team is invalid
      */
     public function set_winner($winner) {
 
-        //Use the matche's team_in_match to give us the BBTeam, and to verify that it's actually in the match
-        if(($winner = $this->match->team_in_match($winner)) == false) {
+		//Set winner as "null", indicating a draw
+		if(is_null($winner)) return $this->set_draw();
+
+        //Use the match's team_in_match to give us the BBTeam, and to verify that it's actually in the match
+        if(($winner = &$this->match->team_in_match($winner)) == false) {
             return $this->set_error('Invalid team selected for this game\'s winner');
         }
 
         //Update the winner property
-        $this->winner = $winner;
+        $this->winner = &$winner;
 
         //Figure out which team lost so that we can update the loser value
         if($this->winner == $this->match->winner()) {
-            $this->loser = $this->match->loser();
+            $this->loser = &$this->match->loser();
         }
-        else $this->loser = $this->match->winner();
+        else $this->loser = &$this->match->winner();
 
         //Update the team id values
         $this->set_new_data('tourney_team_id', $this->winner->id);
@@ -187,6 +196,23 @@ class BBMatchGame extends BBModel {
         //Success!
         return true;
     }
+	/**
+	 * Set the winner of this game to null, indicating a draw
+	 * @return boolean
+	 */
+	public function set_draw() {
+		//Draws are only valid in group rounds
+		if($this->tournament->status != 'Active-Groups') return $this->set_error('Only matches in group-rounds can be draws');
+
+		$this->winner = false;
+		$this->loser = false;
+
+		//Update the values
+		$this->set_new_data('tourney_team_id', 0);
+		
+		//Success!
+		return true;
+	}
 }
 
 ?>

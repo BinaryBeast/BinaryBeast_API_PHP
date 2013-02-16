@@ -145,6 +145,16 @@ class BBSimpleModel {
         $this->bb->clear_error();
     }
 
+	/**
+	 * Returns an array containing the result code, and friendly translation
+	 *	of the last API request
+	 * 
+	 * @return array
+	 */
+	public function result() {
+		return array('result' => $this->result, 'friendly' => $this->result_friendly);
+	}
+
     /**
      * Get the service that the child class supposedly defines
      * 
@@ -163,9 +173,13 @@ class BBSimpleModel {
      */
     protected function get_cache_setting($setting) {
         $setting = strtoupper($setting);
-        $value = constant('selt::CACHE_' . $setting);
-        if(is_null($value)) $value = constant(get_called_class() . '::' . $setting);
-        return $value;
+		if(defined(get_called_class() . '::CACHE_' . $setting)) {
+			return constant(get_called_class() . '::CACHE_' . $setting);
+		}
+		if(defined('self::CACHE_' . $setting)) {
+			return constant('self::CACHE_' . $setting);
+		}
+		return null;
     }
 
     /**
@@ -214,16 +228,13 @@ class BBSimpleModel {
      * @return array  - false if it failed
      */
     protected function get_list($svc, $args, $list_name, $wrap_class = null) {
-
+		
         //Try to determine cache settings
         $ttl            = $this->get_cache_setting('ttl_list');
         $object_type    = $this->get_cache_setting('object_type');
 
-        //For lists, the "ID" will be a json encoded string of the arguments used to query the list
-        if(!is_null($args) && sizeof($args) > 0) {
-            $object_id = '';
-            foreach($args as $key => $val) $object_id .= "$key:$val";
-        } else $object_id = null;
+        //For lists, the "ID" will be the arguments used to query the list, to make sure it's uniquely cached
+        if(!is_null($args) && sizeof($args) > 0) $object_id = implode('-', $args);
 
         //GOGOGO!
         $response = $this->bb->call($svc, $args, $ttl, $object_type, $object_id);
@@ -249,13 +260,9 @@ class BBSimpleModel {
      *  in this class, that contain the word 'LIST'
      */
     public function clear_list_cache() {
-        $object_type = $this->get_cache_setting('object_type');
-        $constants = get_defined_constants();
-        foreach($constants as $constant) {
-            if(strpos($constant, '_LIST') !== false || strpos($constant, '_SEARCH') !== false) {
-                $this->bb->cache->clear($constant, $object_type);
-            }
-        }
+		if( !is_null($svc = $this->get_cache_setting('ttl_list')) ) {
+			$this->clear_service($svc);
+		}
     }
     /**
      * Clear specific services associated with this cache_type

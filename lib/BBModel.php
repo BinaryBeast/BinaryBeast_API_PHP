@@ -83,6 +83,19 @@ class BBModel extends BBSimpleModel {
      */
     protected $parent = null;
 
+	/**
+	 * BBClasses objects can set this "iterating" flag to indicate that we're in the middle
+	 *		of a batch update, and should therefore ignore attempts to unflag / flag changes in child classes
+	 * @var boolean
+	 */
+	protected $iterating = false;
+	
+	/**
+	 * To insure that each child is truly unique while flagging changes, we give each
+	 *		new object an arbitrary "uid"
+	 */
+	protected $uid;
+
     /**
      * Constructor
      * Stores a reference to the main BinaryBeast library class, 
@@ -111,6 +124,9 @@ class BBModel extends BBSimpleModel {
         else if(is_numeric($data) || is_string($data)) {
             $this->set_id($data);
         }
+
+		//Set an arbitrary uid to insure that each object is unique
+		$this->uid = uniqid();
     }
 
     /**
@@ -132,7 +148,6 @@ class BBModel extends BBSimpleModel {
         $this->new_data[$key]   = $value;
 
         //Flag unsaved changes
-        $this->changed = true;
         $this->on_change();
     }
     /**
@@ -274,10 +289,15 @@ class BBModel extends BBSimpleModel {
     /**
      * Reset this object back to its original state, as if nothing
      * had changed since its instantiation
+	 * 
+	 * Warning: this method resets all changed children too!!!!
      * 
      * @return void
      */
     public function reset() {
+		//Reset ALL changed child classes
+		$this->reset_changed_children();
+  
         //Revert changes
         $this->new_data = array();
 
@@ -306,8 +326,8 @@ class BBModel extends BBSimpleModel {
         //Simple - let get_sync_values figure out which values to merge together
         $this->import_values($this->get_sync_values());
 
-        //This object no longer has unsaved changes
-        $this->changed = false;
+		//Reset $changed flags
+		$this->on_change(false);
     }
 
     /**
@@ -416,14 +436,15 @@ class BBModel extends BBSimpleModel {
 
     /**
      * Sends the values in this object to the API, to either update or create the tournament, team, etc
+	 * 
+	 * Important note: this method will NOT save unsaved children
      * 
      * By default this method returns the new or existing ID, or false on failure
      *      However for $return_result = true, it will simply return the API's response directly
      * 
-     * Child classes may also define additional arguments to send using the second $args argument
+     * Specific classes may also define additional arguments to send using the second $args argument
      * 
-     * @param boolean $return_result        By default this method returns the id or false, but setting this to true will make it return the api's result instead
-     * @param array   $args                 Child classes may define additional arguments to send along with the request
+     * @param array   $args		child classes may define additional arguments to send along with the request
      * 
      * @return string|int       false if the call failed
      */
@@ -477,16 +498,13 @@ class BBModel extends BBSimpleModel {
                 }
             }
 
-            /**
-             * Merge the new values into $this->data using the sync() method
-             * Which also takes care of updating the $changed flag for us
-             */
+			//Merge all unsaved changes into current_data, and unflag ourselves as having unsaved changes
             $this->sync_changes();
-
+			
             //Child requested the result directly, do so now before we do anything else
             if($return_result) return $result;
 
-            //Otherwise, return the id to indicate success
+            //Success!
             return $id;
         }
 
@@ -494,13 +512,14 @@ class BBModel extends BBSimpleModel {
          * Oh noes!
          * Save the response as the local error, and return false
          */
-        else {
-            return $this->set_error($result);
-        }
+        else return $this->set_error($result);
     }
 
     /**
      * Delete the current object from BinaryBeast!!
+	 * 
+	 * If false is returned, use $object->result() and $object->error() to see why
+	 * 
      * @return boolean
      */
     public function delete() {
@@ -523,14 +542,8 @@ class BBModel extends BBSimpleModel {
             return true;
         }
 
-        /**
-         * Error!
-         * We'll rely on set_error to translate it into a friendly version
-         * for the developer
-         */
-        else {
-            return $this->set_error($result);
-        }
+		//API request failed - developers should evaluate last_error and last_result for details
+        else return $this->set_error($result);
     }
 
     /**
@@ -543,7 +556,7 @@ class BBModel extends BBSimpleModel {
      * @param int|string $id
      * @return void
      */
-    protected function set_id($id) {
+    public function set_id($id) {
         $this->{$this->id_property} = $id;
         if($this->id_property !== 'id') $this->id = &$this->{$this->id_property};
     }
@@ -619,22 +632,22 @@ class BBModel extends BBSimpleModel {
      * @return void
      */
     public function flag_child_changed(BBModel &$child) {
-        //Store changed children into the changed_children array, but in sub_arrays keyed by class name
-        $class = get_class($child);
+		//Parents set an iteration flag to indicate a batch update, therefore telling us to skip individual flagging / unflagging of children
+		if($this->iterating) return;
 
-        //Initialize the sub-array for the child's class if necessary
-        if(!isset($this->changed_children[$class])) $this->changed_children[$class] = array();
+		//Figure out which array to use, based on the class of the provided child (also creates the array if it doesn't already exist)
+		$array = &$this->get_changed_children(get_class($child));
 
         //If it isn't already being tracked, add it now and increment the changed_children counter
-        if(!in_array($child, $this->changed_children[$class])) {
-            $this->changed_children[$class][] = &$child;
+        if(!in_array($child, $array)) {
+            $array[] = &$child;
             ++$this->changed_children_count;
         }
 
-        //Flag the entire model has having unsaved changes
+        //Flag thos entire model has having unsaved changes
         $this->changed = true;
 
-        //Flag for parents too, propogate all the way up (ie changing MatchGame flags MatchGame->Match->Tournament)
+        //Propogate up, flag all parents of parents of parents etc etc
         $this->on_change();
     }
     /**
@@ -645,29 +658,38 @@ class BBModel extends BBSimpleModel {
      * @return void
      */
     public function unflag_child_changed(BBModel &$child) {
-        //Store changed children into the changed_children array, but in sub_arrays keyed by class name
-        $class = get_class($child);
+		//Parents set an iteration flag to indicate a batch update, therefore telling us to skip individual flagging / unflagging of children
+		if($this->iterating) return;
+
+		//Figure out which array to use, based on the class of the provided child (also creates the array if it doesn't already exist)
+		$array = &$this->get_changed_children(get_class($child));
 
         //Try to find the child's index within the changed_children array
-        if(($key = array_search($child, $this->changed_children[$class])) !== false) {
-            unset($this->changed_children[$class][$key]);
+        if(($key = array_search($child, $array)) !== false) {
+            unset($array);
             --$this->changed_children_count;
         }
 
         //Recalculate the changed parent's flag
         $this->changed = sizeof($this->new_data) > 0 || $this->changed_children_count > 0;
 
-        //If we determined local changed flag to be false, then unflag ourselves from our parent too if appropriate
+        /*
+		 * If determined that we no longer have unsaved changes..
+		 * Propogate up, flag all parents of parents of parents etc etc
+		 */
         if(!$this->changed) $this->on_change(false);
     }
     /**
      * Retrieve an array of children of the provided $class name, that have been flagged
      *  as having unsaved changes
      * 
-     * @param string $class
+     * @param string $class		null returns ALL children with changes
      * @return array
      */
-    protected function get_changed_children($class) {
+    public function &get_changed_children($class = null) {
+		if(is_null($class)) return $this->changed_children;
+
+		//Make sure an array exists for this class first, then return
         if(!isset($this->changed_children[$class])) $this->changed_children[$class] = array();
         return $this->changed_children[$class];
     }
@@ -679,40 +701,63 @@ class BBModel extends BBSimpleModel {
      * @param string $class
      */
     protected function reset_changed_children($class = null) {
+		//When we reset all children, ignore them when they call our unflag_changed_children() method
+		$iterating = $this->iterating;
+		$this->iterating = true;
+
         //clear them all
         if(is_null($class)) {
+			//Call reset() on each child
+			foreach($this->changed_children as $children) $this->reset_children($children);
+
+			//Empty our changed_child tracking array and counter
             $this->changed_children = array();
             $this->changed_children_count = 0;
         }
 
         //Specific child type
         else {
-            /**
-             * First decrement the count by the number of children in this array
-             * Use get_changed_children, just to be sure that an array of this class will exist
-             */
-            $this->changed_children_count -= sizeof($this->get_changed_children($class));
+			//Grab a reference to the array holding this $class type
+			$children = $this->get_changed_children($class);
+
+			//decrement our changed-children counter based on the number of children by $class type
+            $this->changed_children_count -= sizeof($children);
+
+			//Tell each child to reset()
+			$this->reset_children($children);
 
             //Empty it out!
             $this->changed_children[$class] = array();
         }
+
+		//Reset our iterating flag to whatever it was before we started
+		$this->iterating = $iterating;
     }
+	/**
+	 * Used by reset_changed_children to loop through an array
+	 *	of children, and to tell each one to reset() themselves
+	 * 
+	 * @param array $children
+	 */
+	private function reset_children(&$children) {
+		foreach($children as $child) $child->reset();
+	}
 
     /**
      * Called when something changes, so that we can decide
      *  notify parent classes of unsaved changes when appropriate
      * 
-     * @param bool $flag    true by default, set to false for unflagging instead of flagging
+     * @param bool $changed    true by default, set to false for unflagging instead of flagging
      * @return void
      */
-    protected function on_change($flag = true) {
+    protected function on_change($changed = true) {
+		//Update local flag first
+		$this->changed = $changed;
+
+		//If we have a parent defined, let them know we either now or no longer have unsaved changes
         if(!is_null($this->parent)) {
-            if($flag) {
-                $this->parent->flag_child_changed($this);
-            }
-            else {
-                $this->parent->unflag_child_changed($this);
-            }
+            if($changed)	$this->parent->flag_child_changed($this);
+            else			$this->parent->unflag_child_changed($this);
         }
     }
 

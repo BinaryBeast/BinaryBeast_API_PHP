@@ -422,6 +422,10 @@ class BBCache {
         if(!is_null($object_id))    $where .= ($where ? ' AND ' : 'WHERE ') . "`object_id` = '$object_id'";
         return $where;
     }
+
+	function __sleep() {
+		return array('type', 'server', 'database', 'table');
+	}
 }
 
 ?>

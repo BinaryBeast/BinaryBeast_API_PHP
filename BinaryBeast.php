@@ -562,8 +562,9 @@ class BinaryBeast {
      * @param string $tourney_id    Optionally pre-define the tournament to load
      * @return BBTournament
      */
-    public function tournament($tourney_id = null) {
-        return $this->get_model('BBTournament', $tourney_id);
+    public function &tournament($tourney_id = null) {
+		$tour = $this->get_model('BBTournament', $tourney_id);
+        return $tour;
     }
     /**
      * Returns a BBMap simple_model class
