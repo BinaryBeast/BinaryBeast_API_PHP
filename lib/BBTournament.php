@@ -41,9 +41,13 @@ class BBTournament extends BBModel {
     /**
      * Caching settings
      */
-    const CACHE_OBJECT_TYPE     = BBCache::TYPE_TOURNAMENT;
-    const CACHE_TTL_TEAMS       = 30;
-    const CACHE_TTL_ROUNDS      = 60;
+    const CACHE_OBJECT_TYPE				= BBCache::TYPE_TOURNAMENT;
+	const CACHE_TTL_LOAD				= 60;
+    const CACHE_TTL_LIST				= 60;
+    const CACHE_TTL_TEAMS				= 30;
+    const CACHE_TTL_ROUNDS				= 60;
+    const CACHE_TTL_LIST_OPEN_MATCHES	= 20;
+
 
     /**
      * Array of participants within this tournament
@@ -263,67 +267,23 @@ class BBTournament extends BBModel {
             return $this->bb->ref($this->set_error($result));
         }
 
-        //Initalize the rounds property, and start importing instantiated BBRounds into it
-        $this->rounds = (object)array();
+		//Initialize the rounds object, use BBHelper to give us the available brackets for this tournament
+		$this->rounds = (object)BBHelper::get_available_brackets($this, true, true);
+
+        //Initialize each returned round, and store it into local propeties
         foreach($result->rounds as $bracket => &$rounds) {
-            
-            /*
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * Move this to a "helper"
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             * 
-             */
-
-            //I only want relevent rounds imported
-            $load = true;
-
-            //Group rounds - Cup tournaments only
-            if($bracket == BinaryBeast::BRACKET_GROUPS && $this->type_id != BinaryBeast::TOURNEY_TYPE_CUP) $load = false;
-            //Loser/Finals brackets - double elim only
-            else if(($bracket == BinaryBeast::BRACKET_LOSERS || $bracket == BinaryBeast::BRACKET_FINALS) && $this->elimination < 2) $load = false;
-            //Bronze - single elim only
-            else if($bracket == BinaryBeast::BRACKET_BRONZE && (!$this->bronze || $this->elimination > 1)) $load = false;
-
-            //If we've determined not to load this bracket, skip to the next round loading iteration
-            if(!$load) continue;
-
             //key each round by the round label
             $bracket_label = BBHelper::get_bracket_label($bracket, true);
 
-            //Now all we do is loop and instantiate
-            $this->rounds->{$bracket_label} = array();
-			$this->iterating = true;
+			//Only import rounds for relevent brackets
+			if(!isset($this->rounds->$bracket_label)) continue;
+
+            //Save each new BBRound after initializing it
             foreach($rounds as $round => &$format) {
-                //Initialize, then give it a few extra important values
                 $new_round = new BBRound($this->bb, $format);
                 $new_round->init($this, $bracket, $round);
-
-                //Done son! now save it to the local rounds array
-                $this->rounds->{$bracket_label}[] = $new_round;
+				$this->rounds->{$bracket_label}[] = $new_round;
             }
-			$this->iterating = false;
         }
 
         //Success! return the result
@@ -347,6 +307,7 @@ class BBTournament extends BBModel {
 		//Now save any new/changed teams and rounds
 		if(!$this->save_rounds())	return false;
 		if(!$this->save_teams())	return false;
+		if(!$this->save_matches())	return false;
 
 		//clear ALL cache for this tournament id
 		$this->clear_id_cache();
@@ -539,6 +500,23 @@ class BBTournament extends BBModel {
         //Success!
         return true;
     }
+	/**
+	 * Submit changes to any matches that have pending changes
+	 * 
+	 * @return boolean
+	 */
+	public function save_matches() {
+		$matches = &$this->get_changed_children('BBMatch');
+		
+		/**
+		 * Nothing special, just save() each one
+		 * Difference is we're not "iterating", because if anything goes wrong, we'll
+		 *	leave it flagged 
+		 */
+		foreach($matches as &$match) $match->save();
+
+		return true;
+	}
 
     /**
      * Load a list of tournaments created by the user of the current api_key
@@ -998,7 +976,7 @@ class BBTournament extends BBModel {
         if(!is_null($this->open_matches)) return $this->open_matches;
 
         //Ask the api
-        $result = $this->call(self::SERVICE_LIST_OPEN_MATCHES, array('tourney_id' => $this->id));
+        $result = $this->call(self::SERVICE_LIST_OPEN_MATCHES, array('tourney_id' => $this->id), self::CACHE_TTL_LIST_OPEN_MATCHES, self::CACHE_OBJECT_TYPE, $this->id);
         if(!$result) return $this->bb->ref(false);
 
         //Cast each match into BBMatch, and call init() so it knows which tournament it belongs to
@@ -1023,12 +1001,22 @@ class BBTournament extends BBModel {
 	 * 
 	 * returns false if either team provided does not belong to this tournament
 	 * 
+	 * You can use this method to load a match using a match id
+	 *		param 1 = match id, param 2 = null
+	 * 
 	 * @param int|BBTeam	$team1
 	 * @param int|BBTeam	$team2
 	 * 
 	 * @return BBMatch
 	 */
-	public function &match($team1, $team2) {
+	public function &match($team1, $team2 = null) {
+		//If asking for an existing match, load that now
+		if(is_null($team2) && is_numeric($team1)) {
+			$match = new BBMatch($this->bb, $team1);
+			$match->init($this);
+			return $match;
+		}
+
 		if(is_null($team1 = &$this->team($team1))) return false;
 		if(is_null($team2 = &$this->team($team2))) return false;
 
