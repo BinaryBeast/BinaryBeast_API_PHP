@@ -492,7 +492,6 @@ class BBModel extends BBSimpleModel {
 
         //GOGOGO
         $result = $this->call($svc, $args);
-		bb_debug($result);
 
         /*
          * Saved successfully - update some local values and return true
@@ -500,7 +499,7 @@ class BBModel extends BBSimpleModel {
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
 
 			//Clear cache for this svc
-			$this->clear_id_cache($svc);
+			$this->clear_id_cache($this->get_service('load'));
 
             //For new objects just created, make sure we extract the id and save it locally
             if(is_null($id)) {
