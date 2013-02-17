@@ -20,7 +20,7 @@
  * @version 2.7.4
  * @date 2013-01-22
  */
-class BinaryBeast {
+class BBLegacy {
 
     /**
      * Rely on the new library for the actual interactions
