@@ -89,6 +89,12 @@ class BBModel extends BBSimpleModel {
 	 * @var boolean
 	 */
 	protected $iterating = false;
+	
+	/**
+	 * To avoid multiple queries, set a flag to track whether not
+	 *	we've already asked the API for this object's values
+	 */
+	protected $loaded = false;
 
     /**
      * Constructor
@@ -118,6 +124,9 @@ class BBModel extends BBSimpleModel {
         else if(is_numeric($data) || is_string($data)) {
             $this->set_id($data);
         }
+
+		//For new objects, use default values for values
+		else $this->data = $this->default_values;
     }
 
     /**
@@ -130,7 +139,7 @@ class BBModel extends BBSimpleModel {
      */
     protected function set_new_data($key, $value) {
         //If it's the same, then don't flag it a change
-        if(isset($this->current_data[$key])) {
+		if(array_key_exists($key, $this->current_data)) {
             if($this->current_data[$key] == $value) return;
         }
 
@@ -238,7 +247,7 @@ class BBModel extends BBSimpleModel {
         }
 
         //Load first if we can
-        if(!is_null($this->id) && sizeof($this->current_data) == 0) {
+        if(!is_null($this->id)) {
             $this->load();
         }
 
@@ -286,14 +295,15 @@ class BBModel extends BBSimpleModel {
      * @return void
      */
     public function reset() {
-		//Reset ALL changed child classes
-		$this->reset_changed_children();
-  
         //Revert changes
         $this->new_data = array();
+		$this->data		= array();
 
         //Reset the live data "view"
         $this->data = $this->get_sync_values();
+
+		//Reset ALL changed child classes
+		$this->reset_changed_children();
 
         //We no longer have any unsaved changes
         $this->changed = false;
@@ -360,6 +370,9 @@ class BBModel extends BBSimpleModel {
         $this->data             = $data;
         $this->current_data     = $data;
         $this->new_data         = array();
+		
+		//Flag object as loaded, so load() will not ask the API again
+		$this->loaded = true;
     }
 
     /**
@@ -395,7 +408,7 @@ class BBModel extends BBSimpleModel {
         }
 
         //Already loaded
-        if(sizeof($this->current_data) > 0) return $this;
+        if($this->loaded) return $this;
 
         //Determine which sevice to use, return false if the child failed to define one
         $svc = $this->get_service('LOAD');
@@ -405,10 +418,14 @@ class BBModel extends BBSimpleModel {
             );
         }
 
+		//Cache settings
+		$ttl			= $this->get_cache_setting('ttl_load');
+		$object_type	= $this->get_cache_setting('object_type');
+
         //GOGOGO!
         $result = $this->call($svc, array_merge(array(
             $this->id_property => $this->id
-        ), $child_args) );
+        ), $child_args), $ttl, $object_type, $this->id);
 
         //If successful, import it now
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
@@ -451,7 +468,7 @@ class BBModel extends BBSimpleModel {
         //Update
         if(!is_null($id) ) {
             //Nothing has changed! Save an warning, but since we dind't exactly fail, return true
-            if(!$this->changed) {
+            if(!$this->changed || sizeof($this->new_data) == 0) {
                 $this->set_error('Warning: save() saved no changes, since nothing has changed');
                 return $this->id;
             }
@@ -475,11 +492,15 @@ class BBModel extends BBSimpleModel {
 
         //GOGOGO
         $result = $this->call($svc, $args);
+		bb_debug($result);
 
         /*
          * Saved successfully - update some local values and return true
          */
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
+
+			//Clear cache for this svc
+			$this->clear_id_cache($svc);
 
             //For new objects just created, make sure we extract the id and save it locally
             if(is_null($id)) {
@@ -586,27 +607,13 @@ class BBModel extends BBSimpleModel {
     }
 
     /**
-     * This method returns a combination of current values + new values
-     * But the trick is that it's sensitive to wether or not this object is new..
-     * 
-     * So for new objects that don't yet have an ID associated with it, it actually
-     * returns a combination of default values + changed values
-     * 
-     * For existing objects, it returns a combination of current values + changed values
+     * Returns an array of up to date values, merging
+	 *		default + current + new 
      * 
      * @return array
      */
     public function get_sync_values() {
-        /**
-         * New object: default + new
-         */
-        if(is_null($this->id)) {
-            return array_merge($this->default_values, $this->new_data);
-        }
-        /**
-         * Existing object: current + new
-         */
-        return array_merge($this->current_data, $this->new_data);
+		return array_merge($this->default_values, $this->current_data, $this->data);
     }
 
     /**
@@ -714,10 +721,8 @@ class BBModel extends BBSimpleModel {
 			//decrement our changed-children counter based on the number of children by $class type
             $this->changed_children_count -= sizeof($children);
 
-			//Tell each child to reset()
+			//Tell each child to reset(), and empty the array
 			$this->reset_children($children);
-
-            //Empty it out!
             $this->changed_children[$class] = array();
         }
 
@@ -753,11 +758,13 @@ class BBModel extends BBSimpleModel {
     }
 	/**
 	 * Clears all cache associated with this object_id+object_type
+	 * 
+	 * @param string|array $svc		Optionally limit this to certain services
 	 */
-	public function clear_id_cache() {
+	public function clear_id_cache($svc = null) {
 		$object_type = $this->get_cache_setting('object_type');
 		if(!is_null($this->id) && !is_null($object_type)) {
-			$this->bb->cache->clear(null, $object_type, $this->id);
+			$this->bb->cache->clear($svc, $object_type, $this->id);
 		}
 	}
 }
