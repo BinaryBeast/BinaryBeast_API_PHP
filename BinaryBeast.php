@@ -768,7 +768,7 @@ class BinaryBeast {
          */
         if(method_exists($legacy, $name)) {
             $result = call_user_func_array(array($legacy, $name), $args);
-            $this->set_result($result);
+            $this->set_result($result, "BBLegacy::$name()", $args);
             return $result;
         }
 

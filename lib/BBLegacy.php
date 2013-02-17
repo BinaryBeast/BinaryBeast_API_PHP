@@ -3,24 +3,25 @@
 /**
  * Version 3.0.0 completely revamped the way the API library worked, moving from more of a
  * procedural flow to an object-oriented one
- * 
+ *
  * I however want to make sure that any of our existing API users can upgrade to the new version
  * and slowly upgrade their code without worrying about breaking anyything
  * 
- * This class class therefore houses all of the original wrapper methods that version 2.7.2 had
+ * This class class therefore houses all of the original wrapper methods that version 2.7.4 had
  * 
- * This is basically a snap-shot 1:1 legacy version of what we had released with 2.7.2, and is in
+ * This is basically a snap-shot 1:1 legacy version of what we had released with 2.7.4, and is in
  * itself even backwards compatible with older version than that :)
- * 
+ *
  * Dual licensed under the MIT and GPL licenses:
  *   http://www.opensource.org/licenses/mit-license.php
  *   http://www.gnu.org/licenses/gpl.html
- * 
- * @version 2.7.2
- * @date 2013-02-08
- * @author Brandon Simmons
+ *
+ * @author BinaryBeast.com
+ * @version 2.7.4
+ * @date 2013-01-22
  */
-class BBLegacy {
+class BinaryBeast {
+
     /**
      * Rely on the new library for the actual interactions
      * @var BinaryBeast
@@ -34,31 +35,41 @@ class BBLegacy {
     function __construct(&$bb) {
         $this->bb = $bb;
     }
+	
+	/**
+	 * Allows BBCache to give us errors to keep track of
+	 */
+	public function set_error($error, $class = null) {
+		$this->error_history[] = array(
+			'error_message'	=> $error, 
+			'class'			=> $class
+		);
+	}
 
     /**
-     * Used by the legacy wrapper methods, call the API.. and append
-     * a warning to the developer in hopes he'll see that he should 
-     * review the way he's using the new library and take advantage of the new
-     * object oriented veresion
-     * 
-     * @param string $svc
-     * @param arrays $args
-     * @return array
+     * Make a service call to the remote BinaryBeast API
+	 * 
+     * @param string $svc    		Service to call (ie Tourney.TourneyCreate.Create)
+     * @param array $args     		Arguments to send
+	 * @param int $ttl				If you configured the BBCache class, use this to define how many minutes this result should be cached
+	 * @param int $object_type		For caching objects: see BBCache::type_ constants
+     * @param mixed $object_id		For caching objects: The id of this the object, like tourney_id or tourney_team_id
+     *
+     * @return object
      */
-    private function call($svc, $args) {
-        //GOGOGO! returne a BBService wrapped response
-        $result = $this->bb->call($svc, $args, true);
+    public function call($svc, $args = null, $ttl = null, $object_type = null, $object_id = null) {
+        //Use the new library to make the actual call, pass the request directly
+        $result = $this->bb->call($svc, $args, $ttl, $object_type, $object_id);
 
-        /**
-         * Append an api_version_warning in hopes that developers
-         * will update their code to use the new object oriented functionalty
-         */
-        $result['api_version_warning'] = 'You are using the old legacy wrapper method "' . $svc . '",'
-                . 'please consider updating your code to take advantage of the new object-oriented functionality of the new API library. '
-                . 'Check out our github pages for examples / tutorials: https://github.com/BinaryBeast/BinaryBeast_API_PHP';
+		/**
+		 * Append an api_version_warning in hopes that developers
+		 * will update their code to use the new object oriented functionalty
+		 */
+		$result->api_version_warning = 'You are using the old legacy wrapper method "' . $svc . '",'
+				. 'please consider updating your code to take advantage of the new object-oriented functionality of the new API library. '
+				. 'Check out our github pages for examples / tutorials: https://github.com/BinaryBeast/BinaryBeast_API_PHP';
 
-        //Success!
-        return $result;
+		return $result;
     }
 
     /**
@@ -80,11 +91,10 @@ class BBLegacy {
      * 
      * @return {object}
      */
-    public function tournament_load($tourney_id)
-    {
+    public function tournament_load($tourney_id) {
         return $this->call('Tourney.TourneyLoad.Info', array('tourney_id' => $tourney_id));
     }
-    
+
     /**
      * Retrieves round format
      * 
@@ -94,11 +104,9 @@ class BBLegacy {
      * 
      * @return {object}
      */
-    public function tournament_load_round_format($tourney_id, $bracket = '*')
-    {
+    public function tournament_load_round_format($tourney_id, $bracket = '*') {
         return $this->call('Tourney.TourneyLoad.Rounds', array('tourney_id' => $tourney_id, 'bracket' => $bracket));
     }
-
 
     /**
      * This wrapper method is a shortcut to create a tournament, it simply calls the Tourney.TourneyCreate.Create service
@@ -125,19 +133,17 @@ class BBLegacy {
      *
      * @return object {int result, ...}
      */
-    public function tournament_create($options)
-    {
+    public function tournament_create($options) {
         //Use the legacy parameter method
         //@todo this method is deprecated and should be phased out eventually
-        if(!is_array($options) && !is_null($options))
-        {
+        if (!is_array($options) && !is_null($options)) {
             $keys = array('title' => 'PHP Test!', 'description' => null, 'public' => true, 'game_code' => null, 'type_id' => 0, 'elimination' => 1
                 , 'max_teams' => 16, 'team_mode' => 1, 'teams_from_group' => 2, 'date_start' => null, 'location' => null, 'teams' => null, 'return_data' => 0);
             $pos = 0;
-            foreach($keys as $key => $default)
-            {
+            foreach ($keys as $key => $default) {
                 ${$key} = func_get_arg($pos);
-                if(${$key} === false) ${$key} = $default;
+                if (${$key} === false)
+                    ${$key} = $default;
                 ++$pos;
             }
             return $this->tournament_create_legacy($title, $description, $public, $game_code, $type_id, $elimination, $max_teams, $team_mode, $teams_from_group, $date_start, $location, $teams, $return_data);
@@ -146,6 +152,7 @@ class BBLegacy {
         //EZ
         return $this->call('Tourney.TourneyCreate.Create', $options);
     }
+
     /**
      * Created to preserve existing PHP applications that may decide to download the new class
      * 
@@ -169,23 +176,22 @@ class BBLegacy {
      * 
      * @return {object} 
      */
-    private function tournament_create_legacy($title, $description = null, $public = 1, $game_code = null, $type_id = 0, $elimination = 1, $max_teams = 16, $team_mode = 1, $teams_from_group = 2, $date_start = null, $location = null, array $teams = null, $return_data = 0)
-    {
+    private function tournament_create_legacy($title, $description = null, $public = 1, $game_code = null, $type_id = 0, $elimination = 1, $max_teams = 16, $team_mode = 1, $teams_from_group = 2, $date_start = null, $location = null, array $teams = null, $return_data = 0) {
         $args = array(
             'title' => $title
-            , 'description'         => $description
-            , 'public'              => $public
-            , 'game_code'           => $game_code
-            , 'type_id'             => $type_id
-            , 'elimination'         => $elimination
-            , 'max_teams'           => $max_teams
-            , 'team_mode'           => $team_mode
-            , 'group_count'         => $group_count
-            , 'teams_from_group'    => $teams_from_group
-            , 'date_start'          => $date_start
-            , 'location'            => $location
-            , 'teams'               => $teams
-            , 'return_data'         => $return_data
+            , 'description' => $description
+            , 'public' => $public
+            , 'game_code' => $game_code
+            , 'type_id' => $type_id
+            , 'elimination' => $elimination
+            , 'max_teams' => $max_teams
+            , 'team_mode' => $team_mode
+            , 'group_count' => $group_count
+            , 'teams_from_group' => $teams_from_group
+            , 'date_start' => $date_start
+            , 'location' => $location
+            , 'teams' => $teams
+            , 'return_data' => $return_data
         );
 
         return $this->call('Tourney.TourneyCreate.Create', $args);
@@ -217,23 +223,22 @@ class BBLegacy {
      *
      * @return object {int result}
      */
-    public function tournament_update($tourney_id, $options = array())
-    {
+    public function tournament_update($tourney_id, $options = array()) {
         //Use the old legacy method of defining every parameter
-        if(!is_array($options) && !is_null($options))
-        {
+        if (!is_array($options) && !is_null($options)) {
             $keys = array('title', 'description', 'public', 'game_code', 'type_id', 'elimination', 'max_teams', 'team_mode', 'teams_from_group', 'date_start', 'location');
-            foreach($keys as $x => $key)
-            {
+            foreach ($keys as $x => $key) {
                 ${$key} = func_get_arg($x + 1);
-                if(${$key} === false) ${$key} = 'null';
+                if (${$key} === false)
+                    ${$key} = 'null';
             }
             return $this->tournament_update_legacy($tourney_id, $title, $description, $public, $game_code, $type_id, $elimination, $max_teams, $team_mode, $teams_from_group, $date_start, $location);
         }
 
-        $args = array_merge(array('TourneyID'	=> $tourney_id), $options);
+        $args = array_merge(array('TourneyID' => $tourney_id), $options);
         return $this->call('Tourney.TourneyUpdate.Settings', $args);
     }
+
     /**
      * Created to allow existing applications to download this new class without breaking their application
      * 
@@ -253,21 +258,20 @@ class BBLegacy {
      * @param type $location
      * @return {object} 
      */
-    private function tournament_update_legacy($tourney_id, $title, $description = 'null', $public = 'null', $game_code = 'null', $type_id = 'null', $elimination = 'null', $max_teams = 'null', $team_mode = 'null', $teams_from_group = 'null', $date_start = 'null', $location = 'null')
-    {
+    private function tournament_update_legacy($tourney_id, $title, $description = 'null', $public = 'null', $game_code = 'null', $type_id = 'null', $elimination = 'null', $max_teams = 'null', $team_mode = 'null', $teams_from_group = 'null', $date_start = 'null', $location = 'null') {
         $args = array(
-            'TourneyID'                 => $tourney_id
-            , 'title' 			=> $title
-            , 'description'		=> $description
-            , 'public' 		 	=> $public
-            , 'game_code'	 	=> $game_code
-            , 'type_id'        		=> $type_id
-            , 'elimination'	 	=> $elimination
-            , 'max_teams'      		=> $max_teams
-            , 'team_mode'      		=> $team_mode
-            , 'teams_from_group'  	=> $teams_from_group
-            , 'date_start'		=> $date_start
-            , 'location'      		=> $location
+            'TourneyID' => $tourney_id
+            , 'title' => $title
+            , 'description' => $description
+            , 'public' => $public
+            , 'game_code' => $game_code
+            , 'type_id' => $type_id
+            , 'elimination' => $elimination
+            , 'max_teams' => $max_teams
+            , 'team_mode' => $team_mode
+            , 'teams_from_group' => $teams_from_group
+            , 'date_start' => $date_start
+            , 'location' => $location
         );
         return $this->call('Tourney.TourneyUpdate.Settings', $args);
     }
@@ -281,8 +285,7 @@ class BBLegacy {
      *
      * @return object {int result}
      */
-    public function tournament_delete($tourney_id)
-    {
+    public function tournament_delete($tourney_id) {
         return $this->call('Tourney.TourneyDelete.Delete', array('tourney_id' => $tourney_id));
     }
 
@@ -298,16 +301,15 @@ class BBLegacy {
      *
      * @return object {int result}
      */
-    public function tournament_start($tourney_id, $seeding = 'random', $teams = null)
-    {
+    public function tournament_start($tourney_id, $seeding = 'random', $teams = null) {
         $args = array('tourney_id' => $tourney_id
             , 'Seeding' => $seeding
-            , 'Teams'   => $teams
+            , 'Teams' => $teams
         );
 
         return $this->call('Tourney.TourneyStart.Start', $args);
     }
-    
+
     /**
      * Change the format of a round within a tournament (best of, map, and date)
      * 
@@ -324,16 +326,15 @@ class BBLegacy {
      * 
      * @return object {int result}
      */
-    public function tournament_round_update($tourney_id, $bracket, $round = 0, $best_of = 1, $map = null, $date = null)
-    {
+    public function tournament_round_update($tourney_id, $bracket, $round = 0, $best_of = 1, $map = null, $date = null) {
         return $this->call('Tourney.TourneyRound.Update', array(
-            'tourney_id'    => $tourney_id
-            , 'bracket'     => $bracket
-            , 'round'       => $round
-            , 'best_of'     => $best_of
-            , 'map'         => $map
-            , 'date'        => $date
-        ));
+                    'tourney_id' => $tourney_id
+                    , 'bracket' => $bracket
+                    , 'round' => $round
+                    , 'best_of' => $best_of
+                    , 'map' => $map
+                    , 'date' => $date
+                ));
     }
 
     /**
@@ -350,23 +351,21 @@ class BBLegacy {
      * @param <int>array    $map_ids      - array of map_ids - official maps with stat tracking etc in our databased, opposed to simply trying to give us the name of the map - use map_list to get maps ids
      * 
      */
-    public function tournament_round_update_batch($tourney_id, $bracket, $best_ofs = array(), $maps = array(), $dates = array(), $map_ids = array())
-    {
+    public function tournament_round_update_batch($tourney_id, $bracket, $best_ofs = array(), $maps = array(), $dates = array(), $map_ids = array()) {
         return $this->call('Tourney.TourneyRound.BatchUpdate', array(
-            'tourney_id'    => $tourney_id
-            , 'bracket'     => $bracket
-            , 'best_ofs'    => $best_ofs
-            , 'maps'        => $maps
-            , 'map_ids'     => $map_ids
-            , 'dates'       => $dates
-        ));
+                    'tourney_id' => $tourney_id
+                    , 'bracket' => $bracket
+                    , 'best_ofs' => $best_ofs
+                    , 'maps' => $maps
+                    , 'map_ids' => $map_ids
+                    , 'dates' => $dates
+                ));
     }
 
     /**
      * Old method, left for legacy API users 
      */
-    public function tournament_list($filter = null, $limit = 30, $private = true)
-    {
+    public function tournament_list($filter = null, $limit = 30, $private = true) {
         return $this->tournament_list_my($filter, $limit, $private);
     }
 
@@ -378,13 +377,12 @@ class BBLegacy {
      * 
      * @return object
      */
-    public function tournament_list_my($filter = null, $limit = 30, $private = true)
-    {
+    public function tournament_list_my($filter = null, $limit = 30, $private = true) {
         return $this->call('Tourney.TourneyList.Creator', array(
-            'filter'    => $filter,
-            'page_size' => $limit,
-            'private'   => $private
-        ));
+                    'filter' => $filter,
+                    'page_size' => $limit,
+                    'private' => $private
+                ));
     }
 
     /**
@@ -396,8 +394,7 @@ class BBLegacy {
      * 
      * @return object[int Result [, array matches]]
      */
-    public function tournament_get_open_matches($tourney_id)
-    {
+    public function tournament_get_open_matches($tourney_id) {
         return $this->call('Tourney.TourneyLoad.OpenMatches', array('tourney_id' => $tourney_id));
     }
 
@@ -408,8 +405,7 @@ class BBLegacy {
      * 
      * @param string $tourney_id 
      */
-    public function tournament_reopen($tourney_id)
-    {
+    public function tournament_reopen($tourney_id) {
         return $this->call('Tourney.TourneyReopen.Reopen', array('tourney_id' => $tourney_id));
     }
 
@@ -420,8 +416,7 @@ class BBLegacy {
      * 
      * @return object {int result]
      */
-    public function tournament_confirm($tourney_id)
-    {
+    public function tournament_confirm($tourney_id) {
         return $this->call('Tourney.TourneySetStatus.Confirmation', array('tourney_id' => $tourney_id));
     }
 
@@ -432,11 +427,9 @@ class BBLegacy {
      * 
      * @return object {int result]
      */
-    public function tournament_unconfirm($tourney_id)
-    {
+    public function tournament_unconfirm($tourney_id) {
         return $this->call('Tourney.TourneySetStatus.Building', array('tourney_id' => $tourney_id));
     }
-
 
     /**
      *
@@ -449,7 +442,6 @@ class BBLegacy {
      * 
      *
      */
-
 
     /**
      * This wrapper class will insert a team into your tournament (Tourney.TourneyTeam.Insert)
@@ -470,16 +462,15 @@ class BBLegacy {
      *
      * @return array [int result [, int tourney_team_id]]
      */
-    public function team_insert($tourney_id, $display_name, $options = array())
-    {
-        $args = array_merge(array('tourney_id'   => $tourney_id
-            , 'display_name'        => $display_name
-            , 'status'              => 1
-        ), $options);
+    public function team_insert($tourney_id, $display_name, $options = array()) {
+        $args = array_merge(array('tourney_id' => $tourney_id
+            , 'display_name' => $display_name
+            , 'status' => 1
+                ), $options);
 
         return $this->call('Tourney.TourneyTeam.Insert', $args);
     }
-    
+
     /**
      * Change a team's settings
      * 
@@ -497,12 +488,11 @@ class BBLegacy {
      * 
      * @return object {int result}
      */
-    public function team_update($tourney_team_id, $options)
-    {
-        $args = array_merge(array('tourney_team_id'   => $tourney_team_id), $options);
+    public function team_update($tourney_team_id, $options) {
+        $args = array_merge(array('tourney_team_id' => $tourney_team_id), $options);
         return $this->call('Tourney.TourneyTeam.Update', $args);
     }
-    
+
     /**
      * Granted that the tournament can still accept new teams, this method will update the status of a team to confirm his position in the draw
      * 
@@ -516,8 +506,7 @@ class BBLegacy {
      * 
      * @return object {int result [, int tourney_team_id]}
      */
-    public function team_confirm($tourney_team_id, $tourney_id = null)
-    {
+    public function team_confirm($tourney_team_id, $tourney_id = null) {
         return $this->call('Tourney.TourneyTeam.Confirm', array('tourney_team_id' => $tourney_team_id, 'tourney_id' => $tourney_id));
     }
 
@@ -532,8 +521,7 @@ class BBLegacy {
      * 
      * @return object {int result [, int tourney_team_id]}
      */
-    public function team_unconfirm($tourney_team_id)
-    {
+    public function team_unconfirm($tourney_team_id) {
         return $this->call('Tourney.TourneyTeam.Unconfirm', array('tourney_team_id' => $tourney_team_id));
     }
 
@@ -550,8 +538,7 @@ class BBLegacy {
      * 
      * @return object {int result [, int tourney_team_id]}
      */
-    public function team_ban($tourney_team_id)
-    {
+    public function team_ban($tourney_team_id) {
         return $this->call('Tourney.TourneyTeam.Ban', array('tourney_team_id' => $tourney_team_id));
     }
 
@@ -565,8 +552,7 @@ class BBLegacy {
      *
      * @return object {int result}
      */
-    public function team_delete($tourney_team_id)
-    {
+    public function team_delete($tourney_team_id) {
         return $this->call('Tourney.TourneyTeam.Delete', array('tourney_team_id' => $tourney_team_id));
     }
 
@@ -592,47 +578,44 @@ class BBLegacy {
      *
      * @return object {int result}
      */
-    public function team_report_win($tourney_id, $winner_tourney_team_id, $loser_tourney_team_id = null, $options = array())
-    {
+    public function team_report_win($tourney_id, $winner_tourney_team_id, $loser_tourney_team_id = null, $options = array()) {
         //The new way of processing this request allows an array of options, as opposed to 15,000 parameters
         //But there are many sites already using the old method, so we make sure not to break their applications
-        if(!is_array($options) && !is_null($options))
-        {
+        if (!is_array($options) && !is_null($options)) {
             $keys = array('score' => 1, 'o_score' => 0, 'replay' => null, 'map' => null, 'notes' => null, 'force' => 0);
             $pos = 3;
-            foreach($keys as $key => $default)
-            {
+            foreach ($keys as $key => $default) {
                 ${$key} = func_get_arg($pos);
-                if(${$key} === false) ${$key} = $default;
+                if (${$key} === false)
+                    ${$key} = $default;
                 ++$pos;
             }
             return $this->team_report_win_legacy($tourney_id, $winner_tourney_team_id, $loser_tourney_team_id, $score, $o_score, $replay, $map, $notes, $force);
         }
 
         $args = array_merge(array('tourney_id' => $tourney_id
-            , 'tourney_team_id'	   => $winner_tourney_team_id
-            , 'o_tourney_team_id'  => $loser_tourney_team_id
-        ), $options);
+            , 'tourney_team_id' => $winner_tourney_team_id
+            , 'o_tourney_team_id' => $loser_tourney_team_id
+                ), $options);
         return $this->call('Tourney.TourneyTeam.ReportWin', $args);
     }
+
     /**
      * Legacy method allowing defining each paramater as opposed to the new method of defining an array of options 
      * Necessary since I upgraded team_report_win to use options instead of definint every single paramater
      * Since there are many sites already using it the PHP API, we're setting up a fallback in case they 
      * decide to grab the latest API class, it would be nice if it worked the same way
      */
-    public function team_report_win_legacy($tourney_id, $tourney_team_id, $o_tourney_team_id = null,
-            $score = 1, $o_score = 0, $replay = null, $map = null, $notes = null, $force = false)
-    {
+    public function team_report_win_legacy($tourney_id, $tourney_team_id, $o_tourney_team_id = null, $score = 1, $o_score = 0, $replay = null, $map = null, $notes = null, $force = false) {
         $args = array('tourney_id' => $tourney_id
-            , 'tourney_team_id'	   => $tourney_team_id
-            , 'o_tourney_team_id'  => $o_tourney_team_id
-            , 'score'		   => $score
-            , 'o_score'		   => $o_score
-            , 'replay'		   => $replay
-            , 'map'		   => $map
-            , 'notes'		   => $notes
-            , 'force'		   => $force
+            , 'tourney_team_id' => $tourney_team_id
+            , 'o_tourney_team_id' => $o_tourney_team_id
+            , 'score' => $score
+            , 'o_score' => $o_score
+            , 'replay' => $replay
+            , 'map' => $map
+            , 'notes' => $notes
+            , 'force' => $force
         );
 
         return $this->call('Tourney.TourneyTeam.ReportWin', $args);
@@ -654,11 +637,10 @@ class BBLegacy {
      *
      * @return object {int Result [, object TeamInfo, array Players]}
      */
-    public function team_get_opponent($tourney_team_id)
-    {
+    public function team_get_opponent($tourney_team_id) {
         return $this->call('Tourney.TourneyTeam.GetOTourneyTeamID', array('tourney_team_id' => $tourney_team_id));
     }
-    
+
     /**
      * Returns as much information about a team as possible
      * 
@@ -666,16 +648,10 @@ class BBLegacy {
      * 
      * @return object {int result {
      */
-    public function team_load($tourney_team_id)
-    {
+    public function team_load($tourney_team_id) {
         return $this->call('Tourney.TourneyLoad.Team', array('tourney_team_id' => $tourney_team_id));
     }
-    
-    
-    
-    
-    
-    
+
     /**
      *
      * 
@@ -685,7 +661,7 @@ class BBLegacy {
      * 
      *  
      */
-    
+
     /**
      * Save the individual game details for a reported match
      * 
@@ -717,19 +693,17 @@ class BBLegacy {
      * 
      * @return {object}
      */
-    public function match_report_games($tourney_match_id, array $winners, array $scores, array $o_scores, array $maps)
-    {
+    public function match_report_games($tourney_match_id, array $winners, array $scores, array $o_scores, array $maps) {
         $args = array(
-            'tourney_match_id'      => $tourney_match_id,
-            'winners'               => $winners,
-            'scores'                => $scores,
-            'o_scores'              => $o_scores,
-            'races'                 => $races,
-            'maps'                  => $maps,
+            'tourney_match_id' => $tourney_match_id,
+            'winners' => $winners,
+            'scores' => $scores,
+            'o_scores' => $o_scores,
+            'races' => $races,
+            'maps' => $maps,
         );
         return $this->call('Tourney.TourneyMatchGame.ReportBatch', $args);
     }
-
 
     /**
      *
@@ -742,7 +716,7 @@ class BBLegacy {
      * 
      *
      */
-    
+
     /**
      * Load a list of maps for the given game_code
      * 
@@ -754,12 +728,9 @@ class BBLegacy {
      * 
      * @return {object}
      */
-    public function map_list($game_code)
-    {
+    public function map_list($game_code) {
         return $this->call('Game.GameMap.LoadList', array('game_code' => $game_code));
     }
-
-
 
     /**
      *
@@ -773,8 +744,6 @@ class BBLegacy {
      *
      */
 
-
-    
     /**
      * This wrapper will return a list of games according to the filter you provide
      *
@@ -786,8 +755,7 @@ class BBLegacy {
      *
      * @return object {int result [, array games]}
      */
-    public function game_search($filter)
-    {
+    public function game_search($filter) {
         return $this->call('Game.GameSearch.Search', array('game' => $filter));
     }
 
@@ -800,13 +768,10 @@ class BBLegacy {
      *
      * @return object {int result, [array games]}
      */
-    public function game_list_top($limit)
-    {
+    public function game_list_top($limit) {
         return $this->call('Game.GameSearch.Top', array('limit' => $limit));
     }
-    
-    
-    
+
     /**
      * 
      * 
@@ -817,8 +782,7 @@ class BBLegacy {
      * 
      * 
      */
-    
-    
+
     /**
      * This wrapper allows you to search through the ISO list of countries
      * This is useful because BinaryBeast team's use ISO 3 character character codes, so 
@@ -832,10 +796,10 @@ class BBLegacy {
      * 
      * @return object {int result, [array countries]}
      */
-    public function country_search($country)
-    {
+    public function country_search($country) {
         return $this->Call('Country.CountrySearch.Search', array('country' => $country));
     }
+
 }
 
 ?>
