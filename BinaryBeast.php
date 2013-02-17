@@ -546,7 +546,7 @@ class BinaryBeast {
      */
     public function &__get($name) {
         //Define a list of acceptable methods that are allowed to be called as property
-        if(in_array($name, array('tournament', 'map', 'country', 'map', 'race', 'legacy', 'cache'))) {
+        if(in_array($name, array('tournament', 'match', 'map', 'country', 'map', 'race', 'legacy', 'cache'))) {
             return $this->{$name}();
         }
 
@@ -566,6 +566,21 @@ class BinaryBeast {
 		$tour = $this->get_model('BBTournament', $tourney_id);
         return $tour;
     }
+	/**
+	 * Returns a new BBMatch model class
+	 *	Only useful if you know the match_id, it otherwise can't be saved / reported
+	 *	without a tournament associated with it
+	 * 
+	 * If you DO however know the match id, you can use this to load the match,
+	 *	and then to load it's touranment by accessing $match->tournament or $match->tournament()
+	 * 
+	 * @param int $tourney_match_id
+	 * @return BBTournament
+	 */
+	public function &match($tourney_match_id = null) {
+		$match = $this->get_model('BBMatch', $tourney_match_id);
+		return $match;
+	}
     /**
      * Returns a BBMap simple_model class
      * @return BBMap
