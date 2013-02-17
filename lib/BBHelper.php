@@ -449,6 +449,53 @@ class BBHelper {
 		return ($best_of + 1) / 2;
 	}
 
+	/**
+	 * Returns an array of brackets available in the given touranment
+	 * For example, for single elim elim brackets with bronze enabled, it may return
+	 *	something like this: ['winners', 'bronze']
+	 * 
+	 * By default it returns bracket labels = set $lables to false and it will reutnr bracket integers instead
+	 * 
+	 * @param BBTournament	$tournament
+	 * @param boolean		$labels		true by default - returns an array of brackets by label, instead of by number
+	 *		ie 'groups' instead of 0, 'winners' instead of 1
+	 * @param boolean		$arrays		false by default - if true, each value returned will be an empty array, as opposed to a string
+	 * @return array
+	 */
+	public static function get_available_brackets(BBTournament &$tournament, $labels = true, $arrays = false) {
+		$brackets = array();
+
+		//Group rounds
+		if($tournament->type_id ==  BinaryBeast::TOURNEY_TYPE_CUP) self::get_bracket($brackets, 0, 'groups', $labels, $arrays);
+
+		//Winners
+		self::get_bracket($brackets, 1, 'winners', $labels, $arrays);
+
+		//Losers / finals
+		if($tournament->elimination > 1) {
+			self::get_bracket($brackets, 2, 'losers', $labels, $arrays);
+			self::get_bracket($brackets, 3, 'finals', $labels, $arrays);
+		}
+
+		//Bronze
+		else if($tournament->bronze) self::get_bracket($brackets, 4, 'bronze', $labels, $arrays);
+
+		//Success!
+		return $brackets;
+	}
+	/**
+	 * Used by get_available_brackets to add a bracket to the 
+	 *	$brackets array, based on labels / arrays 
+	 * @return void - works on $brackets by reference
+	 */
+	private static function get_bracket(&$brackets, $bracket, $label, $labels, $arrays) {
+		//Use label if $lables is true
+		if($labels) $bracket = $label;
+		if($arrays) $brackets[$bracket] = array();
+		else		$brackets[] = $bracket;
+		
+	}
+
 }
 
 ?>
