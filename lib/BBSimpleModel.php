@@ -291,7 +291,7 @@ class BBSimpleModel {
      */
     public function clear_service_cache($svc) {
         $object_type = $this->get_cache_setting('object_type');
-        if(!is_null($object_type)) $this->bb->cache->clear($svc, $object_type);
+        if(!is_null($object_type)) $this->bb->clear_cache($svc, $object_type);
     }
     /**
      * Clears ALL cache associated with this object_type
@@ -300,7 +300,7 @@ class BBSimpleModel {
      */
     public function clear_object_cache() {
         $object_type = $this->get_cache_setting('object_type');
-        if(!is_null($object_type)) $this->bb->cache->clear(null, $object_type);
+        if(!is_null($object_type)) $this->bb->clear_cache(null, $object_type);
     }
 }
 

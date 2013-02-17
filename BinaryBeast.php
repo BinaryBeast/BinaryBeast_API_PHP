@@ -773,6 +773,23 @@ class BinaryBeast {
         $this->ref = $value;
         return $this->ref;
     }
+	
+	/**
+	 * Attempt to clear cache (keyed by any combination of service name[s], object_type, and object_id)
+	 *	without having to worry about wether or not BBCache is setup
+	 * 
+	 * @param strinig|array $svc
+	 * @param string		$object_type
+	 * @param mixed			$object_id
+	 * @return boolean
+	 */
+	public function clear_cache($svc = null, $object_type = null, $object_id = null) {
+		//BBCache not configured
+		if(is_null($this->cache())) return false;
+
+		//Pass it straight along to BBCache
+		return $this->cache->clear($svc, $object_type, $object_id);
+	}
 }
 
 ?>

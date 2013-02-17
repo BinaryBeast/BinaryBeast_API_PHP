@@ -764,7 +764,7 @@ class BBModel extends BBSimpleModel {
 	public function clear_id_cache($svc = null) {
 		$object_type = $this->get_cache_setting('object_type');
 		if(!is_null($this->id) && !is_null($object_type)) {
-			$this->bb->cache->clear($svc, $object_type, $this->id);
+			$this->bb->clear_cache($svc, $object_type, $this->id);
 		}
 	}
 }
