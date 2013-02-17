@@ -110,13 +110,16 @@ class BBMatch extends BBModel {
      * @return void
      */
     public function init(BBTournament &$tournament, $bracket = null) {
-        $this->tournament = $tournament;
+        $this->tournament = &$tournament;
 
         //Associate tournament as parent, so BBModel will flag child changes for us
         $this->parent = &$this->tournament;
 
         //Import bracket if defined
         if(!is_null($bracket)) $this->set_current_data('bracket', $bracket);
+
+		//Update any games we may have (necessary to allow directly loaded matches ($match = $bb->match(id) without calling init())
+		foreach($this->games as &$game) $game->init($this->tournament, $this);
     }
 
     /**
@@ -135,6 +138,12 @@ class BBMatch extends BBModel {
 
 		//Update all game details
 		return $this->save_games();
+
+		//Wipe all tournament cache
+		$this->tournament->clear_id_cache();
+
+		//Success!
+		return true;
     }
 
     /**
@@ -173,13 +182,18 @@ class BBMatch extends BBModel {
      * 
      * @return array
      */
-    protected function &games() {
+    public function &games() {
+		//Try loading first
+		if(!is_null($this->id)) $this->load();
         return $this->games;
     }
 
     /**
      * Overrides BBModal::load because we need to change the argument
      * of get_round when requesting the data from BinaryBeast
+	 * 
+	 * This also allows us to initialize a tournament object for this match
+	 *		if created directly without calling init()
      * 
      * get_round asks BinaryBeast to make sure that it sends the round information
      * used for this match in addition to the match details
@@ -193,7 +207,19 @@ class BBMatch extends BBModel {
      */
     public function &load($id = null, $args = array()) {
         //Let BBModal handle this, just pass it extra paramater
-        return parent::load($id, array_merge(array('get_round' => true), $args) );
+		$result = parent::load($id, array_merge(array('get_round' => true), $args) );
+		if(!$result) return $result;
+
+		//If we don't have a tournament, try to load it now
+		if(isset($this->data['tourney_id']) && is_null($this->tournament)) {
+			$tournament = $this->bb->tournament($this->data['tourney_id']);
+
+			//init() to make sure that parent() is set, and that our games have the new tournament reference
+			$this->init($tournament);
+		}
+
+		//Success!
+		return $result;
     }
 
     /**
@@ -313,7 +339,10 @@ class BBMatch extends BBModel {
             foreach($data->games as &$game) {
                 //Instantiate a new game, tell it to remember us, then store it in games[]
                 $game = new BBMatchGame($this->bb, $game);
-                $game->init($this->tournament, $this);
+				//If we have a tournament (we wouldn't if this was created directly from $bb), give each game a reference
+                if(!is_null($this->tournament)) {
+					$game->init($this->tournament, $this);
+				}
                 $this->games[] = $game;
             }
         }
@@ -368,7 +397,6 @@ class BBMatch extends BBModel {
 		$this->set_new_data('o_tourney_team_id',	$this->loser->id);
 		if(!is_null($winner_score)) $this->set_new_data('score', $winner_score);
 		if(!is_null($loser_score))	$this->set_new_data('o_score', $loser_score);
-		
 
         return true;
     }
@@ -416,7 +444,7 @@ class BBMatch extends BBModel {
      *      each individual game within this match
      * 
      * 
-     * @return boolean
+     * @return int		returns the id if successfull, false otherwise
      */
     public function report() {
         //Already reported
@@ -428,14 +456,22 @@ class BBMatch extends BBModel {
         if(is_null($this->winner_set)) {
             return $this->set_error('Please define a winner before reporting ($team->set_winner($winning_team)) You can refer to $match->team and $match->opponent for participant details');
         }
-		
+
 		//Let BBModel handle this
-		if(!parent::save(false, array('tourney_id' => $this->tournament->id))) {
-			return false;
-		}
+		$result = parent::save(false, array('tourney_id' => $this->tournament->id));
 
 		//Report all of the game details
-		if(!$this->save_games()) return false;
+		if($result) {
+			if(!$this->save_games()) return false;
+		}
+
+		//Wipe all tournament cache, and tournament opponent cache
+		$this->tournament->clear_id_cache();
+		$this->team->clear_opponent_cache();
+		$this->opponent->clear_opponent_cache();
+
+		//Return the save() result
+		return $result;
     }
 	/**
 	 * Perform a batch update on the games in this match
@@ -445,6 +481,9 @@ class BBMatch extends BBModel {
 	public function save_games() {
 		//Update the match first
 		if(is_null($this->id)) return $this->set_error('Please report() or save() beforing saving game data');
+
+		//No games saved - stop now.  We don't actually use this array though, we'll just create a new batch of games
+		if(sizeof($this->get_changed_children('BBMatchGame')) == 0) return true;
 
 		//Start compiling the value array for the API
 		$scores			= array();
@@ -475,13 +514,23 @@ class BBMatch extends BBModel {
 			'o_races'				=> $o_races,
 			'maps'					=> $maps,
 			'winners'				=> $winners,
-			'notes'					=> $notes
+			'notes'					=> $notes,
+			'dump'					=> true,
 		));
 		if($result->result != 200) return $this->set_error('Error saving game details! see $bb->error_history for details');
 
-		//Update each game with new id, and synchronize
+		//Update each game with new id, maps, races, and synchronize
 		$this->iterating = true;
 		foreach($this->games as $key => &$game) {
+			$dump = &$result->games[$key];
+
+			if(!is_null($dump->map_id))		$game->map_id		= $dump->map_id;
+			if(!is_null($dump->map))		$game->map			= $dump->map;
+			if(!is_null($dump->race))		$game->race			= $dump->race;
+			if(!is_null($dump->o_race))		$game->o_race		= $dump->o_race;
+			if(!is_null($dump->race_id))	$game->race_id		= $dump->race_id;
+			if(!is_null($dump->o_race_id))	$game->o_race_id	= $dump->o_race_id;
+
 			$game->set_id($result->ids[$key]);
 			$game->sync_changes();
 		}
@@ -577,7 +626,7 @@ class BBMatch extends BBModel {
         $game_number = sizeof($this->games);
 
         //Make sure game_number is within bounds of best_of (only if able to determine round format)
-        if(!is_null($round = $this->round())) {
+        if(!is_null($round = &$this->round())) {
             if($game_number > $round->best_of) {
                 $this->set_error("Attempted to set details for game $game_number in a best of {$round->best_of} series");
                 return $this->bb->ref(null);
@@ -587,6 +636,9 @@ class BBMatch extends BBModel {
         //Create a new one, initialize it
         $game = new BBMatchGame($this->bb);
         $game->init($this->tournament, $this);
+
+		//Automatically set matche's winner as game winner unless otherwise defined
+		if(is_null($winner)) $winner = &$this->winner();
 
         //Set the winner
         if(!is_null($winner)) $game->set_winner($winner);
@@ -622,6 +674,17 @@ class BBMatch extends BBModel {
         //Failure!
         return $this->bb->ref(false);
     }
+
+	/**
+	 * Returns a reference to this match's tournament
+	 * 
+	 * @return BBTournament
+	 */
+	public function &tournament() {
+		//Load first, in case this object was directly loaded from BinaryBeast::match()
+		if(!is_null($this->id)) $this->load();
+		return $this->tournament;
+	}
 }
 
 ?>

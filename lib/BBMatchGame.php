@@ -111,7 +111,16 @@ class BBMatchGame extends BBModel {
         if(is_null($this->match->id)) {
             return $this->set_error("You must save the entire match before saving games (\$match->save() or \$match->report())");
         }
-        parent::save($return_result, $child_args);
+		//Ask for the result directly, so we can import new map / race values etc
+        $result = parent::save(true, array('tourney_match_id' => $this->match->id));
+		if(!$result) return false;
+
+		if(!is_null($result->map_id))		$this->set_current_data('map_id', $result->map_id);
+		if(!is_null($result->race_id))		$this->set_current_data('race_id', $result->race_id);
+		if(!is_null($result->o_race_id))	$this->set_current_data('o_race_id', $result->o_race_id);
+
+		//Success!
+		return true;
     }
 
     /**
