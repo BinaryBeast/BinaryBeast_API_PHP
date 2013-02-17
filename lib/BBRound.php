@@ -80,38 +80,23 @@ class BBRound extends BBModel {
     }
 
     /**
-     * Overloaded so we can let our tournament know that
-     * we now have unsaved changes
+     * Overloaded so that we can validate the value of best_of,
+	 *		and re-calculate the wins_needed when it changes
      * 
      * @see BBModel::__set()
      * 
      * @return void
      */
     function __set($name, $value) {
-        //Notify the tournament
-        $this->tournament->flag_child_changed($this);
-
         //Make sure that when setting best_of, that it's a valid value
-        if($name == 'best_of') $value = BBHelper::get_best_of($value);
+        if($name == 'best_of') {
+			$value = BBHelper::get_best_of($value);
+			//Store directly into $data - if we reset, it'll be overwritten automatically
+			$this->data['wins_needed'] = BBHelper::get_wins_needed($value);
+		}
 
         //Let the default method handle the rest
         parent::__set($name, $value);
-    }
-
-    /**
-     * Overloaded so that we can let our tournament know that this
-     * class no longer has any unsaved changes
-     * 
-     * @see BBModel::reset()
-     * 
-     * @return void
-     */
-    public function reset() {
-        //Notify the tournament
-        $this->tournament->unflag_child_changed($this);
-
-        //Let the default method handle the rest
-        parent::reset();
     }
 
     /**
@@ -152,12 +137,6 @@ class BBRound extends BBModel {
 
 		//Success!
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
-			//Recalculate the wins_needed
-			$this->set_current_data('wins_needed', BBHelper::get_wins_needed($this->data['best_of']));
-
-			//Manually update new_data, since sync_changes depends on new id...
-			$this->new_data = $this->data;
-
             $this->sync_changes();
             return true;
         }
