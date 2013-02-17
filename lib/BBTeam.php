@@ -126,7 +126,7 @@ class BBTeam extends BBModel {
      * @return void
      */
     public function init(BBTournament &$tournament) {
-        $this->tournament = $tournament;
+        $this->tournament = &$tournament;
 
         //Set parent so BBModel will auto flag changes
         $this->parent = &$this->tournament;
@@ -400,6 +400,17 @@ class BBTeam extends BBModel {
 
 		//Use tournament to create the BBModel object, cache it, and return
 		return $this->match = &$this->tournament->match($this, $this->opponent);
+	}
+
+	/**
+	 * Clears all cache associated with this team
+	 *	pertaining to getting oppponent ids / lists
+	 */
+	public function clear_opponent_cache() {
+		$this->clear_id_cache(array(
+			self::SERVICE_GET_OPPONENT,
+			self::SERVICE_LIST_OPPONENTS
+		));
 	}
 }
 
