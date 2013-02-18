@@ -268,6 +268,9 @@ class BBMatch extends BBModel {
      * @return BBTournament
      */
     private function &get_team($property) {
+		//Try loading first
+		if(!is_null($this->id)) $this->load();
+
         //Try to load it using $property provided
         if(!is_null($team = $this->current_data[$property])) {
             //let BBTournament::team() handle setting any errors, we can return it directly
