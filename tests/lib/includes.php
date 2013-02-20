@@ -1,21 +1,23 @@
 <?php
 
+$path = str_replace('\\', '/', dirname(__DIR__ )) .'/../';
+$lib_path = $path . 'lib/';
 require_once('PHPUnit/Autoload.php');
-require_once('../BinaryBeast.php');
-require_once('../lib/BBSimpleModel.php');
-require_once('../lib/BBModel.php');
-require_once('../lib/BBHelper.php');
-require_once('../lib/BBCache.php');
-require_once('../lib/BBCountry.php');
-require_once('../lib/BBGame.php');
-require_once('../lib/BBLegacy.php');
-require_once('../lib/BBMap.php');
-require_once('../lib/BBMatch.php');
-require_once('../lib/BBMatchGame.php');
-require_once('../lib/BBRace.php');
-require_once('../lib/BBRound.php');
-require_once('../lib/BBTeam.php');
-require_once('../lib/BBTournament.php');
+require_once($path . 'BinaryBeast.php');
+require_once($lib_path . 'BBSimpleModel.php');
+require_once($lib_path . 'BBModel.php');
+require_once($lib_path . 'BBHelper.php');
+require_once($lib_path . 'BBCache.php');
+require_once($lib_path . 'BBCountry.php');
+require_once($lib_path . 'BBGame.php');
+require_once($lib_path . 'BBLegacy.php');
+require_once($lib_path . 'BBMap.php');
+require_once($lib_path . 'BBMatch.php');
+require_once($lib_path . 'BBMatchGame.php');
+require_once($lib_path . 'BBRace.php');
+require_once($lib_path . 'BBRound.php');
+require_once($lib_path . 'BBTeam.php');
+require_once($lib_path . 'BBTournament.php');
 
 $bb = new BinaryBeast('e17d31bfcbedd1c39bcb018c5f0d0fbf.4dcb36f5cc0d74.24632846');
 $bb->disable_ssl_verification();

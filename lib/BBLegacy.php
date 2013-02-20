@@ -690,10 +690,11 @@ class BBLegacy {
      * @param array $scores
      * @param array $o_scores
      * @param array $maps
+     * @param array $races      can be race names or race_id integers
      * 
      * @return {object}
      */
-    public function match_report_games($tourney_match_id, array $winners, array $scores, array $o_scores, array $maps) {
+    public function match_report_games($tourney_match_id, array $winners, array $scores = array(), array $o_scores = array(), array $maps = array(), $races = array()) {
         $args = array(
             'tourney_match_id' => $tourney_match_id,
             'winners' => $winners,
