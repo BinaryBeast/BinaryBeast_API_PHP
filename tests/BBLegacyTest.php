@@ -27,7 +27,6 @@ class BBLegacyTest extends bb_test_case {
     function __construct($name = NULL, array $data = array(), $dataName = '') {
         parent::__construct($name, $data, $dataName);
         $this->object = &$this->bb;
-        echo 'here?!!!!!!';
     }
     
     private function get_id() {
@@ -146,7 +145,7 @@ class BBLegacyTest extends bb_test_case {
      * @covers BBLegacy::team_update
      */
     public function testTeam_update() {
-        $this->assertServiceSuccessful($this->object->team_update($this->team_id, array('display_name' => 'Player 7 - renamed', 'status' => 1)));
+        $this->assertServiceSuccessful($this->object->team_update($this->get_team_id(), array('display_name' => 'Player 7 - renamed', 'status' => 1)));
     }
     /**
      * @covers BBLegacy::team_unconfirm
@@ -172,7 +171,7 @@ class BBLegacyTest extends bb_test_case {
      */
     public function testTeam_delete() {
         $result = $this->object->team_insert($this->get_id(), 'team to delete');
-        $this->assertServiceSuccessful($this->object->team_delete($$result->tourney_team_id));
+        $this->assertServiceSuccessful($this->object->team_delete($result->tourney_team_id));
     }
 
     /**
