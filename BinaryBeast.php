@@ -19,7 +19,7 @@
  * @package BinaryBeast
  *
  * @author BinaryBeast.com
- * @version 2.7.4
+ * @version 2.7.5
  * @date 2013-01-22
  * 
  * For a list of available services, please see http://wiki.binarybeast.com/?title=BinaryBeast_API#Packages
@@ -73,7 +73,7 @@ class BinaryBeast {
      * A few constants to make a few values a bit easier to read / use
      */
 
-    const API_VERSION = '2.7.4';
+    const API_VERSION = '2.7.5';
     //
     const BRACKET_GROUPS	= 0;
     const BRACKET_WINNERS	= 1;
@@ -1071,16 +1071,19 @@ class BinaryBeast {
      * @param array $scores
      * @param array $o_scores
      * @param array $maps
+     * @param array $races              Winner's race of each game - can be race names or race_id integers
+     * @param array $o_races            Loser's race of each game - can be race names or race_id integers
      * 
      * @return {object}
      */
-    public function match_report_games($tourney_match_id, array $winners, array $scores, array $o_scores, array $maps) {
+    public function match_report_games($tourney_match_id, array $winners, array $scores = array(), array $o_scores = array(), array $maps = array(), $races = array(), $o_races = array()) {
         $args = array(
             'tourney_match_id' => $tourney_match_id,
             'winners' => $winners,
             'scores' => $scores,
             'o_scores' => $o_scores,
             'races' => $races,
+            'o_races' => $o_races,
             'maps' => $maps,
         );
         return $this->call('Tourney.TourneyMatchGame.ReportBatch', $args);
