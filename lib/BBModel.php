@@ -225,6 +225,15 @@ class BBModel extends BBSimpleModel {
          */
         return $this->bb->ref(null);
     }
+    
+    /**
+     * Returns the default value for the given $key if available
+     * @return mixed
+     */
+    public function default_value($key) {
+        if(array_key_exists($key, $this->default_values)) return $this->default_values[$key];
+        return null;
+    }
 
     /**
      * Intercepts attempts to set property values
