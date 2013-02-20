@@ -323,6 +323,13 @@ class BinaryBeast {
     public function enable_ssl_verification() {
         $this->verify_ssl = true;
     }
+    /**
+     * Returns the current ssl-verification mode, true = enabled, false = disabled
+     * @return boolean
+     */
+    public function ssl_verification() {
+        return $this->verify_ssl;
+    }
 
     /**
      * Executes an API service, and returns the raw unprocessed value
@@ -483,7 +490,7 @@ class BinaryBeast {
      * @return object {int result, string Message}
      */
     private static function get_server_ready_error() {
-        return array('result' => false,
+        return (object)array('result' => false,
             'message' => 'Please verify that both cURL and json are enabled your server!'
         );
     }
@@ -518,7 +525,7 @@ class BinaryBeast {
         //SSL Verification failed
         if (!$result) {
             $this->set_error(array('error_message' => 'cURL call failed', 'curl_error' => curl_error($curl), 'curl_code' => curl_errno($curl)));
-            return json_encode(array('result' => false, 'error' => $this->last_error));
+            return json_encode((object)array('result' => false, 'error' => $this->last_error));
         }
 
         //Success!
@@ -546,7 +553,7 @@ class BinaryBeast {
      */
     public function &__get($name) {
         //Define a list of acceptable methods that are allowed to be called as property
-        if(in_array($name, array('tournament', 'match', 'map', 'country', 'map', 'race', 'legacy', 'cache'))) {
+        if(in_array($name, array('tournament', 'match', 'map', 'country', 'game', 'race', 'legacy', 'cache'))) {
             return $this->{$name}();
         }
 
