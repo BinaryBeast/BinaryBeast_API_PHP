@@ -46,7 +46,7 @@ class BBRace extends BBSimpleModel {
      */
     public function load_list($game_code, $filter = null) {
         if(is_null($filter)) return $this->game_list($game_code);
-        return $this->search($game_code, $filter);
+        return $this->game_search($game_code, $filter);
     }
     /**
      * Returns an array of races used in the provided $game_code, after applying
@@ -55,7 +55,7 @@ class BBRace extends BBSimpleModel {
      * @param string $filter    Search filter
      * @return array
      */
-    public function search($game_code, $filter) {
+    public function game_search($game_code, $filter) {
         return $this->get_list(self::SERVICE_SEARCH, array('game_code' => $game_code, 'filter' => $filter), 'list');
     }
 }
