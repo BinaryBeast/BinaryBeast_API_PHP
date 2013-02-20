@@ -17,7 +17,7 @@
  *   http://www.gnu.org/licenses/gpl.html
  *
  * @author BinaryBeast.com
- * @version 2.7.4
+ * @version 2.7.5
  * @date 2013-01-22
  */
 class BBLegacy {
@@ -690,17 +690,19 @@ class BBLegacy {
      * @param array $scores
      * @param array $o_scores
      * @param array $maps
-     * @param array $races      can be race names or race_id integers
+     * @param array $races              Winner's race of each game - can be race names or race_id integers
+     * @param array $o_races            Loser's race of each game - can be race names or race_id integers
      * 
      * @return {object}
      */
-    public function match_report_games($tourney_match_id, array $winners, array $scores = array(), array $o_scores = array(), array $maps = array(), $races = array()) {
+    public function match_report_games($tourney_match_id, array $winners, array $scores = array(), array $o_scores = array(), array $maps = array(), $races = array(), $o_races = array()) {
         $args = array(
             'tourney_match_id' => $tourney_match_id,
             'winners' => $winners,
             'scores' => $scores,
             'o_scores' => $o_scores,
             'races' => $races,
+            'o_races' => $o_races,
             'maps' => $maps,
         );
         return $this->call('Tourney.TourneyMatchGame.ReportBatch', $args);
