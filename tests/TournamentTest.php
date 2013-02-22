@@ -3,7 +3,7 @@
 require_once('lib/includes.php');
 
 /**
- * Test game listing / searching
+ * Test tournament loading / updating
  * @group tournament
  * @group model
  * @group all
@@ -51,5 +51,34 @@ class TournamentTest extends bb_test_case {
         $this->assertNotEquals(false, $result);
         $this->assertStringStartsWith('x', $result);
     }
+    public function add_teams() {
+        for($x = 0; $x < 8; $x++) {
+            $team = $this->object->team();
+            $team->display_name = 'player ' . ($x + 1);
+            $team->confirm();
+            $team->country_code = 'USA';
+            $team->network_display_name = 'in-game name ' . ($x + 1);
+        }
+        $this->assertTrue($this->object->save());
+    }
+    public function test_teams() {
+        $this->assertTrue(is_array($this->object->teams()));
+        $this->assertTrue(sizeof($this->object->teams()) == 8);
+        foreach($this->object->teams as $team) $this->assertTrue(!is_null($team->id));
+    }
+    public function test_add_rounds() {
+        $maps = array('Abyssal Caverns', 614, 'Akilon Flats', 71, 'Arid Plateau', 337, 'Backwater Gulch', 225);
+        foreach($this->object->rounds as &$bracket) {
+            foreach($bracket as $x => &$round) {
+                $round->best_of = 3;
+                $round->map = $maps[$x];
+            }
+        }
+        $this->assertTrue($this->object->save());
+        $round = &$this->object->rounds->finals[0];
+        $round->best_of = 5;
+        $this->assertTrue($round->save());
+    }
 
+    
 }
