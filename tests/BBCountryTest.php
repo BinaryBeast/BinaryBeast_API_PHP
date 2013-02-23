@@ -4,6 +4,10 @@ require_once('lib/includes.php');
 
 /**
  * Test country listing 
+ * @group country
+ * @group list
+ * @group simple_model
+ * @group all
  */
 class BBCountryTest extends bb_test_case {
 

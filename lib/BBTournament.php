@@ -339,9 +339,6 @@ class BBTournament extends BBModel {
         $this->import_values($result);
         $this->set_id($result->tourney_id);
 
-		//Clear cache
-		$this->clear_service($services);
-
         //Success!
         return $this->id;
     }

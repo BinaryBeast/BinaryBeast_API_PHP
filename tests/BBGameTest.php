@@ -4,6 +4,10 @@ require_once('lib/includes.php');
 
 /**
  * Test game listing / searching
+ * @group game
+ * @group list
+ * @group simple_model
+ * @group all
  */
 class BBGameTest extends bb_test_case {
 

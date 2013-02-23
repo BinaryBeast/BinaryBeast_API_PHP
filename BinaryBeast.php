@@ -808,6 +808,7 @@ class BinaryBeast {
 	public function clear_cache($svc = null, $object_type = null, $object_id = null) {
 		//BBCache not configured
 		if(is_null($this->cache())) return false;
+        if($this->cache === false) return false;
 
 		//Pass it straight along to BBCache
 		return $this->cache->clear($svc, $object_type, $object_id);
