@@ -253,9 +253,6 @@ class BBModel extends BBSimpleModel {
 
         //Let set_new_data handle this
         $this->set_new_data($name, $value);
-
-        //Children_changed flag in parent
-        $this->on_change();
     }
 
     /**
