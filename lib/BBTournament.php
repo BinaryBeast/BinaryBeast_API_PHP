@@ -167,7 +167,7 @@ class BBTournament extends BBModel {
 
 		//Use BBSimpleModels' listing method, for caching etc
 		if( ($this->teams = $this->get_list(self::SERVICE_LOAD_TEAMS, array('tourney_id' => $this->tourney_id)
-			, 'teams', 'BBTeam')) !== false) {
+			, 'teams', 'BBTeam')) === false) {
 			$this->set_error('Error loading the teams in this tournament! see error() for details');
             return $this->bb->ref(null);
 		}
@@ -971,6 +971,12 @@ class BBTournament extends BBModel {
     public function &open_matches() {
         //Already cached
         if(!is_null($this->open_matches)) return $this->open_matches;
+
+        //Inactive tournament
+        if(!BBHelper::tournament_is_active($this)) {
+            $this->set_error('cannot load open matches of an inactive tournament, start() it first');
+            return $this->bb->ref(null);
+        }
 
         //Ask the api
         $result = $this->call(self::SERVICE_LIST_OPEN_MATCHES, array('tourney_id' => $this->id), self::CACHE_TTL_LIST_OPEN_MATCHES, self::CACHE_OBJECT_TYPE, $this->id);
