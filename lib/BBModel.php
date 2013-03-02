@@ -473,11 +473,13 @@ class BBModel extends BBSimpleModel {
 
         //Update
         if(!is_null($id) ) {
-            //Nothing has changed! Save an warning, but since we dind't exactly fail, return true
-            if(!$this->changed || sizeof($this->new_data) == 0) {
+            //if they call save() with no changes, save a warning in BinaryBeast::error_history
+            if(!$this->changed) {
                 $this->set_error('Warning: save() saved no changes, since nothing has changed');
                 return $this->id;
             }
+            //Changed is true but new_data is empty, which means that we have changed children - therefore just return true without an warning
+            if(sizeof($this->new_data) == 0) return $this->id;
 
             //GOGOGO! determine the service name, and save the id
             $args = $this->new_data;
@@ -647,7 +649,7 @@ class BBModel extends BBSimpleModel {
             ++$this->changed_children_count;
         }
 
-        //Flag thos entire model has having unsaved changes
+        //Flag this entire model has having unsaved changes
         $this->changed = true;
 
         //Propogate up, flag all parents of parents of parents etc etc
