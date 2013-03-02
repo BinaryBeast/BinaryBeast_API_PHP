@@ -52,8 +52,8 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
      * @param string $msg
      */
     public static function assertListFormat($list, $keys = array(), $msg = 'Returned objects does not have expected values') {
-        self::assertTrue(is_array($list), 'returned value is not an array');
-        self::assertTrue(sizeof($list) > 0, 'Returned value was empty, unable to verify contents');
+        self::assertTrue(is_array($list), 'provided value is not an array');
+        self::assertTrue(sizeof($list) > 0, 'provided value was empty, unable to verify contents');
 
         //run assertObjectFormat on every item returned in the array
         foreach($list as $object) self::assertObjectFormat($object, $keys);
