@@ -156,6 +156,9 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
     public static function assertNotFalseOrNull($value) {
         self::assertTrue(!is_null($value) && $value !== false);
     }
+    public static function assertTourneyID($value) {
+        self::assertStringStartsWith('x', $value);
+    }
 }
 
 ?>  
