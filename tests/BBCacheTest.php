@@ -92,20 +92,27 @@ class BBCacheTest extends bb_test_case {
      * @group new
      */
     public function test_clear_expired() {
-        //Delete first in case already cached from previous test
-        $this->assertTrue($this->bb->clear_cache(null, null, 'xQL1302101'));
+        //Delete all tournament cache to avoid conflicts with previous tests
+        $this->assertTrue($this->bb->clear_cache(null, BBCache::TYPE_TOURNAMENT));
 
-        //Cache a tournament, specify negative ttl
-        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xQL1302101'), -1, null, 'xQL1302101');
+        //Cache a tournament, specify negative ttl to auto-expire
+        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xQL1302101'), -1, BBCache::TYPE_TOURNAMENT, 'xQL1302101');
+        $this->assertServiceSuccessful($result);
+
+        //Cache a second tour, with normal cache ttl
+        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xSC213021613'), 2, BBCache::TYPE_TOURNAMENT, 'xSC213021613');
         $this->assertServiceSuccessful($result);
 
         //clear expired cache
         $this->assertTrue($this->object->clear_expired_cache());
 
-        //Reload - shouldn't be cached
-        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xQL1302101'), -1);
-        var_dump($result);
+        //Reload tour 1 - shouldn't be cached
+        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xQL1302101'), -1, BBCache::TYPE_TOURNAMENT, 'xQL1302101');
         $this->assertServiceNotLoadedFromCache($result);
+
+        //Reload tour 2 - should be cached
+        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xSC213021613'), 2, BBCache::TYPE_TOURNAMENT, 'xSC213021613');
+        $this->assertServiceLoadedFromCache($result);
     }
 
 }
