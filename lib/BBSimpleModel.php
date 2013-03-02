@@ -156,7 +156,6 @@ class BBSimpleModel {
      */
     protected function clear_error() {
         $this->set_error(null);
-        $this->bb->clear_error();
     }
 
 	/**
