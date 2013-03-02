@@ -813,6 +813,22 @@ class BinaryBeast {
 		//Pass it straight along to BBCache
 		return $this->cache->clear($svc, $object_type, $object_id);
 	}
+    /**
+     * Attempt to delete all expired cache records from the local database
+     * 
+     * doing this through the main library class allow you to call the method
+     *  without first having to make sure that the cache class exists / is configured
+     * 
+     * @return boolean
+     */
+    public function clear_expired_cache() {
+		//BBCache not configured
+		if(is_null($this->cache())) return false;
+        if($this->cache === false) return false;
+
+        //Delegate!
+        return $this->cache->clear_expired();
+    }
 }
 
 ?>
