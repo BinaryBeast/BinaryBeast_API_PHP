@@ -361,7 +361,7 @@ class BBTeam extends BBModel {
 		if($this->orphan_error()) return false;
 
 		//No change
-		if($this->current_data['status'] == $status) return true;
+		if($this->data['status'] == $status) return true;
 
 		//Tournament already started
 		if(BBHelper::tournament_is_active($this->tournament)) {
