@@ -139,6 +139,20 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
         self::assertServiceSuccessful($result);
         self::assertAttributeEquals(403, 'result', $result, $msg);
     }
+    /**
+     * Test a svc result to see if it was loaded from local cache
+     */
+    public static function assertServiceLoadedFromCache($result) {
+        self::assertServiceSuccessful($result);
+        self::assertAttributeEquals(true, 'from_cache', $result);
+    }
+    /**
+     * Test a svc result to see if it was NOT loaded from local cache
+     */
+    public static function assertServiceNotLoadedFromCache($result) {
+        self::assertServiceSuccessful($result);
+        self::assertTrue(!isset($result->from_cache));
+    }
 }
 
 ?>  
