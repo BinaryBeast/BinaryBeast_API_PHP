@@ -58,7 +58,7 @@ class BBCache {
      * Password for logging into the database
      * @var string
      */
-    private $password = 'test';//null;
+    private $password = null;
 
     /************************* DEVELOPERS: SET THE VALUES ABOVE! ********************
      ********************************************************************************
@@ -157,8 +157,7 @@ class BBCache {
             || is_null($this->server)
             || is_null($this->database)
             || is_null($this->table)
-            || is_null($this->username)
-            || is_null($this->password) ) {
+            || is_null($this->username) ) {
             return false;
         }
         //Success! Make sure $type is all lower case to be standard, and return true
