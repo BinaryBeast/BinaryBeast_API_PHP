@@ -166,8 +166,8 @@ class BBTournament extends BBModel {
         if(!is_null($this->teams)) return $this->teams;
 
 		//Use BBSimpleModels' listing method, for caching etc
-		if( !($this->teams = $this->get_list(self::SERVICE_LOAD_TEAMS, array('tourney_id' => $this->tourney_id)
-			, 'teams', 'BBTeam'))) {
+		if( ($this->teams = $this->get_list(self::SERVICE_LOAD_TEAMS, array('tourney_id' => $this->tourney_id)
+			, 'teams', 'BBTeam')) !== false) {
 			$this->set_error('Error loading the teams in this tournament! see error() for details');
             return $this->bb->ref(null);
 		}
@@ -827,13 +827,13 @@ class BBTournament extends BBModel {
      * 
      * @param string $seeding       'random' by default
      *      How to arrange the team matches
-     *      'Random' (Groups + Brackets)        =>      Randomized positions
-     *      'Manual' (Groups + Brackets)        =>      Arranges the teams in the order you provide in $order
-     *      'Sports' (Brackets only)            =>      This is the more traditional seeding more organizers are likely used to,
+     *      'random' (Groups + Brackets)        =>      Randomized positions
+     *      'manual' (Groups + Brackets)        =>      Arranges the teams in the order you provide in $order
+     *      'sports' (Brackets only)            =>      This is the more traditional seeding more organizers are likely used to,
      *              @see link to example here
      *              Top seeds are given the greatest advantage, lowest seeds the lowest
      *              So for a 16 man bracket, seed 1 players against 32 first, 2 against 31, 3 against 30... 8 against 9 etc
-     *      'Balanced' (brackets only)          =>      BinaryBeast's own in-house algorithm for arranged team seeds, we felt 'Sports' was a bit too inbalanced,
+     *      'balanced' (brackets only)          =>      BinaryBeast's own in-house algorithm for arranged team seeds, we felt 'Sports' was a bit too inbalanced,
      *              @see link to example here
      *              Unlike sports where the difference in seed is dynamic, favoring top seeds, in Balanced the seed different is the same for every match, basically top seed + $players_count/2
      *              For a 16 man bracket, seed 1 is against 9, 2 against 10, 3 against 11, 4 against 12.. 8 against 16 etc
