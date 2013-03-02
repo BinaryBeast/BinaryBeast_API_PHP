@@ -993,12 +993,6 @@ class BBTournament extends BBModel {
         return $this->open_matches;
     }
 	/**
-	 * Alias for BBTournament::open_matches()
-	 */
-	public function &matches() {
-		return $this->open_matches();
-	}
-	/**
 	 * Given two teams / team ids, this method can be used to 
 	 *		create a new BBMatch object with the new teams
 	 * 
