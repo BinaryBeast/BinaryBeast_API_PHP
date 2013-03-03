@@ -294,7 +294,7 @@ class BBTournament extends BBModel {
      * Save the tournament - overloads BBModel::save() so we can 
      * check to see if we need to save rounds too
      * 
-     * @return int|string       The id of this tournament to indicate a successful save
+     * @return string       The id of this tournament to indicate a successful save, false if something failed
      */
     public function save($return_result = false, $child_args = null) {
 
@@ -324,11 +324,19 @@ class BBTournament extends BBModel {
      * @return string       The new tourney_id for this object
      */
     private function save_new() {
-        /**
-         * Use the standard BBModel::save, but add the paramater return_data, so that 
-         * BinaryBeast will send back in the response a full tourney_info dump that we can import
-         */
-        if(!$result = parent::save(true, array('return_data' => 2))) return false;
+        //return_data => 2 asks BinaryBeast to include a full tourney_info dump in its response
+        $args = array('return_data' => 2);
+
+        //If any teams have been added, include them too - the API can handle it
+        $changed_teams = $this->get_changed_children('BBTeam');
+        $teams = array();
+        if(sizeof($changed_teams) > 0) {
+            foreach($teams as &$team) $teams[] = $team->data;
+        }
+        if(sizeof($teams) > 0) $args['teams'] = $teams;
+
+        //Let BBModel handle it from here - but ask for the api respnose to be returned instead of a generic boolean
+        if(!$result = parent::save(true, $args)) return false;
 
         //OH NOES!
         if($result->result !== 200) return false;
@@ -435,7 +443,7 @@ class BBTournament extends BBModel {
 
         /**
          * Using the array of tracked / changed teams, let's compile
-         * a couple arrays of team values to send to the API
+         *  a couple arrays of team values to send to the API
          * 
          * Initialize the two team arrays: new + update
          */
@@ -450,7 +458,7 @@ class BBTournament extends BBModel {
              * New team - get all default + new values and add to $new_teams
              */
             if(is_null($team->id)) {
-                $new_teams[] = $team->get_sync_values();
+                $new_teams[] = $team->data;
             }
             /**
              * Existing team - get only values that are new, and key by team id
@@ -644,6 +652,7 @@ class BBTournament extends BBModel {
 				return $this->bb->ref(false);
 			}
 		}
+        //If it's a new object, allow devs to add teams before save(), so we need to make sure $teams is initialized
 		else if(is_null($this->teams)) $this->teams = array();
 
         /**
