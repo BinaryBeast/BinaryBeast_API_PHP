@@ -3,15 +3,15 @@
 require_once('lib/includes.php');
 
 /**
- * Test tournament loading / updating
- * @group tournament
+ * Test match model reporting and manipulations
+ * @group match
  * @group model
  * @group all
  */
-class TournamentTest extends bb_test_case {
+class BBMatchTest extends bb_test_case {
 
     /**
-     * @var BBTournament
+     * @var BBMatch
      */
     protected $object;
     protected static $static_object;
@@ -19,9 +19,26 @@ class TournamentTest extends bb_test_case {
     protected function setUp() {
         if(!is_null(self::$static_object)) $this->object = &self::$static_object;
         else {
-            self::$static_object = $this->bb->tournament();
+            self::$static_object = $this->init();
             $this->object = &self::$static_object;
         }
+    }
+    private function init() {
+        $tour = $this->bb->tournament();
+        $tour->title = 'PHP API library 3.0.0 test';
+        $tour->description = 'PHPUnit test for the BBMatch class';
+        $tour->elimination = 1;
+        $tour->max_teams = 8;
+        $tour->team_mode = 1;
+        $tour->save();
+
+        $countries = array('USA', 'GBR', 'USA', 'NOR', 'JPN', 'SWE', 'NOR', 'GBR');
+        for($x = 0; $x < 8; $x++) {
+            $team = $tour->team();
+            $team->display_name = 'Player ' . ($x + 1);
+            $team->country_code = $countries[$x];
+        }
+        
     }
     public function test_get_object() {
         $this->assertInstanceOf('BBTournament', $this->object);
