@@ -78,8 +78,13 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
                 
             }
 
+            //BBModel - use the data + key_exists
+            if($object instanceof BBModel) {
+                self::assertArrayHasKey($key, $object->data, 'Object does not have attribute ' . $key);
+            }
+
             //Assert property exists
-            self::assertObjectHasAttribute($key, $object, 'Object does not have attribute ' . $key);
+            else self::assertObjectHasAttribute($key, $object, 'Object does not have attribute ' . $key);
 
             //Assert the property type
             if(!is_null($type)) {
@@ -157,6 +162,7 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
         self::assertTrue(!is_null($value) && $value !== false);
     }
     public static function assertTourneyID($value) {
+        self::assertTrue(is_string($value), 'provided value is not a string, it\'s a ' . gettype($value));
         self::assertStringStartsWith('x', $value);
     }
 }
