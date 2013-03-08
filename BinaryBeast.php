@@ -553,7 +553,7 @@ class BinaryBeast {
      */
     public function &__get($name) {
         //Define a list of acceptable methods that are allowed to be called as property
-        if(in_array($name, array('tournament', 'match', 'map', 'country', 'game', 'race', 'legacy', 'cache'))) {
+        if(in_array($name, array('tournament', 'team', 'round', 'match', 'match_game', 'map', 'country', 'game', 'race', 'legacy', 'cache'))) {
             return $this->{$name}();
         }
 
@@ -566,12 +566,32 @@ class BinaryBeast {
      * Use this to create a new tournament with save(), or load an existing
      *      tournament by providing the id now, or when you call load()
      * 
-     * @param string $tourney_id    Optionally pre-define the tournament to load
+     * @param string $tourney_data    Optionally pre-define the tournament to load
      * @return BBTournament
      */
-    public function &tournament($tourney_id = null) {
-		$tour = $this->get_model('BBTournament', $tourney_id);
+    public function &tournament($tourney_data = null) {
+		$tour = $this->get_model('BBTournament', $tourney_data);
         return $tour;
+    }
+    /**
+     * Returns a new BBTeam model class
+     * 
+     * @param object|intstring $team_data    Optionally pre-define the team's data or id
+     * @return BBTeam
+     */
+    public function &team($team_data = null) {
+		$team = $this->get_model('BBTeam', $team_data);
+        return $team;
+    }
+    /**
+     * Returns a new BBRound model class
+     * 
+     * @param object $round_data    Optionally the round data
+     * @return BBRound
+     */
+    public function &round($round_data = null) {
+		$round = $this->get_model('BBRound', $round_data);
+        return $round;
     }
 	/**
 	 * Returns a new BBMatch model class
@@ -581,12 +601,27 @@ class BinaryBeast {
 	 * If you DO however know the match id, you can use this to load the match,
 	 *	and then to load it's touranment by accessing $match->tournament or $match->tournament()
 	 * 
-	 * @param int $tourney_match_id
-	 * @return BBTournament
+	 * @param int|object $match_data
+	 * @return BBMatch
 	 */
-	public function &match($tourney_match_id = null) {
-		$match = $this->get_model('BBMatch', $tourney_match_id);
+	public function &match($match_data = null) {
+		$match = $this->get_model('BBMatch', $match_data);
 		return $match;
+	}
+	/**
+	 * Returns a new BBMatch model class
+	 *	Only useful if you know the match_id, it otherwise can't be saved / reported
+	 *	without a tournament associated with it
+	 * 
+	 * If you DO however know the match id, you can use this to load the match,
+	 *	and then to load it's touranment by accessing $match->tournament or $match->tournament()
+	 * 
+	 * @param int|object $game      Either the tourney_match_game_id or the game data
+	 * @return BBMatchGame
+	 */
+	public function &match_game($game_data = null) {
+		$game = $this->get_model('BBMatchGame', $game_data);
+		return $game;
 	}
     /**
      * Returns a BBMap simple_model class
