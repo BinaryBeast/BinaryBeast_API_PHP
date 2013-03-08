@@ -89,7 +89,7 @@ class BBCacheTest extends bb_test_case {
         $this->assertServiceNotLoadedFromCache($result);
     }
     /**
-     * @group new
+     * @group clear_expired_cache
      */
     public function test_clear_expired() {
         //Delete all tournament cache to avoid conflicts with previous tests

@@ -357,7 +357,7 @@ class BBModel extends BBSimpleModel {
      * @param object    $data
      * @return void
      */
-    protected function import_values($data) {
+    public function import_values($data) {
         //Cast it as an array now
         $data = (array)$data;
 
@@ -376,7 +376,7 @@ class BBModel extends BBSimpleModel {
         $this->data             = $data;
         $this->current_data     = $data;
         $this->new_data         = array();
-		
+
 		//Flag object as loaded, so load() will not ask the API again
 		$this->loaded = true;
     }
@@ -531,7 +531,11 @@ class BBModel extends BBSimpleModel {
          * Oh noes!
          * Save the response as the local error, and return false
          */
-        else return $this->set_error($result);
+        else {
+            var_dump(['result' => $result, 'result_wtf' => $result->wtf]);
+            die();
+            return $this->set_error($result);
+        }
     }
 
     /**

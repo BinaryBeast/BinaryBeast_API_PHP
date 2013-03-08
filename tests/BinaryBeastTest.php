@@ -80,11 +80,27 @@ class BinaryBeastTest extends bb_test_case {
     }
 
     /**
+     * @covers BinaryBeast::team
+     */
+    public function test_team() {
+        $this->assertInstanceOf('BBTeam', $this->object->team, '$this->object->team did not return a new BBTeam');
+        $this->assertInstanceOf('BBTeam', $this->object->team(), '$this->object->team() did not return a new BBTeam');
+    }
+
+    /**
      * @covers BinaryBeast::match
      */
     public function testMatch() {
         $this->assertInstanceOf('BBMatch', $this->object->match, '$this->object->match did not return a new BBMatch');
         $this->assertInstanceOf('BBMatch', $this->object->match(), '$this->object->match() did not return a new BBMatch');
+    }
+
+    /**
+     * @covers BinaryBeast::match
+     */
+    public function test_match_game() {
+        $this->assertInstanceOf('BBMatchGame', $this->object->match_game, '$this->object->match_game did not return a new BBMatchGame');
+        $this->assertInstanceOf('BBMatchGame', $this->object->match_game(), '$this->object->match_game() did not return a new BBMatchGame');
     }
 
     /**

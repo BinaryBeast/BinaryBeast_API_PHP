@@ -145,6 +145,18 @@ class BBMatch extends BBModel {
 		//Success!
 		return true;
     }
+    
+    /**
+     * Overloaded so that we can delete also reset the array of games
+     * @return void
+     */
+    public function reset() {
+        parent::reset();
+        if(is_null($this->id)) {
+            $this->games = array();
+            $this->winner_set = false;
+        }
+    }
 
     /**
      * Returns the BBRound containing the round format for this match
@@ -334,14 +346,14 @@ class BBMatch extends BBModel {
      * @param object $data
      * @return void
      */
-    protected function import_values($data) {
+    public function import_values($data) {
         //Found it!
         if(isset($data->games)) {
             //Now loop through each game as instantiate a new BBMatchGame for it
             $this->games = array();
             foreach($data->games as &$game) {
                 //Instantiate a new game, tell it to remember us, then store it in games[]
-                $game = new BBMatchGame($this->bb, $game);
+                $game = $this->bb->match_game($game);
 				//If we have a tournament (we wouldn't if this was created directly from $bb), give each game a reference
                 if(!is_null($this->tournament)) {
 					$game->init($this->tournament, $this);
@@ -631,13 +643,18 @@ class BBMatch extends BBModel {
         //Make sure game_number is within bounds of best_of (only if able to determine round format)
         if(!is_null($round = &$this->round())) {
             if($game_number > $round->best_of) {
+                //If $winner is a game number and it exists, just return that
+                if(is_numeric($winner)) {
+                    if(isset($this->games[$winner])) return $this->games[$winner];
+                }
+
                 $this->set_error("Attempted to set details for game $game_number in a best of {$round->best_of} series");
                 return $this->bb->ref(null);
             }
         }
 
         //Create a new one, initialize it
-        $game = new BBMatchGame($this->bb);
+        $game = $this->bb->match_game();
         $game->init($this->tournament, $this);
 
 		//Automatically set matche's winner as game winner unless otherwise defined

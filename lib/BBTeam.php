@@ -156,7 +156,7 @@ class BBTeam extends BBModel {
 	public function save($return_result = false, $child_args = null) {
 		//Orphaned team - don't save
 		if($this->orphan_error()) return false;
-		
+
 		//Tournament must be saved first
 		if(is_null($this->tournament->id)) {
 			return $this->set_error('Tournament must be saved before adding teams');
@@ -333,7 +333,7 @@ class BBTeam extends BBModel {
 	 * @return boolean
 	 */
 	public function confirm() {
-		return $this->set_status(BinaryBeast::TEAM_STATUS_UNCONFIRMED, self::SERVICE_CONFIRM);
+		return $this->set_status(BinaryBeast::TEAM_STATUS_CONFIRMED, self::SERVICE_CONFIRM);
 	}
 	/**
 	 * Confirm this team's position in the tournament
@@ -370,7 +370,7 @@ class BBTeam extends BBModel {
 
 		//Not a real team yet, just change the status to 1
 		if(is_null($this->id)) {
-			$this->set_new_data('status', $svc);
+			$this->set_new_data('status', $status);
 			return true;
 		}
 

@@ -280,7 +280,7 @@ class BBTournament extends BBModel {
 
             //Save each new BBRound after initializing it
             foreach($rounds as $round => &$format) {
-                $new_round = new BBRound($this->bb, $format);
+                $new_round = $this->bb->round($format);
                 $new_round->init($this, $bracket, $round);
 				$this->rounds->{$bracket_label}[] = $new_round;
             }
@@ -331,7 +331,7 @@ class BBTournament extends BBModel {
         $changed_teams = $this->get_changed_children('BBTeam');
         $teams = array();
         if(sizeof($changed_teams) > 0) {
-            foreach($teams as &$team) $teams[] = $team->data;
+            foreach($changed_teams as $team) $teams[] = $team->data;
         }
         if(sizeof($teams) > 0) $args['teams'] = $teams;
 
@@ -346,6 +346,23 @@ class BBTournament extends BBModel {
          */
         $this->import_values($result);
         $this->set_id($result->tourney_id);
+
+        //Use the api's returned array of teams to update to give each of our new teams its team_id
+        if(isset($result->teams)) {
+            if(is_array($result->teams)) {
+                if(sizeof($result->teams) > 0) {
+                    $this->iterating = true;
+                    foreach($result->teams as $x => $team) {
+                        $result = $this->teams[$x]->import_values($team);
+                        $this->teams[$x]->set_id($team->tourney_team_id);
+                    }
+                    $this->iterating = false;
+                }
+            }
+        }
+        
+        //Reset count of changed children
+        $this->reset_changed_children('BBTeam');
 
         //Success!
         return $this->id;
@@ -687,7 +704,7 @@ class BBTournament extends BBModel {
         }
 
         //Instantiate a blank Team, and give it a reference to this tournament
-        $team = new BBTeam($this->bb);
+        $team = $this->bb->team();
         $team->init($this);
 
         /**
@@ -993,7 +1010,7 @@ class BBTournament extends BBModel {
 
         //Cast each match into BBMatch, and call init() so it knows which tournament it belongs to
         foreach($result->matches as $match) {
-            $match = new BBMatch($this->bb, $match);
+            $match = $this->bb->match($match);
             $match->init($this);
             $this->open_matches[] = $match;
         }
@@ -1018,7 +1035,7 @@ class BBTournament extends BBModel {
 	public function &match($team1, $team2 = null) {
 		//If asking for an existing match, load that now
 		if(is_null($team2) && is_numeric($team1)) {
-			$match = new BBMatch($this->bb, $team1);
+			$match = $this->bb->match($team1);
 			$match->init($this);
 			return $match;
 		}
