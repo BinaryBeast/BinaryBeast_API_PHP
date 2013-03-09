@@ -33,7 +33,7 @@ class BBModel extends BBSimpleModel {
     /**
      * Stores JUST values that have been changed and are pending the next save()
      */
-    protected $new_data = array();
+    public $new_data = array();
 
     //Should be defined by children classes to let us know which property to use as the unique ID for this instance
     //For example for a tournament, this value should be tourney_id, so we can refer to $this->tourney_id dynamically
@@ -84,6 +84,12 @@ class BBModel extends BBSimpleModel {
     protected $parent = null;
 
 	/**
+     * Used by a few child classes (like teams and MatchGames) to flag themselves
+     *  after having been deleted - to prevent any further manipulation
+	 */
+	private $orphan = false;
+
+	/**
 	 * BBClasses objects can set this "iterating" flag to indicate that we're in the middle
 	 *		of a batch update, and should therefore ignore attempts to unflag / flag changes in child classes
 	 * @var boolean
@@ -105,7 +111,7 @@ class BBModel extends BBSimpleModel {
      * @param object      $data     Optionally auto-load this object with values from $data
      */
     function __construct(BinaryBeast &$bb, $data = null) {
-        $this->bb = $bb;
+        parent::__construct($bb);
 
         //If provided with data, automatically import the values into this instance
         if(is_object($data) || is_array($data)) {
@@ -139,8 +145,8 @@ class BBModel extends BBSimpleModel {
      */
     protected function set_new_data($key, $value) {
         //If it's the same, then don't flag it a change
-		if(array_key_exists($key, $this->current_data)) {
-            if($this->current_data[$key] == $value) return;
+		if(array_key_exists($key, $this->data)) {
+            if($this->data[$key] == $value) return;
         }
 
         //Add it to both $new_data and $data
@@ -161,6 +167,24 @@ class BBModel extends BBSimpleModel {
         $this->data[$key]           = $value;
         $this->current_data[$key]   = $value;
     }
+
+	/**
+	 * Methods that make any changes to this team use this method to first check to see
+	 *	if this team has been orphaned... aka deleted
+	 * 
+	 * returns a boolean - false if not orphaned, true if orphaned
+	 * 
+	 * It also will call set_error, so you don't have to handle the error if orphaned
+	 * 
+	 * @return boolean
+	 */
+	protected function orphan_error() {
+		if($this->orphan) {
+			$this->set_error('Team has been removed from the tournament, you can no longer make changes to it');
+			return true;
+		}
+		return false;
+	}
 
     /**
      * Intercept attempts to load values from this object
@@ -249,6 +273,8 @@ class BBModel extends BBSimpleModel {
      * @return void
      */
     public function __set($name, $value) {
+        if($this->orphan_error()) return false;
+
         //Read only? - set a warning and return false
         if(in_array($name, $this->read_only)) {
             $this->set_error($name . ' is a read-only property');
@@ -307,7 +333,7 @@ class BBModel extends BBSimpleModel {
 
         //Reset the live data "view"
         $this->data = $this->get_sync_values();
-
+        
 		//Reset ALL changed child classes
 		$this->reset_changed_children();
 
@@ -358,6 +384,8 @@ class BBModel extends BBSimpleModel {
      * @return void
      */
     public function import_values($data) {
+        if($this->orphan_error()) return false;
+
         //Cast it as an array now
         $data = (array)$data;
 
@@ -390,8 +418,12 @@ class BBModel extends BBSimpleModel {
      * Which is basically tournament returning a new instance, then 
      * calling the load method within that, which returns itself (as long as nothing went wrong)
      * 
-     * @param mixed $id     If you did not provide an ID in the instantiation, they can provide one now
-     * @param array $child_args   Allow child classes to define additional paramaters to send to the API (for example the primary key of an object may consist of multiple values)
+     * @param mixed     $id             If you did not provide an ID in the instantiation, they can provide one now
+     * @param array     $child_args     Allow child classes to define additional paramaters to send to the API (for example the primary key of an object may consist of multiple values)
+     * @param boolean   $return_result  false by default, set this to true if you'd like the data result to be returned instead of the instance
+     *      Note that this can only be used if we actually make an API call,
+     *          if we find that the object has already been loaded, the instance will be
+     *          returned anyway
      * 
      * @return BBModel  Returns itself unless there was an error, in which case it returns false
      */
@@ -463,16 +495,14 @@ class BBModel extends BBSimpleModel {
      * @return string|int       false if the call failed
      */
     public function save($return_result = false, $child_args = null) {
+        if($this->orphan_error()) return false;
 
         //Initialize some values to send to the API
         $svc    = null;
         $args   = array();
 
-        //Determine the id to update, if there is one
-        $id = $this->get_id();
-
         //Update
-        if(!is_null($id) ) {
+        if(!is_null($this->id) ) {
             //if they call save() with no changes, save a warning in BinaryBeast::error_history
             if(!$this->changed) {
                 $this->set_error('Warning: save() saved no changes, since nothing has changed');
@@ -483,14 +513,14 @@ class BBModel extends BBSimpleModel {
 
             //GOGOGO! determine the service name, and save the id
             $args = $this->new_data;
-            $args[$this->id_property] = $id;
+            $args[$this->id_property] = $this->id;
             $svc = $this->get_service('update');
         }
 
         //Create - merge the arguments with the default / newly set values
         else {
             //Copy default values into $data, so when we sync it will merge them in with the data_new values
-            $this->data = $this->default_values;
+            $this->data = array_merge($this->default_values, $this->data);
             $args = array_merge($this->data, $this->new_data);
             $svc = $this->get_service('CREATE');
         }
@@ -510,32 +540,25 @@ class BBModel extends BBSimpleModel {
 			$this->clear_id_cache($this->get_service('load'));
 
             //For new objects just created, make sure we extract the id and save it locally
-            if(is_null($id)) {
+            if(is_null($this->id)) {
                 if(isset($result->{$this->id_property})) {                    
-                    $id = $result->{$this->id_property};
-                    $this->set_id($id);
+                    $this->id = $result->{$this->id_property};
+                    $this->set_id($this->id);
                 }
             }
 
 			//Merge all unsaved changes into current_data, and unflag ourselves as having unsaved changes
             $this->sync_changes();
-			
+
             //Child requested the result directly, do so now before we do anything else
             if($return_result) return $result;
 
             //Success!
-            return $id;
+            return $this->id;
         }
 
-        /*
-         * Oh noes!
-         * Save the response as the local error, and return false
-         */
-        else {
-            var_dump(['result' => $result, 'result_wtf' => $result->wtf]);
-            die();
-            return $this->set_error($result);
-        }
+        //Failure!
+        else return $this->set_error($result);
     }
 
     /**
@@ -546,27 +569,46 @@ class BBModel extends BBSimpleModel {
      * @return boolean
      */
     public function delete() {
-        //Determine the service name and arguments
-        $svc = $this->get_service('DELETE');
-        $args = array(
-            $this->id_property => $this->{$this->id_property}
-        );
+        //Only call the API if we have an id
+        if(!is_null($this->id)) {
+            //Determine the service name and arguments
+            $svc = $this->get_service('DELETE');
+            $args = array($this->id_property => $this->id);
 
-        //GOGOGO!!!
-        $result = $this->call($svc, $args);
+            //GOGOGO!!!
+            $result = $this->call($svc, $args);
 
-        //DELETED!!!
-        if($result->result == BinaryBeast::RESULT_SUCCESS) {
-            //Reset all local values and errors
-            $this->set_id(null);
-            $this->data = array();
-            $this->new_data = array();
-            $this->clear_error();
-            return true;
+            //DELETED!!!
+            if($result->result == BinaryBeast::RESULT_SUCCESS) {
+                //Reset all local values and errors
+                $this->set_id(null);
+                $this->data = array();
+                $this->new_data = array();
+            }
+
+            //API request failed - developers should evaluate last_error and last_result for details
+            else return $this->set_error($result);
         }
 
-		//API request failed - developers should evaluate last_error and last_result for details
-        else return $this->set_error($result);
+        //Now that we've deleted successfully, we can remove ourselves from our parent (if we have one)
+        if(!is_null($this->parent)) {
+            $this->parent->remove_child($this);
+            $this->parent = null;
+            $this->orphan = true;
+        }
+
+        //Successfully deleted
+        return true;
+    }
+
+    /**
+     * Returns a boolean based on whether this object is
+     *  new (aka has no id), or existing
+     * 
+     * @return boolean
+     */
+    public function is_new() {
+        return is_null($this->id);
     }
 
     /**
@@ -580,6 +622,9 @@ class BBModel extends BBSimpleModel {
      * @return void
      */
     public function set_id($id) {
+		//Can't change orphaned children
+		if($this->orphan_error()) return false;
+
         $this->{$this->id_property} = $id;
         if($this->id_property !== 'id') $this->id = &$this->{$this->id_property};
     }
@@ -597,16 +642,6 @@ class BBModel extends BBSimpleModel {
 
         //Either not instantiated or wasn't present in $data
         return false;
-    }
-
-    /**
-     * Retrive the unique id of this instance, taking into consideration
-     * children clases definining the property name, (ie tournament -> tourney_team_id)
-     * 
-     * @return mixed
-     */
-    protected function get_id() {
-        return $this->{$this->id_property};
     }
 
     /**
@@ -702,6 +737,7 @@ class BBModel extends BBSimpleModel {
         if(!isset($this->changed_children[$class])) $this->changed_children[$class] = array();
         return $this->changed_children[$class];
     }
+
     /**
      * Empties the lists of children being tracked as having changes
      * 
@@ -737,6 +773,9 @@ class BBModel extends BBSimpleModel {
             $this->changed_children[$class] = array();
         }
 
+        //Recalculate the changed parent's flag
+        $this->changed = sizeof($this->new_data) > 0 || $this->changed_children_count > 0;
+
 		//Reset our iterating flag to whatever it was before we started
 		$this->iterating = $iterating;
     }
@@ -751,6 +790,58 @@ class BBModel extends BBSimpleModel {
 	}
 
     /**
+     * Remove a child class from this object
+     *  It's up to each class to define how this works however, the second
+     *  paramater needs to be a reference to the array the class
+     *  is using to track them 
+     *
+     * For example for touranments, you call tournament->remove_child($team),
+     *  and it will call BBModel, providing the $teams array
+     * 
+     * @param BBModel   $child
+     * @param array     $children
+     * @param bool      $preserve       false by default - set this to true to skip the step where
+     *      we set the value to null before removing it - thereby setting all references to null
+     *      This would be undesirable for something like a match that was reported however, and all you want to do
+     *          is remove it from the list of open_matches
+     * @return boolean      true if removed
+     */
+    public function remove_child(BBModel &$child, &$children = null, $preserve = false) {
+        if(!is_array($children)) return false;
+
+        //First - run the unflag method to remove from teams_changed
+        //It also has the nice side-effect of recalculating the local $changed flag
+        $this->unflag_child_changed($child);
+
+        //Finally, remove it from the teams array (use teams() to ensure the array is popualted first)
+		if( ($key = array_search($child, $children)) !== false) {
+            //Set the actual value to null, in hopes of setting references to null too - but skip if $preserve was set
+            if(!$preserve) $children[$key] = null;
+            //Remove the value from the array
+			unset($children[$key]);
+            //Re-index the array
+            $children = array_values($children);
+		}
+    }
+    /**
+     * Used internally to remove any children being tracked internally, that do not exist on the API - 
+     *      aka they don't have an id - so we're deleting all unsaved children
+     * 
+     * @param array $children
+     */
+    protected function remove_new_children(&$children) {
+        //Now delete any new teams
+        if(is_array($children)) {
+            foreach($children as &$child) {
+                if($child->is_new()) {
+                    $child->delete();
+                    $child = null;
+                }
+            }
+        }
+    }
+
+    /**
      * Called when something changes, so that we can decide
      *  notify parent classes of unsaved changes when appropriate
      * 
@@ -758,8 +849,11 @@ class BBModel extends BBSimpleModel {
      * @return void
      */
     protected function on_change($changed = true) {
-		//Update local flag first
-		$this->changed = $changed;
+        if($this->orphan_error()) return false;
+
+        //If unflagging changes, keep the flag if we still have unsaved children
+        if(!$changed)   $this->changed = $this->changed_children_count > 0;
+        else            $this->changed = $changed;
 
 		//If we have a parent defined, let them know we either now or no longer have unsaved changes
         if(!is_null($this->parent)) {

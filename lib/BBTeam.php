@@ -75,12 +75,6 @@ class BBTeam extends BBModel {
 	 */
 	private $eliminated_by;
 
-	/**
-	 * When a team is deleted, we flag it as an orphan, so that
-	 *		any future attempts to edit it will return an accurate error
-	 */
-	private $orphan = false;
-
     /**
      * Default values for a new participant, also a useful reference for developers
      * @var array
@@ -131,24 +125,6 @@ class BBTeam extends BBModel {
         //Set parent so BBModel will auto flag changes
         $this->parent = &$this->tournament;
     }
-	
-	/**
-	 * Methods that make any changes to this team use this method to first check to see
-	 *	if this team has been orphaned... aka deleted
-	 * 
-	 * returns a boolean - false if not orphaned, true if orphaned
-	 * 
-	 * It also will call set_error, so you don't have to handle the error if orphaned
-	 * 
-	 * @return boolean
-	 */
-	private function orphan_error() {
-		if($this->orphan) {
-			$this->set_error('Team has been removed from the tournament, you can no longer make changes to it');
-			return true;
-		}
-		return false;
-	}
 
 	/**
 	 * Overrides BBModel::save() so we can return false if trying to save an oprhaned team
@@ -174,11 +150,10 @@ class BBTeam extends BBModel {
 	 * @return BBTournament
 	 */
 	public function &tournament() {
+		if($this->orphan_error()) return $this->bb->ref(null);
+
 		//Already set
 		if(!is_null($this->tournament)) return $this->tournament;
-
-		//If orphaned, return null
-		if($this->orphan_error()) return $this->bb->ref(null);
 
 		//Make sure we even have an ID to load
 		if(is_null($this->id)) {
@@ -200,57 +175,6 @@ class BBTeam extends BBModel {
 		//Failure!
 		$this->set_error('Error loading tournament ' . $id);
 		return $this->bb->ref(null);
-	}
-
-    /**
-     * Delete this team!!!!!!!
-	 * WARNING - USE CAUTING! THIS IS A DANGEROUS METHOD THAT CANNOT BE REVERSED!!!!
-	 * 
-	 * If for any reason we should fail to delete the team,
-	 *		please use $team->result() and $team->error() to see why
-	 * 
-	 * 
-     * Note for new unsaved team, this method removes itself from the tournament
-     * 
-     * @return boolean
-     */
-    public function delete() {
-		//Already deleted - derp
-		if($this->orphan_error()) return false;
-
-		/**
-		 * First ask the API to delete it from BinaryBeast, but only 
-		 *		if the team has an ID
-		 */
-		if(!is_null($this->id)) {
-			if(!parent::delete()) return false;
-		}
-
-		/**
-		 * At this point we either deleted from the API successfully, 
-		 *	or didn't even have a team_id to delete (new team)
-		 * 
-		 * So now we remove the tournament reference, affectively
-		 *		orphaning this object - so that it can no longer be edited
-		 */
-		$this->tournament->remove_team($this);
-		$this->tournament = null;
-		$this->orphan = true;
-
-		//Deleted successfully
-		return true;
-    }
-
-    /**
-	 * Overrides BBModel's id setter so we can throw a fit if this team has been orphaned
-     * 
-     * @param int $tourney_team_id
-     */
-	public function set_id($id) {
-		//Can't change orphaned teams
-		if($this->orphan_error()) return false;
-
-		parent::set_id($id);
 	}
 
     /**
@@ -392,6 +316,8 @@ class BBTeam extends BBModel {
 	 * @return BBMatch
 	 */
 	public function &match() {
+        if($this->orphan_error()) return $this->bb->ref(null);
+
 		//Already
 		if(!is_null($this->match)) return $this->match;
 

@@ -116,19 +116,35 @@ class BBTournamentTest extends bb_test_case {
         $this->assertEquals('updated', $this->object->title);
         $this->assertNull($this->object->id);
     }
-    public function test_reset() {
-        $this->get_new();
-        $this->object->title = 'updated';
-        $this->assertEquals('updated', $this->object->title, 'test does not retain result from prior test');
-        $this->object->reset();
-        $this->assertEquals($this->object->default_value('title'), $this->object->title);
-    }
     public function test_setup() {
         $this->get_new_configured();
         $this->assertEquals('PHP Unit Test Touranment', $this->object->title);
         $this->assertEquals('SC2', $this->object->game_code);
         $this->assertEquals(2, $this->object->elimination);
         $this->assertEquals(64, $this->object->max_teams);
+    }
+    /**
+     * Test saving settings without saving any children
+     */
+    public function test_save_settings() {
+        $this->get_new();
+        $this->object->title = 'changed';
+        $team = $this->object->team();
+        $team1 = $this->object->team();
+        $team2 = $this->object->team();
+        $this->assertTourneyID($this->object->save_settings());
+        //Should still be flagged as changed, since it has changed children
+        $this->assertTrue($this->object->changed);
+        //Make sure none of the teams were saved
+        $this->assertNull($team->id);
+        $this->assertNull($team1->id);
+        $this->assertNull($team2->id);
+        //Now do a full save and make sure the teams get ids
+        $this->assertTourneyID($result = $this->object->save());
+        $this->assertFalse($this->object->changed);
+        $this->assertNotNull($team->id);
+        $this->assertNotNull($team1->id);
+        $this->assertNotNull($team2->id);
     }
     public function test_create() {
         $this->get_new_configured();
@@ -211,9 +227,9 @@ class BBTournamentTest extends bb_test_case {
         $this->assertTrue(is_int($team->save()));
     }
     /**
-     * Test adding a single team to an active tournament
+     * Test trying to save a tournament in a new tournament (should not let us)
      */
-    public function test_add_team_inactive() {
+    public function test_add_team_new() {
         $this->get_inactive(true);
         $team = $this->object->team();
         $team->display_name = 'new player';
@@ -222,6 +238,13 @@ class BBTournamentTest extends bb_test_case {
         $team->network_display_name = 'in-game name';
         //Should not allow us, tournament hasn't been saved
         $this->assertFalse($team->save());
+    }
+    /**
+     * Test trying to add a new team to an active touranment
+     */
+    public function test_add_team_active() {
+        $this->get_active();
+        $this->assertFalse($this->object->team());
     }
     /**
      * Testing loading a list of teams from an active tournament
@@ -261,9 +284,36 @@ class BBTournamentTest extends bb_test_case {
         $this->assertObjectFormat($this->object->rounds->winners[0], array('best_of', 'wins_needed'));
     }
     /**
+     * Test to make sure reset() does everything it needs to 
+     *  include resetting children, and delete new children
+     */
+    public function test_reset() {
+        $this->get_new();
+        $this->object->title = 'updated';
+        $this->assertEquals('updated', $this->object->title, 'test does not retain result from prior test');
+        $this->object->reset();
+        $this->assertFalse($this->object->changed);
+        $this->assertEquals($this->object->default_value('title'), $this->object->title);
+        //Add teams - team0 will become null since we save a ref - team1 we test to make sure it becomes an orphan correctly
+        $team0 = &$this->object->team();
+        $team1 = $this->object->team();
+        $this->assertTrue(is_array($this->object->teams()));
+        $this->assertTrue(in_array($team0, $this->object->teams()));
+        $this->assertTrue(in_array($team1, $this->object->teams()));
+        $this->object->reset();
+        $this->assertNull($team0);
+        $this->assertTrue(sizeof($this->object->teams()) == 0);
+        $this->assertFalse($this->object->changed);
+        //Orphaned team
+        $team1->dislay_name = 'updated';
+        $this->assertNotEquals('updated', $team1->display_name);
+        $this->assertFalse($team1->confirm());
+        $this->assertFalse($team1->delete());
+    }
+    /**
      * Testing enabling player confirmations
      */
-    public function enable_player_confirmations() {
+    public function test_enable_player_confirmations() {
         $this->get_inactive();
         $this->assertTrue($this->object->enable_player_confirmations());
         $this->assertEquals('Confirmation', $this->object->status, 'Tournament status should equal "Confirmation", "' . $this->object->status . '" was found');
@@ -271,7 +321,7 @@ class BBTournamentTest extends bb_test_case {
     /**
      * Test disabling player confirmations
      */
-    public function disable_player_confirmations() {
+    public function test_disable_player_confirmations() {
         $this->get_inactive();
         $this->assertTrue($this->object->disable_player_confirmations());
         $this->assertEquals('Building', $this->object->status, 'Tournament status should equal "Building", "' . $this->object->status . '" was found');

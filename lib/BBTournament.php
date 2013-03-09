@@ -316,24 +316,35 @@ class BBTournament extends BBModel {
         return $result;
     }
     /**
+     * Save the tournament without updating any children
+     */
+    public function save_settings() {
+        //For new tournaments - use save_new for special import instructions, otherwise use the standard save() method
+        return is_null($this->id) ? $this->save_new(true) : parent::save();
+    }
+    /**
      * If creating a new tournament, we want to make sure that when the data is sent
      * to the API, that we request return_data => 2, therefore asking BinaryBeast to send
      * back a full TourneyInfo object for us to import all values that may have been
      * generated on BB's end
      * 
+     * @param boolean $settings_only        false by default - can be used to skip saving children (BBTeams)
+     * 
      * @return string       The new tourney_id for this object
      */
-    private function save_new() {
+    private function save_new($settings_only = false) {
         //return_data => 2 asks BinaryBeast to include a full tourney_info dump in its response
         $args = array('return_data' => 2);
 
         //If any teams have been added, include them too - the API can handle it
-        $changed_teams = $this->get_changed_children('BBTeam');
-        $teams = array();
-        if(sizeof($changed_teams) > 0) {
-            foreach($changed_teams as $team) $teams[] = $team->data;
+        if(!$settings_only) {
+            $changed_teams = $this->get_changed_children('BBTeam');
+            $teams = array();
+            if(sizeof($changed_teams) > 0) {
+                foreach($changed_teams as $team) $teams[] = $team->data;
+            }
+            if(sizeof($teams) > 0) $args['teams'] = $teams;
         }
-        if(sizeof($teams) > 0) $args['teams'] = $teams;
 
         //Let BBModel handle it from here - but ask for the api respnose to be returned instead of a generic boolean
         if(!$result = parent::save(true, $args)) return false;
@@ -348,21 +359,23 @@ class BBTournament extends BBModel {
         $this->set_id($result->tourney_id);
 
         //Use the api's returned array of teams to update to give each of our new teams its team_id
-        if(isset($result->teams)) {
-            if(is_array($result->teams)) {
-                if(sizeof($result->teams) > 0) {
-                    $this->iterating = true;
-                    foreach($result->teams as $x => $team) {
-                        $result = $this->teams[$x]->import_values($team);
-                        $this->teams[$x]->set_id($team->tourney_team_id);
+        if(!$settings_only) {
+            if(isset($result->teams)) {
+                if(is_array($result->teams)) {
+                    if(sizeof($result->teams) > 0) {
+                        $this->iterating = true;
+                        foreach($result->teams as $x => $team) {
+                            $result = $this->teams[$x]->import_values($team);
+                            $this->teams[$x]->set_id($team->tourney_team_id);
+                        }
+                        $this->iterating = false;
                     }
-                    $this->iterating = false;
                 }
             }
+
+            //Reset count of changed children
+            $this->reset_changed_children('BBTeam');
         }
-        
-        //Reset count of changed children
-        $this->reset_changed_children('BBTeam');
 
         //Success!
         return $this->id;
@@ -437,6 +450,16 @@ class BBTournament extends BBModel {
         //Reset our list of changed rounds, and return true, yay!
         $this->reset_changed_children('BBRound');
         return true;
+    }
+    /**
+     * Overrides BBModel::reset() so we can define the $teams array for removing unsaved teams
+     */
+    public function reset() {
+        //BBModel's default action first
+        parent::reset();
+
+        //Now let BBmodel remove any unsaved teams from $this->teams
+        $this->remove_new_children($this->teams());
     }
 
     /**
@@ -525,17 +548,27 @@ class BBTournament extends BBModel {
 	/**
 	 * Submit changes to any matches that have pending changes
 	 * 
+     * @param boolean $report       true by default - you can set this to false to ONLY save existing matches, and not to report()
+     *  and now ones
+     * 
 	 * @return boolean
 	 */
-	public function save_matches() {
+	public function save_matches($report = true) {
 		$matches = &$this->get_changed_children('BBMatch');
-		
+
 		/**
 		 * Nothing special, just save() each one
 		 * Difference is we're not "iterating", because if anything goes wrong, we'll
 		 *	leave it flagged 
 		 */
-		foreach($matches as &$match) $match->save();
+		foreach($matches as &$match) {
+            if(!$report) {
+                if(is_null($match->id)) {
+                    continue;
+                }
+            }
+            $match->save();
+        }
 
 		return true;
 	}
@@ -582,25 +615,13 @@ class BBTournament extends BBModel {
     }
 
     /**
-     * Remove a team from this tournament's teams lists
-     * Warning: this method does NOT perform any API requests, it's strictly
-     * used to disassociate a BBTeam object from this tournament
-     * 
-     * The most likely use of this method is from BBTeam::delete() to remove itself from this
-     *  tournament
-     * 
-     * @param BBTeam $team
-     * @return void
+     * Remove a child class from this team - like a BBTeam
+     * @param BBModel $child
+     * @param type $children
      */
-    public function remove_team(BBTeam &$team) {
-        //First - run the unflag method to remove from teams_changed
-        //It also has the nice side-effect of recalculating the local $changed flag
-        $this->unflag_child_changed($team);
-
-        //Finally, remove it from the teams array (use teams() to ensure the array is popualted first)
-		if( ($key = array_search($team, $this->teams())) !== false) {
-			unset($this->teams[$key]);
-		}
+    public function remove_child(BBModel &$child, &$children = null, $preserve = false) {
+        if($child instanceof BBTeam) parent::remove_child($child, $this->teams());
+        if($child instanceof BBMatch) parent::remove_child($child, $this->open_matches(), true);
     }
 
     /**
@@ -655,7 +676,7 @@ class BBTournament extends BBModel {
      * 
      * @param int $id       Optionally attempt to retrieve a reference to the BBTeam of an existing team
      * 
-     * @return BBTeam
+     * @return BBTeam       Returns null if invalid
      */
     public function &team($id = null) {
 
@@ -728,14 +749,6 @@ class BBTournament extends BBModel {
 
         //Success! return a reference to the new team
         return $this->teams[$key];
-    }
-    /**
-     * Alias for team()
-     * 
-     * @return BBTeam
-     */
-    public function &add_team() {
-        return $this->team();
     }
 
     /**

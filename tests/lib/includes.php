@@ -165,6 +165,14 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
         self::assertTrue(is_string($value), 'provided value is not a string, it\'s a ' . gettype($value));
         self::assertStringStartsWith('x', $value);
     }
+    public static function assertID($value) {
+        //Treat it as a tournament id
+        if(is_string($value)) return self::assertTourneyID($value);
+
+        //Treat it as a normal integer id
+        self::assertTrue(is_numeric($value));
+        self::assertTrue($value > 0);
+    }
 }
 
 ?>  

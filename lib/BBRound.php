@@ -112,10 +112,7 @@ class BBRound extends BBModel {
     public function save($return_result = false, $child_args = null) {
 
         //Nothing to save
-        if(!$this->changed) {
-            $this->set_error('Warning: save() saved no changes, since nothing has changed');
-            return true;
-        }
+        if(!$this->changed) return true;
 
         /**
          * Build the arguments to send to BinaryBeast
@@ -145,6 +142,15 @@ class BBRound extends BBModel {
          * Oh noes!
          */
         else return $this->set_error($result);
+    }
+    /**
+     * Since we dont' have an id, and we don't create rounds
+     *  one at a time, we handle this flag differently than BBmodel
+     * 
+     * @return boolean
+     */
+    public function is_new() {
+        return false;
     }
 }
 

@@ -61,9 +61,9 @@ class BBMatchGame extends BBModel {
     protected $default_values = array(
         //tourney_team_id of the winner - loser is not required, since we assume the other player of the match was the loser
         'tourney_team_id'       => null,
-        //Score of the winner
+        //Score of the match's winner
         'score'                 => 1,
-        //Score of the loser
+        //Score of the match's loser
         'o_score'               => 0,
         //Map ID - you can find this value in $bb->map->game_list($game_code[$filter = null]) (map_id)
         'map_id'                => null,
@@ -76,13 +76,13 @@ class BBMatchGame extends BBModel {
         //General description / notes on the match
         'notes'                 => null,
         //This will be updated soon to be more flexible, but for now - all this value serves as is as a URL to the replay of this match
-        'replay'                => null,
+        'replay'                => null
     );
 
     /**
      * A few settings that shouldn't be changed manually
      */
-    protected $read_only = array('tourney_team_id', 'o_tourney_team_id', 'tourney_match_id', 'tourney_id');
+    protected $read_only = array('tourney_team_id', 'o_tourney_team_id', 'tourney_match_id', 'tourney_id', 'score', 'o_score');
 
     /**
      * Since PHP doens't allow overloading the constructor with a different paramater list,
@@ -125,6 +125,9 @@ class BBMatchGame extends BBModel {
 
     /**
      * Returns the BBTeam object of the winner of this game
+     * 
+     * This method will also seutp the value for loser, used by 
+     *      loser() to keep the code DRY
 	 * 
 	 * If false is returned, it indicates a draw
      * 
@@ -136,12 +139,26 @@ class BBMatchGame extends BBModel {
 
         //No winner defined
         if(is_null($id = $this->data['tourney_team_id'])) {
-            $this->set_error('Winner/Loser not defined for this game');
-            return $this->bb->ref(null);
+            //If this is a new object, it means no winner was set
+            if(is_null($this->id)) {
+                $this->set_error('Winner/Loser not defined for this game');
+                return $this->bb->ref(null);
+            }
+
+            //Existing game - null team id means that this game was a draw
+            $this->winner = false;
+            $this->loser = false;
+            return $this->bb->ref(false);
         }
 
         //Try to load from the tournament, return directly since null is returned if the id is invalid anyway
-        $this->winner = $this->tournament->team($id);
+        $this->winner = &$this->tournament->team($id);
+
+        //Now that we have a winner, use match::toggle_team to determine the loser
+        $this->loser = &$this->match->toggle_team($this->winner);
+
+        //If null or false, I dont' want it returned by reference - wrap it in ref()
+        if(is_null($this->winner) || $this->winner === false) return $this->bb->ref($this->winner);
         return $this->winner;
     }
 
@@ -153,17 +170,11 @@ class BBMatchGame extends BBModel {
      * @return BBTeam
      */
     public function &loser() {
-        //Already cached
-        if(!is_null($this->loser) || $this->loser === false) return $this->loser;
+        //Let winner() figure it out for us
+        $this->winner();
 
-        //No loser defined
-        if(is_null($id = $this->data['o_tourney_team_id'])) {
-            $this->set_error('Winner/Loser not defined for this game');
-            return $this->bb->ref(null);
-        }
-
-        //Try to load from the tournament, return directly since null is returned if the id is invalid anyway
-        $this->loser = $this->tournament->team($id);
+        //If null or false, I dont' want it returned by reference - wrap it in ref()
+        if(is_null($this->loser) || $this->loser === false) return $this->bb->ref($this->loser);
         return $this->loser;
     }
 
@@ -176,13 +187,14 @@ class BBMatchGame extends BBModel {
 	 * 
 	 * Set winner to null to indiciate a draw
      * 
-     * @param BBTeam|int        The winning team
-     * returns false if provided team is invalid
+     * @param BBTeam|int    $winner        The winning team - can be a BBTeam instance of a tourney_team_id integer
+     *  returns false if provided team is invalid
      */
-    public function set_winner($winner) {
+    public function set_winner($winner, $match_winner_score = null, $match_loser_score = null) {
+        if($this->orphan_error()) return false;
 
 		//Set winner as "null", indicating a draw
-		if(is_null($winner)) return $this->set_draw();
+		if(is_null($winner) || $winner == false) return $this->set_draw();
 
         //Use the match's team_in_match to give us the BBTeam, and to verify that it's actually in the match
         if(($winner = &$this->match->team_in_match($winner)) == false) {
@@ -192,15 +204,15 @@ class BBMatchGame extends BBModel {
         //Update the winner property
         $this->winner = &$winner;
 
-        //Figure out which team lost so that we can update the loser value
-        if($this->winner == $this->match->winner()) {
-            $this->loser = &$this->match->loser();
-        }
-        else $this->loser = &$this->match->winner();
+        //Use BBMatch::toggle_team to figure out who the loser is
+        $this->loser = &$this->match->toggle_team($this->winner);
 
         //Update the team id values
         $this->set_new_data('tourney_team_id', $this->winner->id);
         $this->set_new_data('o_tourney_team_id', $this->loser->id);
+
+        //Set scores
+        $this->set_scores($match_winner_score, $match_loser_score);
 
         //Success!
         return true;
@@ -210,18 +222,51 @@ class BBMatchGame extends BBModel {
 	 * @return boolean
 	 */
 	public function set_draw() {
+        if($this->orphan_error()) return false;
+
 		//Draws are only valid in group rounds
 		if($this->tournament->status != 'Active-Groups') return $this->set_error('Only matches in group-rounds can be draws');
 
-		$this->winner = false;
-		$this->loser = false;
+        //Set both teams to false, which is the indicator for a draw
+		$this->winner   = false;
+		$this->loser    = false;
 
-		//Update the values
-		$this->set_new_data('tourney_team_id', 0);
-		
+		//Update the values - though the API ignores it, we'll set "draw" too, so that
+        //developers can easily check $game->is_draw as a boolean
+		$this->set_new_data('tourney_team_id', null);
+
 		//Success!
 		return true;
 	}
+    /**
+     * Define the scores for this game
+     * 
+     * WARNING: this can be a little bit confusing at first, so be careful
+     * 
+     * The winner / loser scores per game are tracked based on who won the overall match
+     * 
+     * "score" is the score of the winner of the entire match
+     * "o_score" is the score of the loser of the entire match
+     * 
+     * The reason we force developers to use the set_scores method to define scores, and set score and o_score to read-only, is
+     *  to help cut down on confusion
+     * 
+     * @param int $match_winner_score
+     * @param int $match_loser_score
+     * @return void
+     */
+    public function set_scores($match_winner_score = null, $match_loser_score = null) {
+        if(!is_null($match_winner_score)) $this->set_new_data('score', $match_winner_score);
+        if(!is_null($match_loser_score)) $this->set_new_data('o_score', $match_loser_score);
+    }
+
+    /**
+     * Returns a simple boolean to indicate whehter or not 
+     *  this game was considered a draw
+     */
+    public function is_draw() {
+        return $this->winner() === false;
+    }
 }
 
 ?>

@@ -72,12 +72,14 @@ class BBSimpleModel {
 
     /**
      * Constructor
-     * Stores a reference to the main BinaryBeast library class
+     * Stores a reference to the main BinaryBeast library class,
+     *  and generates a UID to guarantee all new objects will be unique (important while flagging child changes, 
+     *      because PHP can confuse new objects if they haven't had any unique settings set)
      * 
      * @param BinaryBeast $bb       Reference to the main API class
      */
-    function __construct(BinaryBeast $bb) {
-        $this->bb = $bb;
+    function __construct(BinaryBeast &$bb) {
+        $this->bb = &$bb;
 
 		//Set an arbitrary uid to insure that each object is unique
 		$this->uid = uniqid();
