@@ -132,7 +132,10 @@ class BBModel extends BBSimpleModel {
         }
 
 		//For new objects, use default values for values
-		else $this->data = $this->default_values;
+		else {
+            $this->data = $this->default_values;
+            $this->changed = true;
+        }
     }
 
     /**
@@ -569,6 +572,7 @@ class BBModel extends BBSimpleModel {
      * @return boolean
      */
     public function delete() {
+        $pre_fail_0 = $this->tournament->status;
         //Only call the API if we have an id
         if(!is_null($this->id)) {
             //Determine the service name and arguments
@@ -577,6 +581,7 @@ class BBModel extends BBSimpleModel {
 
             //GOGOGO!!!
             $result = $this->call($svc, $args);
+            $pre_fail_1 = $this->tournament->status;
 
             //DELETED!!!
             if($result->result == BinaryBeast::RESULT_SUCCESS) {
@@ -587,12 +592,20 @@ class BBModel extends BBSimpleModel {
             }
 
             //API request failed - developers should evaluate last_error and last_result for details
-            else return $this->set_error($result);
+            else {
+                var_dump('fail');
+                var_dump(['team_delete()' => ['result' => $result, 'class' => get_called_class()] ]);
+                var_dump(['fail_tour_id' => $this->tournament->id, 'fail_status' => $this->tournament->status]);
+                var_dump(['pre_fail_0' => $pre_fail_0, 'pre_fail_1' => $pre_fail_1]);
+                $set = $this->set_error($result);
+                var_dump(['set_error' => $set]);
+                return $set;
+            }
         }
 
         //Now that we've deleted successfully, we can remove ourselves from our parent (if we have one)
         if(!is_null($this->parent)) {
-            $this->parent->remove_child($this);
+            $result = $this->parent->remove_child($this);
             $this->parent = null;
             $this->orphan = true;
         }
@@ -698,7 +711,7 @@ class BBModel extends BBSimpleModel {
      * Removes any references to a child class (team/round for tournaments.. etc), so we know that
      * the child has no unsaved changes
      * 
-     * @param BBModel $child - a reference to the Round calling
+     * @param BBModel $child - a reference to the child to unflag
      * @return void
      */
     public function unflag_child_changed(BBModel &$child) {
@@ -710,7 +723,9 @@ class BBModel extends BBSimpleModel {
 
         //Try to find the child's index within the changed_children array
         if(($key = array_search($child, $array)) !== false) {
-            unset($array);
+            unset($array[$key]);
+            //Re-index the array
+            $array = array_values($array);
             --$this->changed_children_count;
         }
 
@@ -809,19 +824,26 @@ class BBModel extends BBSimpleModel {
     public function remove_child(BBModel &$child, &$children = null, $preserve = false) {
         if(!is_array($children)) return false;
 
-        //First - run the unflag method to remove from teams_changed
-        //It also has the nice side-effect of recalculating the local $changed flag
+        //First - run the unflag method to remove from teams_changed - and re-calculate the $changed flag
         $this->unflag_child_changed($child);
 
         //Finally, remove it from the teams array (use teams() to ensure the array is popualted first)
 		if( ($key = array_search($child, $children)) !== false) {
             //Set the actual value to null, in hopes of setting references to null too - but skip if $preserve was set
             if(!$preserve) $children[$key] = null;
+
             //Remove the value from the array
 			unset($children[$key]);
+
             //Re-index the array
             $children = array_values($children);
+
+            //Return true to indicate that we found and removed the object
+            return true;
 		}
+
+        //Didn't find anything
+        return false;
     }
     /**
      * Used internally to remove any children being tracked internally, that do not exist on the API - 

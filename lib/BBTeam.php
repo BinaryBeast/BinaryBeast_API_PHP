@@ -56,7 +56,7 @@ class BBTeam extends BBModel {
      * The BBTeam of this team's current opponent
      * @var BBTeam
      */
-    private $opponent;
+    protected $opponent;
 
     /**
      * For group rounds, this team may currently have several opponents available to play against
@@ -68,12 +68,12 @@ class BBTeam extends BBModel {
 	 * This team's current match, use current_match or match() to get
 	 * @var BBMatch
 	 */
-	private $match;
+	protected $match;
 	/**
 	 * If eliminated, store the team that eliminated us here
 	 * @var BBTeam
 	 */
-	private $eliminated_by;
+	protected $eliminated_by;
 
     /**
      * Default values for a new participant, also a useful reference for developers
@@ -117,13 +117,23 @@ class BBTeam extends BBModel {
      * we'll simply use a psuedo-constructor and call it init()
      * 
      * @param BBTournament $tournament
+     * @param boolean $add_to_parent        True by default, try to add ourselves to the parent BBTournament
      * @return void
      */
-    public function init(BBTournament &$tournament) {
+    public function init(BBTournament &$tournament, $add_to_parent = true) {
         $this->tournament = &$tournament;
 
         //Set parent so BBModel will auto flag changes
         $this->parent = &$this->tournament;
+
+        //If not already being tracked, flag ourselves in the new tournament
+        if($add_to_parent) {
+            if(is_array($teams = &$this->tournament->teams())) {
+                if(!in_array($this, $teams)) {
+                    $this->tournament->add_team($this);
+                }
+            }
+        }
     }
 
 	/**
@@ -147,7 +157,7 @@ class BBTeam extends BBModel {
 	 * 
 	 * returns null if "orphaned", aka the team was deleted
 	 * 
-	 * @return BBTournament
+	 * @return BBTournament - null if unable to find it
 	 */
 	public function &tournament() {
 		if($this->orphan_error()) return $this->bb->ref(null);
@@ -188,14 +198,16 @@ class BBTeam extends BBModel {
      *      there may be several opponents currently waiting to play agains this team,
      *		If that's the case, then the this method will simply return the first one found
      * 
-     * @return BBTeam (null if no opponent available)
+     * @return BBTeam
+     *      null indicates that this team currently has no opponent, if the tournament is active it means he's waiting for another match to finish
+     *      false indicates that this team has been eliminated, you can use elimianted_by to see by whome
      */
     public function &opponent() {
 		//Orphaned team
 		if($this->orphan_error()) return $this->bb->ref(null);
 
         //Already figured it out
-        if(!is_null($this->opponent)) return $this->opponent;
+        if(!is_null($this->opponent) || $this->opponent === false) return $this->opponent;
 
         //Tournament is not active, can't possibly have an opponent - derp
         if(!BBHelper::tournament_is_active($this->tournament)) {
@@ -209,11 +221,16 @@ class BBTeam extends BBModel {
 			'tourney_team_id' => $this->id
 			), self::CACHE_TTL_OPPONENTS, self::CACHE_OBJECT_TYPE, $this->id);
 
+        //Default to false, unless we determine otherwise
+        $this->eliminated_by = false;
+
 		//Found him!
-		if($result->result == 200) $this->opponent = &$this->tournament->team($result->o_tourney_team_id);
+		if($result->result == 200) {
+            $this->opponent = &$this->tournament->team($result->o_tourney_team_id);
+        }
 
 		//Eliminated
-		else if($result->result == 735) {
+		else if($result->result ==  735) {
 			$this->opponent = false;
 			$this->eliminated_by = &$this->tournament->team($result->victor->tourney_team_id);
 			$this->set_error('Team has been eliminated! see $team->eliminated_by to see who defeated this team');
@@ -233,27 +250,34 @@ class BBTeam extends BBModel {
 	 * @return BBTeam
 	 */
 	public function &eliminated_by() {
-		if(!is_null($this->eliminated_by)) return $this->eliminated_by;
+		if(!is_null($this->eliminated_by) || $this->eliminated_by === false) {
+            return $this->eliminated_by;
+        }
 
 		//Not set - try running opponent() then returning, as it will be set after opponent() is run
 		$this->opponent();
 
 		return $this->eliminated_by;
 	}
-	
+
 	/**
 	 * If a match is reported, this method can be called to clear any
 	 *		cached opponent results this team may have saved
 	 */
 	public function reset_opponents() {
-		$this->opponent		= null;
-		$this->opponents	= null;
-		$this->match		= null;
+        $this->opponent         = &$this->bb->ref(null);
+        $this->match            = &$this->bb->ref(null);
+        $this->eliminated_by    = &$this->bb->ref(null);
+
+        //Attempt to clear API cache too
+		$this->clear_id_cache(array(
+			self::SERVICE_GET_OPPONENT,
+			self::SERVICE_LIST_OPPONENTS
+		));
 	}
 
 	/**
 	 * Confirm this team's position in the tournament
-	 * 
 	 * @return boolean
 	 */
 	public function confirm() {
@@ -261,7 +285,6 @@ class BBTeam extends BBModel {
 	}
 	/**
 	 * Confirm this team's position in the tournament
-	 * 
 	 * @return boolean
 	 */
 	public function unconfirm() {
@@ -269,6 +292,7 @@ class BBTeam extends BBModel {
 	}
 	/**
 	 * Ban this team from the tournament
+     * @return boolean
 	 */
 	public function ban() {
 		return $this->set_status(BinaryBeast::TEAM_STATUS_BANNED, self::SERVICE_BAN);
@@ -318,7 +342,7 @@ class BBTeam extends BBModel {
 	public function &match() {
         if($this->orphan_error()) return $this->bb->ref(null);
 
-		//Already
+		//Already cached
 		if(!is_null($this->match)) return $this->match;
 
 		//No opponent - can't make a match
@@ -328,16 +352,6 @@ class BBTeam extends BBModel {
 		return $this->match = &$this->tournament->match($this, $this->opponent);
 	}
 
-	/**
-	 * Clears all cache associated with this team
-	 *	pertaining to getting oppponent ids / lists
-	 */
-	public function clear_opponent_cache() {
-		$this->clear_id_cache(array(
-			self::SERVICE_GET_OPPONENT,
-			self::SERVICE_LIST_OPPONENTS
-		));
-	}
 }
 
 ?>

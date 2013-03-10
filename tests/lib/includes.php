@@ -27,7 +27,7 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
     
     /** @var BinaryBeast */
     protected $bb;
-    
+
     function __construct($name = NULL, array $data = array(), $dataName = '') {
         global $bb;
         $this->bb = &$bb;
@@ -35,8 +35,11 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
         parent::__construct($name, $data, $dataName);
     }
     
-    public function history() {
-        return array($this->object->result_history, $this->object->error_history);
+    protected function dump_history() {
+        var_dump(array('errors' => $this->bb->error_history, 'results' => $this->bb->result_history));
+    }
+    protected function dump_errors() {
+        var_dump(array('errors' => $this->bb->error_history));
     }
     
     /**
@@ -172,6 +175,10 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
         //Treat it as a normal integer id
         self::assertTrue(is_numeric($value));
         self::assertTrue($value > 0);
+    }
+    public static function assertArraySize($array, $size) {
+        $this->assertTrue(is_array($array));
+        $this->assertTrue(sizeof($array) == $size, "Array size $size expected, " . sizeof($array) . ' found');
     }
 }
 

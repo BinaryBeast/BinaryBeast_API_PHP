@@ -135,4 +135,11 @@ class BinaryBeastTest extends bb_test_case {
         $this->assertInstanceOf('BBRace', $this->object->race(), '$this->object->game() did not return a new BBRace');
     }
 
+    /**
+     * @covers BinaryBeast::ref
+     */
+    public function test_ref() {
+        //Make sure multiple references are independent etc
+        $this->assertTrue(false, 'implement this');
+    }
 }

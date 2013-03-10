@@ -531,7 +531,6 @@ class BBMatch extends BBModel {
          *  to the next stage etc
          */
         $tournament = &$this->tournament();
-        var_dump(['status' => $tournament->status, 'key' => array_search($this, $tournament->open_matches())]);
         if(!in_array($this, $tournament->open_matches())) {
             return $this->set_error('This match is no longer listed as an open match for this tournament, perhaps it was reported elsewhere, or the tournament has begun the next stage');
         }
@@ -552,6 +551,8 @@ class BBMatch extends BBModel {
         }
 
 		//Let BBModel handle this
+        $this->team->opponent();
+        $this->opponent->opponent();
 		$result = parent::save(false, array('tourney_id' => $this->tournament->id));
 
 		//Report all of the game details
@@ -559,13 +560,13 @@ class BBMatch extends BBModel {
 			if(!$this->save_games()) return false;
 		}
 
-        //Tell the touranment that this is no longer an open match
-        $this->tournament->remove_child($this);
-
 		//Wipe all tournament cache, and tournament opponent cache
 		$this->tournament->clear_id_cache();
-		$this->team->clear_opponent_cache();
-		$this->opponent->clear_opponent_cache();
+		$this->team->reset_opponents();
+		$this->opponent->reset_opponents();
+
+        //Tell the touranment that this is no longer an open match
+        $this->tournament->remove_child($this);
 
 		//Return the save() result
 		return $result;
@@ -810,7 +811,7 @@ class BBMatch extends BBModel {
      * @param type $children
      */
     public function remove_child(BBModel &$child, &$children = null, $preserve = false) {
-        if($child instanceof BBMatchGame) parent::remove_child($child, $this->games());
+        if($child instanceof BBMatchGame) return parent::remove_child($child, $this->games());
     }
 
     /**

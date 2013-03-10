@@ -18,6 +18,14 @@ class BBMatchTest extends bb_test_case {
     protected static $tournament_with_groups;
 
     /**
+     * Attempt to delete any tournaments we've created
+     */
+    function __destruct() {
+        if(!is_null(self::$tournament)) self::$tournament->delete();
+        if(!is_null(self::$tournament_with_groups)) self::$tournament_with_groups->delete();
+    }
+
+    /**
      * Default set up - statically cache a tournament, and load
      *  one of its open matches - standard elimination brackets only, double elim
      */
@@ -683,8 +691,6 @@ class BBMatchTest extends bb_test_case {
      * Test unreport() on a match that was part of a tournament
      *  phase that is no longer active - group rounds, in a tournament
      *  in active-brackets
-     * 
-     * @group new
      */
     public function test_unreport_invalid_status() {
         $this->set_object(true);
@@ -718,7 +724,6 @@ class BBMatchTest extends bb_test_case {
     }
     /**
      * Test unreport()
-     * @group new
      */
     public function test_unreport() {
         $this->assertTrue(false, 'build this - also have to build fetching latest match in BBTeam');
@@ -727,8 +732,6 @@ class BBMatchTest extends bb_test_case {
      * Test unreport() on a match that is not allowed
      *  to be unreported - because either team has 
      *  reported other wins since
-     * 
-     * @group new
      */
     public function test_unreport_bracket_invalid() {
         $this->assertTrue(false, 'build this');

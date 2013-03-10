@@ -147,7 +147,7 @@ class BinaryBeast {
      * Really stupid way of getting around the ridiculous error when trying
      * to return null in &__get, so we use $bb->ref() to set this value and return it
      */
-    private $ref = null;
+    private $ref = array();
 
     /**
      * A few constants to make a few values a bit easier to read / use
@@ -374,7 +374,7 @@ class BinaryBeast {
             $args['api_email']      = $this->email;
             $args['api_password']   = $this->password;
         }
-
+        
         //Who you gonna call?
         return $this->call_curl(http_build_query($args));
     }
@@ -827,8 +827,10 @@ class BinaryBeast {
      * @return mixed
      */
     public function &ref($value) {
-        $this->ref = $value;
-        return $this->ref;
+        //Make a new reference each time, to avoid accidentally sharing and then overwriting
+        $key = sizeof($this->ref);
+        $this->ref[$key] = $value;
+        return $this->ref[$key];
     }
 	
 	/**
