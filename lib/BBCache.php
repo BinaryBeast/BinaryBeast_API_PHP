@@ -8,6 +8,14 @@
  * 
  * It can cache anything that you could get through $bb->call
  * 
+ * <b>MESSAGE TO DEVELOPERS!!!</b>
+ * <pre>
+ *      If you want to take advantage of the integrate API response caching in this class,
+ *      you must have PDO_MySLQ installed, and you must define the connection details
+ *      in BBConfig.php!
+ * </pre>
+ * 
+ * 
  * @version 1.0.2
  * @date 2013-02-12
  * @author Brandon Simmons

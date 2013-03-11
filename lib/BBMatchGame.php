@@ -8,8 +8,92 @@
  *   http://www.gnu.org/licenses/gpl.html
  * 
  * @version 1.0.0
- * @date 2013-02-02
+ * @date 2013-03-10
  * @author Brandon Simmons
+ * 
+ * 
+ * ******* Property documentation *********
+ * @property int $tourney_team_id
+ *  <pre>
+ *      The unique int tourney_team_id of this game's winner
+ *  </pre>
+ * 
+ * @property int $score
+ *  <pre>
+ *      Score of the match's winner
+ * 
+ *      WARNING: this can be a little bit confusing at first, so be careful
+ *          Game scores are tracked based on who won the overall match,
+ *          therefore this value represents the score of the team who won the entire match
+ *  </pre>
+ * 
+ * @property int $o_score
+ *  <pre>
+ *      Score of the match's loser
+ * 
+ *      WARNING: this can be a little bit confusing at first, so be careful
+ *          Game scores are tracked based on who won the overall match,
+ *          therefore this value represents the score of the team who lost the entire match
+ *  </pre>
+ * 
+ * @property string|int $map
+ *  <pre>
+ *      The map name this game was played on
+ *      You can define this as the map_id integer, or any map name string
+ * 
+ *      Using a map_id has many benefits, like image preview / stat tracking etc
+ *          so if you want to use a map_id, you can use {@link BBMap::game_search()}
+ *  </pre>
+ * 
+ * @property-read int $map_id 
+ *  <b>Read Only</b>
+ *  <pre>
+ *      Value set when loading the game - the unique int id of the map 
+ *          this game was played on
+ *      Warning: attempts to change this value will result in updating the value of $map
+ *  </pre>
+ * 
+ * @property string|int $race
+ *  <pre>
+ *      The match winner's race - can be the race_id integer, or a custom race name string
+ *      Use {@link BBRace::game_list()} for race_ids values
+ *  </pre>
+ * 
+ * @property string|int $o_race
+ *  <pre>
+ *      The match loser's race - can be the race_id integer, or a custom race name string
+ *      Use {@link BBRace::game_list()} for race_ids values
+ *  </pre>
+ * 
+ * @property string $notes General description / notes on the match
+ * 
+ * @property string $replay
+ *  <pre>
+ *      This will be updated soon to be more flexible, but for now
+ *          all this value serves as is as a URL to the replay of this match
+ *  </pre>
+ * 
+ * @property BBTeam $winner
+ *  <b>Alias for {@link BBMatchGame::winner()}</b>
+ *  <pre>
+ *      BBTeam object for the winner of the game
+ *  </pre>
+ *  <b>Returns NULL if winner hasn't been defined ({@link BBMatchGame::set_winner()}</b>
+ *  <b>Returns FALSE if match was a draw</b>
+ * 
+ * @property BBTeam $loser
+ *  <b>Alias for {@link BBMatchGame::loser()}</b>
+ *  <pre>
+ *      BBTeam object for the loser of the game
+ *  </pre>
+ *  <b>Returns NULL if winner hasn't been defined ({@link BBMatchGame::set_winner()}</b>
+ *  <b>Returns FALSE if match was a draw</b>
+ * 
+ * @property BBMatch $match
+ *  <b>Alias for {@link BBMatchGame::match()}</b>
+ *  <pre>
+ *      The match this game is in
+ *  </pre>
  */
 class BBMatchGame extends BBModel {
 
@@ -59,30 +143,21 @@ class BBMatchGame extends BBModel {
      * @var array
      */
     protected $default_values = array(
-        //tourney_team_id of the winner - loser is not required, since we assume the other player of the match was the loser
         'tourney_team_id'       => null,
-        //Score of the match's winner
         'score'                 => 1,
-        //Score of the match's loser
         'o_score'               => 0,
-        //Map ID - you can find this value in $bb->map->game_list($game_code[$filter = null]) (map_id)
         'map_id'                => null,
-        //Optionally you can provide the map name instead of map_id
         'map'                   => null,
-        //Winner's race - can be the race_id or race name (use $bb->race->game_list($game_code) for race_ids)
         'race'                  => null,
-        //Loser's race - can be the race_id or race name (use $bb->race->game_list($game_code) for race_ids)
         'o_race'                => null,
-        //General description / notes on the match
         'notes'                 => null,
-        //This will be updated soon to be more flexible, but for now - all this value serves as is as a URL to the replay of this match
         'replay'                => null
     );
 
     /**
      * A few settings that shouldn't be changed manually
      */
-    protected $read_only = array('tourney_team_id', 'o_tourney_team_id', 'tourney_match_id', 'tourney_id', 'score', 'o_score');
+    protected $read_only = array('tourney_match_id', 'tourney_id');
 
     /**
      * Since PHP doens't allow overloading the constructor with a different paramater list,
@@ -98,6 +173,34 @@ class BBMatchGame extends BBModel {
 
         //Let BBModel know who our parent is, so that changes are automatically flagged in BBMatch
         $this->parent = &$this->match;
+    }
+
+    
+    /**
+     * Overloaded to update map when trying to set map_id, and so we can treat
+     *  attempts to change team ids by calling set_winner|loser
+     * 
+     * @see BBModel::__set()
+     * 
+     * @return void
+     */
+    public function __set($name, $value) {
+        //If setting team ids, run it through set_winner / set_loser
+        if($name == 'tourney_team_id')      return $this->set_winner($value);
+        if($name == 'o_tourney_team_id')    return $this->set_loser($value);
+
+        if($name == 'map_id') $name = 'map';
+        parent::__set($name, $value);
+    }
+    
+    /**
+     * Returns a reference to the match this game is in
+     * 
+     * @return BBMatch
+     */
+    protected function &match() {
+        if(is_null($this->match)) return $this->bb->ref(null);
+        return $this->match;
     }
 
     /**
@@ -132,6 +235,8 @@ class BBMatchGame extends BBModel {
 	 * If false is returned, it indicates a draw
      * 
      * @return BBTeam
+     *      false if game is a draw
+     *      null if not yet defined
      */
     public function &winner() {
         //Already cached
@@ -216,6 +321,20 @@ class BBMatchGame extends BBModel {
 
         //Success!
         return true;
+    }
+    /**
+     * Define which team lost this game - alternative to {@link BBMatchGame::set_winner()}
+     * 
+     * @param BBTeam|int $loser      tourney_team_id of the loser (null or false to indicat a draw)
+	 * @param int $winner_score
+	 * @param int $loser_score
+     * @return boolean
+     */
+    public function set_loser($loser, $winner_score = null, $loser_score = null) {
+        if( !is_null($winner = $this->match->toggle_team($loser)) ) {
+            return $this->set_winner($loser_score, $winner_score, $loser);
+        }
+        return false;
     }
 	/**
 	 * Set the winner of this game to null, indicating a draw

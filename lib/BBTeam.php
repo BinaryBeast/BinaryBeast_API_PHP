@@ -15,6 +15,133 @@
  * @version 1.0.0
  * @date 2013-02-05
  * @author Brandon Simmons
+ * 
+ * 
+ * ******* Property documentation *********
+ * @property string $display_name
+ *  <pre>
+ *      The name displayed on the brackets for this participant
+ *  </pre>
+ * 
+ * @property string $country_code
+ *  <b>Default: null</b>
+ *  <b>3 characters (ISO 3166-1 alpha-3)</b>
+ *  <pre>
+ *      This team's country, defined by the 3-character country code
+ *  </pre>
+ * 
+ *  <b>Where to find the country codes:</b>
+ *  <pre>
+ *      Wikipedia: {@link http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3}
+ *      BinaryBeast API: {@link BBCountry::country_search()}
+ *  </pre>
+ * 
+ * @property int $status
+ *  <b>Default: 1 (confirmed)</b>
+ *  <pre>
+ *      The status of this team - Unconfirmed, Confirmed, and Banned
+ *  </pre>
+ * 
+ *  <b>Translate into a string:</b>
+ *      Use the BBHelper library: {@link BBHelper::translate_team_status()}
+ * 
+ *  <b>Values found from BinaryBeast constants:</b>
+ *  <pre>
+ *      Confirmed: {@link BinaryBeast::TEAM_STATUS_CONFIRMED}
+ *      Unconfirmed: {@link BinaryBeast::TEAM_STATUS_UNCONFIRMED}
+ *      Banned: {@link BinaryBeast::TEAM_STATUS_BANNED}
+ *  </pre>
+ * 
+ * @property-read int $wins
+ *  <b>Read Only</b>
+ *  <pre>
+ *      The number of wins this team has in the winners' bracket
+ *      For brackets, it also represents which round he has progressed to
+ *          in the bracket
+ *  </pre>
+ * 
+ * @property-read int $lb_wins
+ *  <b>Read Only</b>
+ *  <pre>
+ *      The number of wins this team has in the losers' bracket
+ *      For brackets, it also represents which round he has progressed to
+ *          in the bracket
+ *  </pre>
+ * 
+ * @property-read int $bronze_wins
+ *  <b>Read Only</b>
+ *  <pre>
+ *      Number of wins this team has in the bronze / 3rd place bracket
+ *  </pre>
+ * 
+ * @property-read int $losses
+ *  <b>Read Only</b>
+ *  <b>Group Rounds Only</b>
+ *  <pre>
+ *      Number of losses this team has in his group
+ *  </pre>
+ * 
+ * @property-read int $draws
+ *  <b>Read Only</b>
+ *  <b>Group Rounds Only</b>
+ *  <pre>
+ *      Number of draws this team has in his group
+ *  </pre>
+ * 
+ * @property-read int $position
+ *  <b>Read Only</b>
+ *  <b>Elimination Brackets Only</b>
+ *  <pre>
+ *      The team's starting position in the winner brackets
+ *  </pre>
+ * 
+ * @property string $notes
+ *  <pre>
+ *      This is a special value that could take a while to explain.. but in short:
+ * 
+ *      It's a special hidden value that allows developers to store custom data.. for example you could store
+ *          a json encoded string that stores some data about this team that's specific to your site, like
+ *          the local user_id, or his local email address. etc etc
+ *  </pre>
+ * 
+ * @property string $network_display_name
+ *  <pre>
+ *      If your tournament is using a game that is associated with a network (like sc2 => bnet2),
+ * 
+ *      This is the value you can use to define his character code / aka his in-game name
+ * 
+ *      Same goes for steam, xbox live, etc etc
+ *  </pre>
+ * 
+ * @property BBTournament $tournament
+ *  <b>Alias for {@link BBTeam::tournament()}</b>
+ *  <pre>
+ *      The tournament this team is in
+ *  </pre>
+ *  <b>NULL returned if created from BinaryBeast::team() without running {@link BBTeam::init()}</b>
+ * 
+ * @property BBMatch $match
+ *  <b>Alias for {@link BBTeam::match()}</b>
+ *  <pre>
+ *      If this team has an opponent waiting, this method can be used to get the
+ *          BBMatch object for the match, so that it can be reported
+ *  </pre>
+ *  <b>NULL if no match available</b>
+ * 
+ * @property BBTeam $opponent
+ *  <b>Alias for {@link BBTeam::opponent()}</b>
+ *  <pre>
+ *      the BBTeam object of this team's current opponent
+ *  </pre>
+ *  <b>NULL return means the team doesn't have an opponent yet</b>
+ *  <b>FALSE return means the team has been eliminated</b>
+ * 
+ * @property BBTeam $eliminated_by
+ *  <b>Alias for {@link BBTeam::eliminated_by()}</b>
+ *  <pre>
+ *      the BBTeam object of the team that eliminated this team, if applicable
+ *  </pre>
+ *  <b>FALSE return means the team has not yet been eliminated</b>
  */
 class BBTeam extends BBModel {
 
@@ -76,33 +203,19 @@ class BBTeam extends BBModel {
 	protected $eliminated_by;
 
     /**
-     * Default values for a new participant, also a useful reference for developers
+     * Default values for a new team
      * @var array
      */
     protected $default_values = array(
-        //The name displayed on the brackets for this participant
         'display_name'                          => 'New Participant',
-        //3 character ISO CountryCode, use $bb->country_search([$filter]) for values
         'country_code'                          => null,
-        //The initial status of this team, see BinaryBeast::TEAM_STATUS_* for values
         'status'                                => BinaryBeast::TEAM_STATUS_CONFIRMED,
-        /**
-         * This is a special value that could take a while to explain.. but in short:
-         * It's a special hidden value that allows developers to store custom data.. for example you could store
-         * a json encoded string that stores some data about this team that's specific to your site, like
-         * his local user_id, or his local email address. etc etc
-         */
         'notes'                                 => null,
-        /**
-         * If your tournament is using a game that is associated with a network (like sc2 => bnet2),
-         * This is the value you can use to define his character code / aka his in-game name
-         * Same goes for steam, xbox live, etc etc
-         */
         'network_display_name'                  => null,
     );
 
     //Values that developers aren't allowed to change
-    protected $read_only = array('players');
+    protected $read_only = array('players', 'wins', 'lb_wins', 'losses', 'draws', 'bronze_wins', 'position');
 
     /**
      * Array of players within this team (only for tours with team_mode > 1, aka only for team games)
@@ -134,6 +247,21 @@ class BBTeam extends BBModel {
                 }
             }
         }
+    }
+    
+    /**
+     * Overloaded to allow setting the status value - so we can intercept with the appropriate
+     *  status method (confirm() unconfirm() ban())
+     * @param string $name
+     * @param mixed $value
+     */
+    public function __set($name, $value) {
+        if($name == 'status') {
+            if($value == -1) return $this->ban();
+            if($value == 0) return $this->unconfirm();
+            if($value == 1) return $this->confirm();
+        }
+        parent::__set($name, $value);
     }
 
 	/**
@@ -247,7 +375,7 @@ class BBTeam extends BBModel {
 	 * If this team has been eliminated, this method will return the BBTeam object
 	 *	of the team that eliminated it
 	 * 
-	 * @return BBTeam
+	 * @return BBTeam - false if the team hasn't been eliminated
 	 */
 	public function &eliminated_by() {
 		if(!is_null($this->eliminated_by) || $this->eliminated_by === false) {
@@ -259,12 +387,35 @@ class BBTeam extends BBModel {
 
 		return $this->eliminated_by;
 	}
+    
+    /**
+     * Overloaded so that we can invoke reset_opponents() when a reload is required
+     * @return self
+     */
+    public function &reload() {
+        $this->reset_opponents();
+        return parent::reload();
+    }
+
+    /**
+     * Overload BBModel's reset() so we can also 
+     *  reset any cached opponent / match data
+     * 
+     * This is important, since when reportin wins, reload() is called, which calls
+     *      reset() - so we need to make sure that we honor the reaload() and re-query for
+     *      opponent / eliminated_by etc
+     */
+    public function reset() {
+        parent::reset();
+        $this->reset_opponents();
+    }
 
 	/**
 	 * If a match is reported, this method can be called to clear any
 	 *		cached opponent results this team may have saved
 	 */
 	public function reset_opponents() {
+        //Assign to a new reference, so that we're not changing the original team value in Tournament::$teams
         $this->opponent         = &$this->bb->ref(null);
         $this->match            = &$this->bb->ref(null);
         $this->eliminated_by    = &$this->bb->ref(null);

@@ -27,10 +27,13 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
     
     /** @var BinaryBeast */
     protected $bb;
+    /** @var BinaryBeast */
+    protected static $bb_static;
 
     function __construct($name = NULL, array $data = array(), $dataName = '') {
         global $bb;
         $this->bb = &$bb;
+        if(is_null(self::$bb_static)) self::$bb_static = &$this->bb;
 
         parent::__construct($name, $data, $dataName);
     }
@@ -177,8 +180,31 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
         self::assertTrue($value > 0);
     }
     public static function assertArraySize($array, $size) {
-        $this->assertTrue(is_array($array));
-        $this->assertTrue(sizeof($array) == $size, "Array size $size expected, " . sizeof($array) . ' found');
+        self::assertTrue(is_array($array));
+        self::assertTrue(sizeof($array) == $size, "Array size $size expected, " . sizeof($array) . ' found');
+    }
+    public static function assertArrayContains($array, $search) {
+        self::assertTrue(is_array($array));
+        self::assertTrue(in_array($search, $array));
+    }
+    public static function assertArrayNotContains($array, $search) {
+        self::assertTrue(is_array($array));
+        self::assertFalse(in_array($search, $array));
+    }
+
+    public static function AssertTeamValueExternally($team, $key, $value) {
+        if($team instanceof BBTeam) $team = $team->id;
+        self::assertInstanceOf('BBTeam', $team = self::$bb_static->team($team));
+        //
+        if(is_null($value)) self::assertNull($team->$key);
+        else                self::assertEquals($value, $team->$key);
+    }
+    public static function AssertTournamentValueExternally($tourney, $key, $value) {
+        if($tourney instanceof BBTournament) $tourney = $tourney->id;
+        self::assertInstanceOf('BBTournament', $tourney = self::$bb_static->tournament($tourney));
+        //
+        if(is_null($value)) self::assertNull($tourney->$key);
+        else                self::assertEquals($value, $tourney->$key);
     }
 }
 

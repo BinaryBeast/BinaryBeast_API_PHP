@@ -170,8 +170,8 @@ class BBHelper {
      */
     public static function get_group_size(BBTournament &$tournament) {
         //Just grab a list of confirmed team ids, and count how many we get
-        $confirmed_teams = $tournament->confirmed_team_ids();
-        $teams = sizeof($confirmed_teams);
+        $confirmed_ids = $tournament->confirmed_teams(true);
+        $teams = sizeof($confirmed_ids);
 
         //Derp
         if($tournament->group_count == 0) return 0;

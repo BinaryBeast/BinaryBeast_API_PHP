@@ -3,29 +3,9 @@
 /**
  * Entry point for the BinaryBeast PHP API Library
  * 
- * *********************** READ ME! ***********************
- * 
- * Developers: If you want to take advantage of the BBCache library, you must
- *      set a few things up first:
- * 
- *      1) Make sure that your PHP installation has PDO_{your-database-library} available
- *          For MySQL, you need PDO_MYSQL
- *          For Postgres, you need PDO_PGSQL
- *          etc, etc
- *      2) You must define the values in the BBCache::config array (lib/BBCache.php)
- * 
- * 
- * And that's all you have to do - as long as the values you set were valid, 
- *  BBCache will handle everything for you autmoatically - each BBModel class
- *  has a public TTL constants that BBCache uses when creating the cache, and
- *  offers methods for manually clearing them too
- * 
- * 
- * I HIGHLY recommend you take advantage of this, as it will drastically cut down
- *  on the number of API requests that this library is forced to make, which 
- *  means faster execution for you, and less burden on our API
- * 
- * *********************** READ ME! ***********************
+ * <b>Important note for developers!</b><br />
+ * <b>You MUST define the configuration values before using this library</b><br />
+ * <b>Configuration is saved in {@link BBConfig.php}</b>
  * 
  * This is the 3rd release of our public library written in PHP.  The biggest change from the 
  * previous being that it now takes on a more object-oriented approach in exchange for
@@ -64,10 +44,63 @@
  *   http://www.opensource.org/licenses/mit-license.php
  *   http://www.gnu.org/licenses/gpl.html
  * 
- * 
  * @version 3.0.0
- * @date 2013-02-04
+ * @date 2013-03-10
  * @author Brandon Simmons <contact@binarybeast.com>
+ * 
+ * 
+ * @property BBTournament $tournament
+ * <b>Alias for {@link BinaryBeast::tournament()}</b><br />
+ * <pre>
+ *  Returns a new BBTournamament object
+ *  The recommended use of this would be loading tournament lists, without
+ *      having to handle the $tournament object directly
+ *  {@example $my_tournaments = $bb->tournament->list_my()}
+ * </pre>
+ * 
+ * @property BBTeam $team
+ * <b>Alias for {@link BinaryBeast::team()}</b><br />
+ *  Returns a new BBTeam object
+ * 
+ * @property BBRound $round
+ * <b>Alias for {@link BinaryBeast::round()}</b><br />
+ *  Returns a new BBRound object
+ * 
+ * @property BBMatch $match
+ * <b>Alias for {@link BinaryBeast::match()}</b><br />
+ *  Returns a new BBMatch object
+ * 
+ * @property BBMatchGame $match_game
+ * <b>Alias for {@link BinaryBeast::match_game()}</b><br />
+ *  Returns a new BBMatchGame object
+ * 
+ * @property BBMap $map
+ * <b>Alias for {@link BinaryBeast::map()}</b><br />
+ *  Returns a BBMap object, that you can use to search for maps and map_ids
+ * 
+ * @property BBCountry $country
+ * <b>Alias for {@link BinaryBeast::country()}</b><br />
+ *  Returns a BBCountry object, that you can use to search for countries and country_codes
+ * 
+ * @property BBGame $game
+ * <b>Alias for {@link BinaryBeast::game()}</b><br />
+ *  Returns a BBGame object, that you can use to search for games and game_codes
+ * 
+ * @property BBRace $race
+ * <b>Alias for {@link BinaryBeast::race()}</b><br />
+ *  Returns a BBRace object, that you can use to search for races and race_ids
+ * 
+ * @property BBLegacy $legacy
+ * <b>Alias for {@link BinaryBeast::legacy()}</b><br />
+ *  Returns the BBLegacy class - that's used to execute the old wrapper methods that were provided in earlier versions of this library
+ * 
+ * @property BBCache $cache
+ * <b>Alias for {@link BinaryBeast::cache()}</b><br />
+ *  Returns the BBCache class, which is used to save and retrieve API responses from a local database, to cut down on API calls
+ * 
+ * 
+ * 
+ * 
  */
 class BinaryBeast {
 
@@ -136,7 +169,7 @@ class BinaryBeast {
         'BBTournament'  => array('BBTeam', 'BBRound', 'BBMatch'),
         'BBMatch'       => array('BBMatchGame')
     );
-    
+
     /**
      * The first time this class is instantiated, we'll auto-load 
      * some libraries, but skip that step if another instance is created
@@ -148,6 +181,13 @@ class BinaryBeast {
      * to return null in &__get, so we use $bb->ref() to set this value and return it
      */
     private $ref = array();
+
+    /**
+     * Object that stores our application-specific configuration values
+     * @var BBConfiguration
+     */
+    private static $config;
+    
 
     /**
      * A few constants to make a few values a bit easier to read / use
@@ -222,9 +262,6 @@ class BinaryBeast {
      * @param string		Optional: your api_key
      */
     function __construct($api_key = null) {
-        //Cache the api key
-        $this->api_key = $api_key;
-
         /**
          * Make sure this server supports json and cURL
          * Static because there's no point in checking for each instantiation
@@ -233,6 +270,9 @@ class BinaryBeast {
 
         //Execute the static "constructor", but only for the first instantiation
         if(self::$first) self::init($this);
+
+        //Cache the api key
+        $this->api_key = $api_key;
     }
 
     /**
@@ -248,6 +288,7 @@ class BinaryBeast {
      * @return void
      */
     private static function init(&$bb) {
+        $bb->load_library('BBConfiguration');
         $bb->load_library('BBHelper');
         $bb->load_library('BBSimpleModel');
         $bb->load_library('BBModel');
@@ -653,7 +694,7 @@ class BinaryBeast {
     }
     /**
      * Returns a cached instance of BBLegacy, for calling old 
-     *  service wrappers that were defined in version 2.7.2 of this API Library
+     *  service wrappers that were defined in version 2.7.5 of this API Library
      * 
      * @return BBLegacy
      */

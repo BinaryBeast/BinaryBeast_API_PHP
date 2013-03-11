@@ -17,6 +17,7 @@ class BinaryBeastTest extends bb_test_case {
 
     protected function setUp() {
         $this->object = &$this->bb;
+        $tour = $this->object->tournament();
     }
 
     /**
@@ -141,5 +142,22 @@ class BinaryBeastTest extends bb_test_case {
     public function test_ref() {
         //Make sure multiple references are independent etc
         $this->assertTrue(false, 'implement this');
+    }
+    
+    /**
+     * Test to make sure that allowing __get to call any method can't result
+     *  in opening up too much to developers
+     */
+    public function test_malicious() {
+        $this->assertTrue(false, 'implement this');
+    }
+    
+    /**
+     * Test to make sure that BBModels do not allow
+     *  loading data from a specific ID, if it already had an ID and you are
+     *  specifying a new one
+     */
+    public function test_load_different_id() {
+        $this->assertTrue(false, 'Implement this - also move it to a BBmodel test');
     }
 }

@@ -10,6 +10,50 @@
  * @version 1.0.0
  * @date 2013-02-03
  * @author Brandon Simmons
+ * 
+ * 
+ * ******* Property documentation *********
+ * @property int $best_of
+ *  <b>Default: 1</b>
+ *  <pre>
+ *      Best of value for this round
+ *      best_of 1 means first team to win one game wins the match
+ *      best_of 3 means first team to win 2 two games wins the match
+ *      {@link BBRound::$wins_needed}
+ *  </pre>
+ * 
+ * @property-read int $wins_needed
+ *  <b>Read Only</b>
+ *  <pre>
+ *      The number of wins a participant to win a match, based on the value of best_of
+ *      Simple formula of ($best_of + 1) / 2
+ *      {@link BBRound::$best_of}
+ *  </pre>
+ * 
+ * @property string|int $map
+ *  <pre>
+ *      The first map in this round
+ *      You can define this as the map_id integer, or any map name string
+ * 
+ *      There are plans to extend this functionality, to allow you to define
+ *          each map in the best_of series for each round
+ *          unfortunately for now, you can only define the first map
+ * 
+ *      Using a map_id has many benefits, like image preview / stat tracking etc
+ *          so if you want to use a map_id, you can use {@link BBMap::game_search()}
+ *  </pre>
+ * 
+ * @property-read int $map_id
+ *  <b>Read Only</b>
+ *  <pre>
+ *      Value set when loading the round - the unique int id for the value of $map
+ *  </pre>
+ * 
+ * @property string $date
+ *  <pre>
+ *      A description of when this round should start
+ *      For the moment this is a simple unformated string, it does not even validate the format.
+ *  </pre>
  */
 class BBRound extends BBModel {
 
@@ -36,7 +80,7 @@ class BBRound extends BBModel {
      * so we'll store them separately
      * 
      * We're storing a reference to the actual BBTouranment that this round belongs to,
-     * so we can just use that to determine the tourney_id
+     *  so we can just use that to determine the tourney_id
      */
     public $bracket;
     public $round;
@@ -47,17 +91,9 @@ class BBRound extends BBModel {
      * @var array
      */
     protected $default_values = array(
-        //int:      Best of value for this round (ie best of 1 (1), or best of 3 (3)
         'best_of'           => 1,
-
-        //int:      id of the map you'd like to use for this round (use $bb->list_maps([filter]) for map ids and names)
-        //Note: You cannot use maps id's from other games, the map you provide MUST be associated with this tournament's game
         'map_id'            => null,
-
-        //string: Optionally you can define the actual map name instead of the map_id - if you happen to spell it the same, BB will associate it with the correct map_id
         'map'               => null,
-
-        //string: For the moment this is a simple unformated string, it does not even validate the format.  This should reflect when this particular round should be played
         'date'              => null,
     );
 
@@ -87,13 +123,16 @@ class BBRound extends BBModel {
      * 
      * @return void
      */
-    function __set($name, $value) {
+    public function __set($name, $value) {
         //Make sure that when setting best_of, that it's a valid value
         if($name == 'best_of') {
 			$value = BBHelper::get_best_of($value);
 			//Store directly into $data - if we reset, it'll be overwritten automatically
 			$this->data['wins_needed'] = BBHelper::get_wins_needed($value);
+            return;
 		}
+        //setting map_id - change map instead
+        if($name == 'map_id') $name = 'map';
 
         //Let the default method handle the rest
         parent::__set($name, $value);

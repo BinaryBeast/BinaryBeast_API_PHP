@@ -18,11 +18,17 @@ class BBMatchTest extends bb_test_case {
     protected static $tournament_with_groups;
 
     /**
+     * Store an array of all tournaments created, so that we can delete them after
+     *  all tests are complete
+     * @var BBTournament[]
+     */
+    protected static $tournaments = array();
+
+    /**
      * Attempt to delete any tournaments we've created
      */
     function __destruct() {
-        if(!is_null(self::$tournament)) self::$tournament->delete();
-        if(!is_null(self::$tournament_with_groups)) self::$tournament_with_groups->delete();
+        foreach(self::$tournaments as $tournament) $tournament->delete();
     }
 
     /**
@@ -70,6 +76,7 @@ class BBMatchTest extends bb_test_case {
         $tour->save();
         $tour->start();
 
+        self::$tournaments[] = $tour;
         if($groups) self::$tournament_with_groups = $tour;
         else        self::$tournament = $tour;
     }
@@ -94,8 +101,25 @@ class BBMatchTest extends bb_test_case {
             $this->init_tournament($groups);
             return $this->set_object();
         }
-        $this->object = &$matches[0];
-        $this->object->reset();
+        $this->object = null;
+        foreach($matches as &$match) {
+            if(!($match instanceof BBMatch)) {
+                /**
+                 * Somewhere along the way, one of the matches is being set to NULL,
+                 *  and not being removed - wtf
+                 */
+                var_dump(['gay' => $matches]); die();
+            }
+            if($match->is_new() && !$match->changed) {
+                //success!
+                $this->object = &$match;
+                return;
+            }
+        }
+
+        //Didn't find an untouched match - grab a new tournament etc and try again
+        $this->init_tournament();
+        return $this->set_object();
     }
     /**
      * Returns a BBTeam object KNOWN not to be part of this match
@@ -450,6 +474,8 @@ class BBMatchTest extends bb_test_case {
      */
     public function test_report_with_unsaved_round() {
         $round = $this->object->round();
+        $round->best_of = 3;
+        $this->assertTrue($round->save());
         $round->best_of = 15;
         $this->object->set_winner($this->object->team());
         $this->assertFalse($this->object->report());

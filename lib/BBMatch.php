@@ -12,6 +12,93 @@
  * @version 1.0.0
  * @date 2013-02-10
  * @author Brandon Simmons
+ * 
+ * ******* Property documentation *********
+ * @property int $tourney_team_id
+ *  <pre>
+ *      The ID of the match's overall winner
+ *  </pre>
+ * 
+ * @property int $o_tourney_team_id
+ *  <pre>
+ *      The ID of the match's overall loser
+ *  </pre>
+ * 
+ * @property-read int $bracket
+ *  <b>Read Only</b>
+ *  <pre>
+ *      Numeric value of the bracket is in
+ *      You can use {@link BBHelper::get_bracket_label()} to get the friendly translation
+ *  </pre>
+ * 
+ * @property string $notes
+ *  <pre>
+ *      General notes / description on the match
+ *  </pre>
+ * 
+ * @property int $score
+ *  <pre>
+ *      Winner's score - using this is NOT recommended however
+ *  </pre>
+ *  <b>Please use {@link BBMatch::game()} to defined more detailed results</b>
+ * 
+ * @property int $o_score
+ *  <pre>
+ *      Loser's score - using this is NOT recommended however
+ *  </pre>
+ *  <b>Please use {@link BBMatch::game()} to defined more detailed results</b>
+ * 
+ * @property boolean $draw
+ *  <b>Group Rounds Only</b>
+ *  <pre>
+ *      Simple boolean to indicate whether or not this match resulted in a draw
+ *  </pre>
+ * 
+ * @property BBMatchGame[] $games
+ *  <b>Alias for {@link BBMatch::games()}</b>
+ *  <pre>
+ *      an array of games in this match
+ *  </pre>
+ * 
+ * @property BBRound $round
+ *  <b>Alias for {@link BBMatch::round()}</b>
+ *  <pre>
+ *      The BBRound object defining the format for this match
+ *      Note: null may be returned if for some reason we can't determine
+ *          which round within the bracket this match is
+ *  </pre>
+ * 
+ * @property BBTeam $team
+ *  <b>Alias for {@link BBMatch::team()}</b>
+ *  <pre>
+ *      BBTeam object for the first player in this match
+ *  </pre>
+ * 
+ * @property BBTeam $team2
+ *  <b>Alias for {@link BBMatch::team2()}</b>
+ *  <pre>
+ *      BBTeam object for the second player in this match
+ *  </pre>
+ * 
+ * @property BBTeam $opponent
+ *  <b>Alias for {@link BBMatch::opponent()}</b>
+ *  <pre>
+ *      BBTeam object for the second player in this match
+ *  </pre>
+ * 
+ * @property BBTeam $winner
+ *  <b>Alias for {@link BBMatch::winner()}</b>
+ *  <pre>
+ *      BBTeam object for the winner of the match
+ *  </pre>
+ *  <b>Returns NULL if set_winner hasn't been called</b>
+ *  <b>Returns FALSE if match was a draw</b>
+ * 
+ * @property BBTournament $tournament
+ *  <b>Alias for {@link BBMatch::tournament()}</b>
+ *  <pre>
+ *      The tournament this match is in
+ *  </pre>
  */
 class BBMatch extends BBModel {
 
@@ -22,7 +109,6 @@ class BBMatch extends BBModel {
     const SERVICE_DELETE = 'Tourney.TourneyMatch.Delete';
 	//
 	const SERVICE_UPDATE_GAMES  = 'Tourney.TourneyMatchGame.ReportBatch';
-
 
     //Cache setup (cache for 10 minutes)
     const CACHE_OBJECT_TYPE		= BBCache::TYPE_TOURNAMENT;
@@ -46,7 +132,7 @@ class BBMatch extends BBModel {
 
     /**
      * Public array of games within this match
-     * @var array<BBMatchGame>
+     * @var BBMatchGame[]
      */
     private $games = array();
 
@@ -75,35 +161,21 @@ class BBMatch extends BBModel {
     private $opponent;
 
     /**
-     * Default values for a new tournament
-     * @see BinaryBeast::update()
+     * Default values for a new match
      * @var array
      */
     protected $default_values = array(
-        //tourney_team_id of the match's overall winner
         'tourney_team_id'           => null,
-
-        //tourney_team_id of the matche's overall loser
         'o_tourney_team_id'         => null,
-
-        //Integer - Which bracket was this in?
         'bracket'                   => BinaryBeast::BRACKET_WINNERS,
-
-        //General notes / description on the match
         'notes'                     => null,
-		
-		//Winner's score - using this is NOT recommended however, please using $match->game to defined more detailed results
 		'score'						=> 1,
-
-		//Loser's score - using this is NOT recommended however, please using $match->game to defined more detailed results
 		'o_score'					=> 0,
-
-        //Simple boolean to indicate a draw - cannot be set directly, use set_draw() instead
         'draw'                      => false
     );
 
     //Values sent from the API that I don't want developers to accidentally change
-    protected $read_only = array('team', 'opponent', 'tourney_team_id', 'o_tourney_team_id', 'draw');
+    protected $read_only = array('team', 'opponent', 'tourney_team_id', 'o_tourney_team_id', 'draw', 'bracket');
 
     /**
      * Import parent tournament class
@@ -147,6 +219,21 @@ class BBMatch extends BBModel {
 
 		//Success! return id for consistency
 		return $this->id;
+    }
+
+    /**
+     * Overload BBModel's __set so we can handle setting team ids, and draw manually
+     * @param string $name
+     * @param mixed $value
+     */
+    public function __set($name, $value) {
+        if($name == 'tourney_team_id')      return $this->set_winner($value);
+        if($name == 'o_tourney_team_id')    return $this->set_loser($value);
+        if($name == 'draw') {
+            if($value != false) return $this->set_draw();
+            return;
+        }
+        parent::__set($name, $value);
     }
 
     /**
@@ -220,12 +307,14 @@ class BBMatch extends BBModel {
      * BBModal handle the rest
      * 
      * @param mixed $id     If you did not provide an ID in the instantiation, they can provide one now
+     * @param array $args   ignored
+     * @param boolean   $skip_cache     Disabled by default - set true to NOT try loading from local cache
      * 
-     * @return boolean - true if result is 200, false otherwise
+     * @return self - false if there was an error loading
      */
-    public function &load($id = null, $args = array()) {
+    public function &load($id = null, $args = array(), $skip_cache = false) {
         //Let BBModal handle this, just pass it extra paramater
-		$result = parent::load($id, array_merge(array('get_round' => true), $args) );
+		$result = &parent::load($id, array_merge(array('get_round' => true), $args), $skip_cache );
 		if(!$result) return $result;
 
 		//If we don't have a tournament, try to load it now
@@ -293,7 +382,7 @@ class BBMatch extends BBModel {
         if(is_null($team) || $team === false) return $this->bb->ref(false);
 
         //use team_in_match to both validate it's a valid team, and to allow using either an id, or a team instance
-        if( ($team = $this->team_in_match($team)) ) {
+        if( ($team = &$this->team_in_match($team)) ) {
             if($team == $this->team())              return $this->opponent();
             else if($team == $this->opponent())     return $this->team();
         }
@@ -434,7 +523,7 @@ class BBMatch extends BBModel {
 	 * @param int $loser_score
      * @return boolean
      */
-    public function set_winner($winner, $winner_score = null, $loser_score = null, $wtf = false) {
+    public function set_winner($winner, $winner_score = null, $loser_score = null) {
         //Only appropriate for new matches
         if(!is_null($this->id)) return $this->set_error('Can\'t use set_winner to change the results of a match, you must unreport() first');
 
@@ -464,6 +553,21 @@ class BBMatch extends BBModel {
 
         return true;
     }
+    /**
+     * Define which team lost this match - uses set_win for the actual work, after "toggling" the team
+     * 
+     * @param BBTeam|int $loser      tourney_team_id of the loser (null or false to indicat a draw)
+	 * @param int $winner_score
+	 * @param int $loser_score
+     * @return boolean
+     */
+    public function set_loser($loser, $winner_score = null, $loser_score = null) {
+        if( !is_null($winner = $this->toggle_team($loser)) ) {
+            return $this->set_winner($loser_score, $winner_score, $loser);
+        }
+        return false;
+    }
+
 	/**
 	 * Define the winner of this match as a draw, aka no one won this match
 	 * 
@@ -551,8 +655,6 @@ class BBMatch extends BBModel {
         }
 
 		//Let BBModel handle this
-        $this->team->opponent();
-        $this->opponent->opponent();
 		$result = parent::save(false, array('tourney_id' => $this->tournament->id));
 
 		//Report all of the game details
@@ -560,12 +662,15 @@ class BBMatch extends BBModel {
 			if(!$this->save_games()) return false;
 		}
 
-		//Wipe all tournament cache, and tournament opponent cache
+		//Wipe all tournament cache, and tournament opponent cache / wins lb_wins losses draws bronze_draws etc
 		$this->tournament->clear_id_cache();
-		$this->team->reset_opponents();
-		$this->opponent->reset_opponents();
-
-        //Tell the touranment that this is no longer an open match
+        $this->team->reload();
+        $this->opponent->reload();
+        
+        /**
+         * Tell the touranment that this is no longer an open match
+         * But specify preserve to avoid this object becoming null
+         */
         $this->tournament->remove_child($this);
 
 		//Return the save() result
@@ -677,10 +782,11 @@ class BBMatch extends BBModel {
      * 
      * @param int|BBTeam $team
      * @return int
+     *  null indicates that the $team provided was invalid
      */
     public function get_game_wins($team) {
         if(!($team = &$this->team_in_match($team))) {
-            return 0;
+            return null;
         }
 
         $games = &$this->games();
@@ -768,6 +874,7 @@ class BBMatch extends BBModel {
      * @param int               $match_winner_score     Optionally define the match winner's score for this game
      * @param int               $match_loser_score      Optionally define the match loser's score for this game
      * @return BBMatchGame
+     *      Null if there are already enough games to satisfy the $round->best_of value
      */
     public function &game($winner = null, $match_winner_score = null, $match_loser_score = null) {
 		//Make sure we have any existing games first
@@ -811,7 +918,12 @@ class BBMatch extends BBModel {
      * @param type $children
      */
     public function remove_child(BBModel &$child, &$children = null, $preserve = false) {
-        if($child instanceof BBMatchGame) return parent::remove_child($child, $this->games());
+        if($child instanceof BBMatchGame) {
+            if(!is_null($game = $this->get_child($child, $this->games())) ) {
+                return parent::remove_child($game, $this->games(), $preserve);
+            }
+        }
+        return false;
     }
 
     /**
