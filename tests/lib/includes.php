@@ -208,4 +208,4 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
     }
 }
 
-?>  
+?> 

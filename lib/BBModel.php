@@ -163,8 +163,8 @@ class BBModel extends BBSimpleModel {
         $this->data[$key]       = $value;
         $this->new_data[$key]   = $value;
 
-        //Re-calculated whether or not we have changed (the value may have been set back to the original state for all we know)
-        $this->calculate_changed();
+        //Flag changes in this object, and the parent if appropriate
+        $this->on_change();
     }
     /**
      * Update a current value without flagging changes, just direclty change it
@@ -351,7 +351,7 @@ class BBModel extends BBSimpleModel {
         $this->changed = false;
 
         //Unflag child-changes in parent
-        $this->on_change(false);
+        $this->on_change();
     }
 
     /**
@@ -372,7 +372,7 @@ class BBModel extends BBSimpleModel {
         $this->import_values($this->get_sync_values());
 
 		//Reset $changed flags
-		$this->on_change(false);
+		$this->on_change();
     }
 
     /**
@@ -732,7 +732,7 @@ class BBModel extends BBSimpleModel {
         $this->changed = true;
 
         //Propogate up, flag all parents of parents of parents etc etc
-        $this->on_change();
+        $this->on_change(false);
     }
     /**
      * Removes any references to a child class (team/round for tournaments.. etc), so we know that
@@ -783,8 +783,10 @@ class BBModel extends BBSimpleModel {
         if($child instanceof BBModel) {
             //See if the object itself is in our aray
             if(($key = array_search($child, $children)) === false) {
-                //We have no matching instance, try comparing ids in case our local teams have changed
-                $key = array_search($child->id, $ids);
+                //We have no matching instance, try comparing ids in case our local teams have changed (but only if we HAVE an ID)
+                if(!is_null($child->id)) {
+                    $key = array_search($child->id, $ids);
+                }
             }
         }
 
@@ -926,20 +928,19 @@ class BBModel extends BBSimpleModel {
      * Called when something changes, so that we can decide
      *  notify parent classes of unsaved changes when appropriate
      * 
-     * @param bool $changed    true by default, set to false for unflagging instead of flagging
+     * @param bool $changed    true by default, set to false to skip notifying the parent class of changes
      * @return void
      */
-    protected function on_change($changed = true) {
+    protected function on_change($flag_parent = true) {
         if($this->orphan_error()) return false;
 
-        //Set the $changed flag
-        if(!$changed)   $this->changed = $this->changed_children_count > 0;
-        else            $this->changed = $changed;
+        //Determine the $changed flag
+        $this->calculate_changed();
 
 		//If we have a parent defined, let them know we either now or no longer have unsaved changes
-        if(!is_null($this->parent)) {
-            if($changed)	$this->parent->flag_child_changed($this);
-            else			$this->parent->unflag_child_changed($this);
+        if(!is_null($this->parent) && $flag_parent) {
+            if($this->changed)	$this->parent->flag_child_changed($this);
+            else                $this->parent->unflag_child_changed($this);
         }
     }
 	/**

@@ -63,18 +63,20 @@ class BBMatchTest extends bb_test_case {
             $team->country_code = $countries[$x];
         }
 
-        //All matches are BO3, finals are BO5
-        $tour->save();
+        //All matches are BO3, bronze are BO5
+        $this->assertID($tour->save());
         $maps = array('Abyssal Caverns', 614, 'Akilon Flats', 71, 'Arid Plateau', 337, 'Backwater Gulch', 225);
         foreach($tour->rounds as &$bracket) {
             foreach($bracket as $x => &$round) {
                 $round->best_of = 3;
                 $round->map = isset($maps[$x]) ? $maps[$x] : null;
+                $this->assertTrue($round->changed);
+                $this->assertTrue($tour->changed);
             }
         }
         $tour->rounds->bronze[0]->best_of = 5;
-        $tour->save();
-        $tour->start();
+        $this->assertID($tour->save());
+        $this->assertTrue($tour->start());
 
         self::$tournaments[] = $tour;
         if($groups) self::$tournament_with_groups = $tour;
@@ -101,15 +103,7 @@ class BBMatchTest extends bb_test_case {
             $this->init_tournament($groups);
             return $this->set_object();
         }
-        $this->object = null;
         foreach($matches as &$match) {
-            if(!($match instanceof BBMatch)) {
-                /**
-                 * Somewhere along the way, one of the matches is being set to NULL,
-                 *  and not being removed - wtf
-                 */
-                var_dump(['gay' => $matches]); die();
-            }
             if($match->is_new() && !$match->changed) {
                 //success!
                 $this->object = &$match;
@@ -224,7 +218,9 @@ class BBMatchTest extends bb_test_case {
      * Tests to make sure game() returns a new BBGame model
      */
     public function test_game() {
+        $this->assertFalse($this->object->changed);
         $this->assertInstanceOf('BBMatchGame', $this->object->game());
+        $this->assertTrue($this->object->changed);
     }
     /**
      * Test to make sure that reset() clears the matche's
@@ -384,24 +380,35 @@ class BBMatchTest extends bb_test_case {
 
     /**
      * Test the accuracy of test_get_game_wins
+     * @group wtf
      */
     public function test_get_game_wins() {
         $winner = &$this->object->opponent();
         $loser  = &$this->object->team();
         $this->assertEquals(0, $this->object->get_game_wins($winner));
 
-        $this->object->game();
+        $this->assertInstanceOf('BBMatchGame', $game1 = $this->object->game());
 
         $this->assertEquals(0, $this->object->get_game_wins($winner));
-        
+
         $this->object->set_winner($winner);
-        $this->object->game();
+        $this->assertInstanceOf('BBMatchGame', $game2 = $this->object->game());
         $this->object->game($loser);
+        $this->assertInstanceOf('BBMatchGame', $game3 = $this->object->game($loser));
+        //
+        var_dump('before');
+        $this->assertNull($winner, $game1->winner());
+        var_dump('zero');
+        $this->assertEquals($winner, $game2->winner());
+        var_dump('one');
+        $this->assertEquals($loser, $game3->winner());
+        var_dump('here');
+        //
         $this->assertEquals(1, $this->object->get_game_wins($winner));
         $this->assertEquals(1, $this->object->get_game_wins($loser));
 
         //Changing a game's winner should change the result
-        $this->object->games[0]->set_winner($loser);
+        $game1->set_winner($loser);
         $this->assertEquals(1, $this->object->get_game_wins($winner));
         $this->assertEquals(2, $this->object->get_game_wins($loser));
         //
@@ -475,7 +482,7 @@ class BBMatchTest extends bb_test_case {
     public function test_report_with_unsaved_round() {
         $round = $this->object->round();
         $round->best_of = 3;
-        $this->assertTrue($round->save());
+        $this->assertID($round->save());
         $round->best_of = 15;
         $this->object->set_winner($this->object->team());
         $this->assertFalse($this->object->report());
@@ -717,35 +724,35 @@ class BBMatchTest extends bb_test_case {
      * Test unreport() on a match that was part of a tournament
      *  phase that is no longer active - group rounds, in a tournament
      *  in active-brackets
+     * @group new
      */
     public function test_unreport_invalid_status() {
         $this->set_object(true);
         
-        $tournament = &$this->object->tournament();
-        $matches = &$tournament->open_matches();
-        $matches_count = sizeof($matches);
-        foreach($matches as $x => &$match) {
-            $name = 'match_' . $x;
-            ${$name} = &$match;
-        }
+        //match is currently from groups - remember it and report it after starting brackets
+        $match = $this->object;
+        $tournament = $match->tournament();
 
-        //Guarantee that both of these teams are included in the brackets
-        $team = &$this->object->team();
-        $team2 = &$this->object->opponent();
+        //quick unrelated ref test
+        $key = array_search($match, $match->tournament->open_matches());
+        $match = null;
+        $this->assertNotNull($this->object);
+        $this->assertNotNull($tournament->open_matches[$key]);
+        $match = $this->object;
+
+        //match should be in group rounds
+        $this->assertEquals(0, $match->bracket);
 
         //This match is from the group rounds
-        $this->assertTrue($tournament->start());
+        $this->assertTrue($match->tournament->start());
 
-        //Loop through our matches until we find one with a team() still in the tournament
-        $match = null;
-        for($x = 0; $x < $matches_count; $x++) {
-            $name = 'match_' . $x;
-            /* @var $match BBMatch */
-            $match = ${$name};
-            if($match->set_winner($match->team())) break;
-            else $match = null;
-        }
+        //The match shoudl no longer be part of the touranment
         $this->assertNotNull($match);
+        $this->assertEquals(0, $match->bracket);
+        $this->assertNull($tournament->match($match));
+        $this->assertNotNull($match);
+
+        //Try reporting now that the brackets have started - it shouldn't let us
         $this->assertFalse($match->report());
     }
     /**

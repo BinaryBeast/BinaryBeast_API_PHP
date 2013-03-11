@@ -39,28 +39,28 @@ final class BBConfiguration {
 
     /**
      * The name of the class used to extend BBTournament 
-     * <b>Filename must be BBTournament.php</b>
+     * <b>Filename must be {$custom_tournament}.php</b>
      * 
      * @var string
      */
-    public $custom_tournament = null;
+    public $custom_tournament = 'LocalTournament';
     /**
      * The name of the class used to extend BBTeam 
-     * <b>Filename must be BBTeam.php</b>
+     * <b>Filename must be {$custom_team}.php</b>
      * 
      * @var string
      */
-    public $custom_team = 'SuperTeam';
+    public $custom_team = 'LocalTeam';
     /**
      * The name of the class used to extend BBMatch 
-     * <b>Filename must be BBMatch.php</b>
+     * <b>Filename must be {$custom_match}.php</b>
      * 
      * @var string
      */
     public $custom_match = null;
     /**
      * The name of the class used to extend BBMatchGame
-     * <b>Filename must be BBMatchGame.php</b>
+     * <b>Filename must be {$custom_match_game}.php</b>
      * 
      * @var string
      */

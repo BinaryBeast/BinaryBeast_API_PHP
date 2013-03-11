@@ -129,7 +129,6 @@ class BBRound extends BBModel {
 			$value = BBHelper::get_best_of($value);
 			//Store directly into $data - if we reset, it'll be overwritten automatically
 			$this->data['wins_needed'] = BBHelper::get_wins_needed($value);
-            return;
 		}
         //setting map_id - change map instead
         if($name == 'map_id') $name = 'map';

@@ -5,7 +5,7 @@
  * 
  * <b>Important note for developers!</b><br />
  * <b>You MUST define the configuration values before using this library</b><br />
- * <b>Configuration is saved in {@link BBConfig.php}</b>
+ * <b>Configuration is saved in {@link lib/BBConfiguration.php}</b>
  * 
  * This is the 3rd release of our public library written in PHP.  The biggest change from the 
  * previous being that it now takes on a more object-oriented approach in exchange for
@@ -97,10 +97,6 @@
  * @property BBCache $cache
  * <b>Alias for {@link BinaryBeast::cache()}</b><br />
  *  Returns the BBCache class, which is used to save and retrieve API responses from a local database, to cut down on API calls
- * 
- * 
- * 
- * 
  */
 class BinaryBeast {
 
@@ -177,17 +173,10 @@ class BinaryBeast {
     private static $first = true;
 
     /**
-     * Really stupid way of getting around the ridiculous error when trying
-     * to return null in &__get, so we use $bb->ref() to set this value and return it
-     */
-    private $ref = array();
-
-    /**
      * Object that stores our application-specific configuration values
      * @var BBConfiguration
      */
     private static $config;
-    
 
     /**
      * A few constants to make a few values a bit easier to read / use
@@ -260,6 +249,8 @@ class BinaryBeast {
      *      $bb->login('name@domain.tld', 'your_password');
      *
      * @param string		Optional: your api_key
+     * 
+     * @return CustomBinaryBeast
      */
     function __construct($api_key = null) {
         /**
@@ -868,10 +859,8 @@ class BinaryBeast {
      * @return mixed
      */
     public function &ref($value) {
-        //Make a new reference each time, to avoid accidentally sharing and then overwriting
-        $key = sizeof($this->ref);
-        $this->ref[$key] = $value;
-        return $this->ref[$key];
+        $ref = $value;
+        return $ref;
     }
 	
 	/**

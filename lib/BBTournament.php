@@ -309,11 +309,13 @@ class BBTournament extends BBModel {
      *          OH NO!!!
      *      }
      * 
-     * @param boolean $ids set true to return array of ids only
+     * @param boolean   $ids set true to return array of ids only
+     * @param array     $args   any additonal arguments to send with the API call
      * 
-     * @return boolean      False if it fails for any reason - it will only return false for API / validation errors, never for an empty array set
+     * @return BBTeam[]
+     *      Null is returned if there was an error with the API request
      */
-    public function &teams($ids = false) {
+    public function &teams($ids = false, $args = array()) {
 
         //Already instantiated
         if(!is_null($this->teams)) {
@@ -331,7 +333,7 @@ class BBTournament extends BBModel {
          * Use BBSimpleModels' listing method, for caching etc
          *  also specify $full to make sure that we get ALL teams if the tournament is active
          */
-		if( ($this->teams = $this->get_list(self::SERVICE_LOAD_TEAMS, array('tourney_id' => $this->tourney_id, 'full' => true)
+		if( ($this->teams = $this->get_list(self::SERVICE_LOAD_TEAMS, array_merge($args, array('tourney_id' => $this->tourney_id, 'full' => true))
 			, 'teams', 'BBTeam')) === false) {
 			$this->set_error('Error loading the teams in this tournament! see error() for details');
             return $this->bb->ref(null);
@@ -823,6 +825,7 @@ class BBTournament extends BBModel {
             //Like team(), we use match() to standardize, in case the input has changed from our cached version
             if(!is_null($match = &$this->match($child))) {
                 return parent::remove_child($child, $this->open_matches(), true);
+                
             }
             return false;
         }
@@ -1264,7 +1267,9 @@ class BBTournament extends BBModel {
 	 */
 	public function &match($team1 = null, $team2 = null) {
         //Could already be in open_matches
-        if($team1 instanceof BBMatch) return $this->get_child($team1, $this->open_matches());
+        if($team1 instanceof BBMatch) {
+            return $this->get_child($team1, $this->open_matches());
+        }
 
 		//If asking for an existing match, load that now
 		if(is_null($team2) && is_numeric($team1)) {
