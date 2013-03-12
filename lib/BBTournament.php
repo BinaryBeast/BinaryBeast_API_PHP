@@ -1125,7 +1125,6 @@ class BBTournament extends BBModel {
     public function start($seeding = 'random', $order = null) {
         //Use BBHelper to run verify that this touranment is ready to start
         if(is_string($error = BBHelper::tournament_can_start($this))) {
-            //If it returned a string, that means there's an error to set
             return $this->set_error($error);
         }
 

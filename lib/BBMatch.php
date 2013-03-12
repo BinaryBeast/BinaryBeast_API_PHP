@@ -175,7 +175,7 @@ class BBMatch extends BBModel {
     );
 
     //Values sent from the API that I don't want developers to accidentally change
-    protected $read_only = array('team', 'opponent', 'tourney_team_id', 'o_tourney_team_id', 'draw', 'bracket');
+    protected $read_only = array('team', 'opponent', 'draw', 'bracket');
 
     /**
      * Import parent tournament class
@@ -285,7 +285,7 @@ class BBMatch extends BBModel {
     /**
      * Returns an array of BBGames in this match
      * 
-     * @return array
+     * @return BBMatchGame[]
      */
     public function &games() {
 		//Try loading first
@@ -375,7 +375,7 @@ class BBMatch extends BBModel {
      *  part of this match
      * 
      * @param BBTeam|int    $team
-     * @return BBTeam   - null if input invalid
+     * @return BBTeam|null   - null if input invalid
      */
     public function &toggle_team($team) {
         //If input is false, assume it's from a draw and return false in kind
@@ -621,21 +621,24 @@ class BBMatch extends BBModel {
     public function report($strict = false) {
         //Already reported
         if(!is_null($this->id)) {
+            var_dump('here 0');
             return $this->set_error('This match has already been reported, please use save() if you wish to change the details');
         }
 
         //No winner defined
         if(!$this->winner_set) {
+            var_dump('here 1');
             return $this->set_error('Please define a winner before reporting ($team->set_winner($winning_team)) You can refer to $match->team and $match->opponent for participant details');
         }
 
         /**
          * Do a quick last check to make sure that this match is still in the touranment's list of open_matches,
-         *  if it' snot, it could be caused by a number of things - like being reported elsewhere, or the tournament advancing
+         *  if it's not, it could be caused by a number of things - like being reported elsewhere, or the tournament advancing
          *  to the next stage etc
          */
         $tournament = &$this->tournament();
         if(!in_array($this, $tournament->open_matches())) {
+            var_dump('here 1');
             return $this->set_error('This match is no longer listed as an open match for this tournament, perhaps it was reported elsewhere, or the tournament has begun the next stage');
         }
 
@@ -644,7 +647,10 @@ class BBMatch extends BBModel {
         $round = &$this->round();
         if(!is_null($round)) {
             //Stop now - round has to be saved first
-            if($round->changed) return $this->set_error('The round for this match has unsaved changes, please save them first (either with $round->save(), $tournament->save_rounds, or $tournament->save()');
+            if($round->changed) {
+                var_dump('here 2');
+                return $this->set_error('The round for this match has unsaved changes, please save them first (either with $round->save(), $tournament->save_rounds, or $tournament->save()');
+            }
 
             //Strict - validate the winner has enough game wins first
             if($strict) {
@@ -656,17 +662,20 @@ class BBMatch extends BBModel {
 
 		//Let BBModel handle this
 		$result = parent::save(false, array('tourney_id' => $this->tournament->id));
+        if(!$result) {
+            var_dump(['raw' => parent::save(true, array('tourney_id' => $this->tournament->id))]);
+        }
 
 		//Report all of the game details
 		if($result) {
-			if(!$this->save_games()) return false;
+			if(!$this->save_games()) return $this->set_error('Error saving game details');
 		}
 
 		//Wipe all tournament cache, and tournament opponent cache / wins lb_wins losses draws bronze_draws etc
 		$this->tournament->clear_id_cache();
         $this->team->reload();
         $this->opponent->reload();
-        
+
         /**
          * Tell the touranment that this is no longer an open match
          * But specify preserve to avoid this object becoming null
@@ -674,6 +683,7 @@ class BBMatch extends BBModel {
         $this->tournament->remove_child($this);
 
 		//Return the save() result
+        var_dump('here 3');
 		return $result;
     }
 	/**
@@ -781,7 +791,7 @@ class BBMatch extends BBModel {
      * Get the number of games that the provided team has won
      * 
      * @param int|BBTeam $team
-     * @return int
+     * @return int|null
      *  null indicates that the $team provided was invalid
      */
     public function get_game_wins($team) {
@@ -789,11 +799,13 @@ class BBMatch extends BBModel {
             return null;
         }
 
-        $games = &$this->games();
         $wins = 0;
-        foreach($games as &$game) {
-            if($game->winner() == $team) ++$wins;
+        foreach($this->games() as $game) {
+            if($game->winner() == $team) {
+                ++$wins;
+            }
         }
+
         return $wins;
     }
 
@@ -885,7 +897,7 @@ class BBMatch extends BBModel {
 
         //Make sure game_number is within bounds of best_of (only if able to determine round format)
         if(!is_null($round = &$this->round())) {
-            if($game_number > $round->best_of) {
+            if($game_number >= $round->best_of) {
                 $this->set_error("Attempted to set details for game $game_number in a best of {$round->best_of} series");
                 return $this->bb->ref(null);
             }

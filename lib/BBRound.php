@@ -75,14 +75,16 @@ class BBRound extends BBModel {
     private $tournament = null;
 
     /**
-     * A round's primary key happens to be a combination of
-     * the tournament id, bracket, and round
-     * so we'll store them separately
+     * The bracket this round belongs to
      * 
-     * We're storing a reference to the actual BBTouranment that this round belongs to,
-     *  so we can just use that to determine the tourney_id
+     * @var int
      */
     public $bracket;
+    /**
+     * The round number this object represents with $bracket
+     * 
+     * @var int
+     */
     public $round;
 
     /**

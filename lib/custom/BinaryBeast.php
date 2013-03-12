@@ -28,6 +28,6 @@
  * @method LocalTeam team(int $user_id)
  *  Returns a new BBTeam object, customized by LocalTeam - based on a local user_id
  */
-class CustomBinaryBeast {}
+class CustomBinaryBeast extends BinaryBeast {}
 
 ?>

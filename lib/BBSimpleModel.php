@@ -97,9 +97,6 @@ class BBSimpleModel {
      * @return object
      */
     protected function call($svc, $args = null, $ttl = null, $object_type = null, $object_id = null) {
-        //First, clear out any errors that may have existed before this call
-        $this->clear_error();
-
         //Use BinaryBeast library to make the actual call
         $response = $this->bb->call($svc, $args, $ttl, $object_type, $object_id);
 
@@ -139,6 +136,7 @@ class BBSimpleModel {
     protected function set_error($error) {
         //Send to the main BinaryBeast API Library, and locally save whatever is sent back (a standardized format)
         $this->last_error = $this->bb->set_error($error, get_called_class());
+        var_dump(['last_error' => $this->last_error, 'wtf_history' => $this->bb->error_history]);
 
         //Allows return this directly to return false, saves a line of code - don't have to set_error then return false
         return false;

@@ -143,7 +143,7 @@ class BBTournamentTest extends bb_test_case {
      */
     public function test_create() {
         $this->get_new_configured();
-        $this->assertID($this->tournament->save());
+        $this->assertSave($this->tournament->save());
     }
     /**
      * @covers BBTournament::generate_player_password

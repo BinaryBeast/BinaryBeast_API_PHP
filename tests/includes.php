@@ -3,11 +3,13 @@
 $path = str_replace('\\', '/', dirname(__DIR__ )) .'/../';
 $lib_path = $path . 'lib/';
 require_once('PHPUnit/Autoload.php');
+require_once 'PHPUnit/Framework/Assert.php';
 require_once($path . 'BinaryBeast.php');
 require_once($lib_path . 'BBSimpleModel.php');
 require_once($lib_path . 'BBModel.php');
 require_once($lib_path . 'BBHelper.php');
 require_once($lib_path . 'BBCache.php');
+require_once($lib_path . 'BBConfiguration.php');
 require_once($lib_path . 'BBCountry.php');
 require_once($lib_path . 'BBGame.php');
 require_once($lib_path . 'BBLegacy.php');
@@ -22,9 +24,8 @@ require_once($lib_path . 'BBTournament.php');
 $bb = new BinaryBeast('e17d31bfcbedd1c39bcb018c5f0d0fbf.4dcb36f5cc0d74.24632846');
 $bb->disable_ssl_verification();
 
-require_once 'PHPUnit/Framework/Assert.php';
 class bb_test_case extends PHPUnit_Framework_TestCase {
-    
+
     /** @var BinaryBeast */
     protected $bb;
     /** @var BinaryBeast */
@@ -37,12 +38,20 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
 
         parent::__construct($name, $data, $dataName);
     }
+
+    protected function onNotSuccessfulTest(\Exception $e) {
+        $this->dump_errors();
+        parent::onNotSuccessfulTest($e);
+    }
     
     protected function dump_history() {
         var_dump(array('errors' => $this->bb->error_history, 'results' => $this->bb->result_history));
     }
     protected function dump_errors() {
         var_dump(array('errors' => $this->bb->error_history));
+    }
+    protected function dump_results() {
+        var_dump(array('history' => $this->bb->result_history));
     }
     
     /**
@@ -171,13 +180,32 @@ class bb_test_case extends PHPUnit_Framework_TestCase {
         self::assertTrue(is_string($value), 'provided value is not a string, it\'s a ' . gettype($value));
         self::assertStringStartsWith('x', $value);
     }
+    public static function assertSave($value) {
+        //Boolean
+        if(is_bool($value)) {
+            return self::assertTrue($value !== false, 'save() returned false');
+        }
+
+        //Treat it as an ID
+        else if(is_numeric($value) || is_string($value)) {
+            return self::assertID($value);
+        }
+
+        //Invalid value 
+        self::fail('save() result type (' . gettype($value) . ') invalid ' . $value);
+    }
     public static function assertID($value) {
         //Treat it as a tournament id
-        if(is_string($value)) return self::assertTourneyID($value);
+        if(is_string($value)) {
+            return self::assertTourneyID($value);
+        }
 
         //Treat it as a normal integer id
-        self::assertTrue(is_numeric($value));
-        self::assertTrue($value > 0);
+        else if(is_numeric($value)) {
+            return self::assertTrue($value > 0);
+        }
+
+        self::fail('id value type (' . gettype($value) . ') invalid');
     }
     public static function assertArraySize($array, $size) {
         self::assertTrue(is_array($array));

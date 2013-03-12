@@ -64,7 +64,7 @@ class BBMatchTest extends bb_test_case {
         }
 
         //All matches are BO3, bronze are BO5
-        $this->assertID($tour->save());
+        $this->assertSave($tour->save());
         $maps = array('Abyssal Caverns', 614, 'Akilon Flats', 71, 'Arid Plateau', 337, 'Backwater Gulch', 225);
         foreach($tour->rounds as &$bracket) {
             foreach($bracket as $x => &$round) {
@@ -75,7 +75,7 @@ class BBMatchTest extends bb_test_case {
             }
         }
         $tour->rounds->bronze[0]->best_of = 5;
-        $this->assertID($tour->save());
+        $this->assertSave($tour->save());
         $this->assertTrue($tour->start());
 
         self::$tournaments[] = $tour;
@@ -95,6 +95,7 @@ class BBMatchTest extends bb_test_case {
         }
         else {
             if(is_null(self::$tournament_with_groups)) $this->init_tournament(true);
+            else if(self::$tournament_with_groups->status != 'Active-Groups') $this->init_tournament(true);
             $tournament = &self::$tournament_with_groups;
         }
 
@@ -265,12 +266,12 @@ class BBMatchTest extends bb_test_case {
         $this->assertEquals($this->object->winner(), $game->loser());
     }
     /**
-     * BBMatch should throw a fit when we try to create too many games (than the round's best_of allows)
+     * BBMatch should throw a fit when we try to create more games than the round's best_of allows
      */
     public function test_too_many_games() {
         $round = $this->object->round();
         for($x = 0; $x < $round->best_of + 5; $x++) {
-            if($x <= $round->best_of)   $this->assertInstanceOf('BBMatchGame', $this->object->game());
+            if($x < $round->best_of)    $this->assertInstanceOf('BBMatchGame', $this->object->game());
             else                        $this->assertNull($this->object->game());
         }
     }
@@ -380,30 +381,27 @@ class BBMatchTest extends bb_test_case {
 
     /**
      * Test the accuracy of test_get_game_wins
-     * @group wtf
      */
     public function test_get_game_wins() {
         $winner = &$this->object->opponent();
         $loser  = &$this->object->team();
+        
+        //Winner should start with 0 wins, and it shoudn't change after defining a game without a winner
         $this->assertEquals(0, $this->object->get_game_wins($winner));
-
         $this->assertInstanceOf('BBMatchGame', $game1 = $this->object->game());
-
         $this->assertEquals(0, $this->object->get_game_wins($winner));
 
+        //Now all new games will define the $match winner as game winner by default
         $this->object->set_winner($winner);
         $this->assertInstanceOf('BBMatchGame', $game2 = $this->object->game());
-        $this->object->game($loser);
         $this->assertInstanceOf('BBMatchGame', $game3 = $this->object->game($loser));
-        //
-        var_dump('before');
-        $this->assertNull($winner, $game1->winner());
-        var_dump('zero');
+
+        //Verify the game::winner() returns correctly
+        $this->assertNull($game1->winner());
         $this->assertEquals($winner, $game2->winner());
-        var_dump('one');
         $this->assertEquals($loser, $game3->winner());
-        var_dump('here');
-        //
+
+        //Now the main test - get_game_wins
         $this->assertEquals(1, $this->object->get_game_wins($winner));
         $this->assertEquals(1, $this->object->get_game_wins($loser));
 
@@ -469,6 +467,7 @@ class BBMatchTest extends bb_test_case {
 
     /**
      * Test trying to call report() without defining a winner
+     * @group wtf
      */
     public function test_report_without_winner() {
         $this->assertFalse($this->object->report());
@@ -478,11 +477,12 @@ class BBMatchTest extends bb_test_case {
      * Reporting a match that has a round with unsaved changes can be bad - if we changed
      *  the best_of value and report before sending it to the API... BinaryBeast will
      *  have the original best_of value, and our match may not be saved correctly
+     * @group wtf
      */
     public function test_report_with_unsaved_round() {
         $round = $this->object->round();
         $round->best_of = 3;
-        $this->assertID($round->save());
+        $this->assertSave($round->save());
         $round->best_of = 15;
         $this->object->set_winner($this->object->team());
         $this->assertFalse($this->object->report());
@@ -506,7 +506,7 @@ class BBMatchTest extends bb_test_case {
         $this->assertInstanceOf('BBMatchGame', $game3 = $this->object->game($winner));
         $this->assertEquals($winner, $game3->winner());
         //Report and assert!
-        $this->assertID($this->object->report());
+        $this->assertSave($this->object->report());
         $this->assertNotNull($this->object->id);
         $this->assertFalse($this->object->changed);
         //Make sure each game got an ID too
@@ -526,7 +526,7 @@ class BBMatchTest extends bb_test_case {
         //Should be in there to start
         $this->assertTrue(in_array($match, $tournament->open_matches()));
         $match->set_winner($match->team());
-        $this->assertID($match->report());
+        $this->assertSave($match->report());
 
         //After reporting, it should be removed from open_matches, but make sure it wasn't set to NULL first
         $this->assertNotNull($match);
@@ -632,7 +632,7 @@ class BBMatchTest extends bb_test_case {
         $this->assertTrue($this->object->games[0]->set_winner($winner));
         $this->assertTrue($this->object->games[1]->set_winner($loser));
         $this->assertTrue($this->object->games[2]->set_winner($winner));
-        $this->assertID($this->object->report(true));
+        $this->assertSave($this->object->report(true));
         //Now double check to make sure everything has a proper ID
         $this->assertNotNull($this->object->id);
         $this->assertFalse($this->object->changed);
@@ -661,7 +661,7 @@ class BBMatchTest extends bb_test_case {
         $this->assertNull($game);
         $this->assertTrue(sizeof($this->object->games()) == 2);
         //Should work now that we have 2 games
-        $this->assertID($this->object->report());
+        $this->assertSave($this->object->report());
     }
     /**
      * Test trying to call report() on a draw match
@@ -683,7 +683,7 @@ class BBMatchTest extends bb_test_case {
         $this->assertFalse($game3->is_draw());
 
         //GOGOGO!
-        $this->assertID($id = $this->object->report());
+        $this->assertSave($id = $this->object->report());
         $this->assertTrue($this->object->is_draw());
 
         //use the id to load the match seperately, directly from the BinaryBeast library - and make sure it is considered a draw
@@ -698,7 +698,7 @@ class BBMatchTest extends bb_test_case {
         $this->assertTrue($this->object->set_winner($this->object->team()));
         $this->assertInstanceOf('BBTeam', $winner = $this->object->winner());
         $this->assertInstanceOf('BBTeam', $loser = $this->object->loser());
-        $this->assertID($this->object->report());
+        $this->assertSave($this->object->report());
         //Reported - try adding matches after the fact
         $this->assertInstanceOf('BBMatchGame', $game1 = $this->object->game($winner));
         $this->assertInstanceOf('BBMatchGame', $game2 = $this->object->game($loser));
@@ -708,15 +708,20 @@ class BBMatchTest extends bb_test_case {
         $this->assertID($game2->id);
         //Add one more game, this time use match::save to submit
         $this->assertInstanceOf('BBMatchGame', $game3 = $this->object->game($winner));
-        $this->assertID($this->object->save());
+        $this->assertSave($this->object->save());
         $this->assertID($game3->id);
     }
     /**
      * Test trying to call report() on an alaready reported match
+     * @group wtf
      */
     public function test_double_report() {
+        $this->assertTrue($this->object->is_new());
         $this->assertTrue($this->object->set_winner($this->object->team()));
-        $this->assertID($this->object->report());
+        $result = $this->object->report();
+        $this->dump_errors();
+        $this->dump_results();
+        $this->assertSave($result);
         $this->assertFalse($this->object->report());
     }
 
@@ -724,7 +729,7 @@ class BBMatchTest extends bb_test_case {
      * Test unreport() on a match that was part of a tournament
      *  phase that is no longer active - group rounds, in a tournament
      *  in active-brackets
-     * @group new
+     * @group wtf
      */
     public function test_unreport_invalid_status() {
         $this->set_object(true);
@@ -733,24 +738,19 @@ class BBMatchTest extends bb_test_case {
         $match = $this->object;
         $tournament = $match->tournament();
 
-        //quick unrelated ref test
-        $key = array_search($match, $match->tournament->open_matches());
-        $match = null;
-        $this->assertNotNull($this->object);
-        $this->assertNotNull($tournament->open_matches[$key]);
-        $match = $this->object;
-
         //match should be in group rounds
         $this->assertEquals(0, $match->bracket);
+        $this->assertEquals(0, $match->round->round);
 
         //This match is from the group rounds
-        $this->assertTrue($match->tournament->start());
+        $start_result = $match->tournament->start();
+        if(!$start_result) $this->dump_errors();
+        $this->assertTrue($start_result);
 
-        //The match shoudl no longer be part of the touranment
+        //The match should no longer be part of the tournament, and that the match we have in $match hasn't changed
         $this->assertNotNull($match);
         $this->assertEquals(0, $match->bracket);
         $this->assertNull($tournament->match($match));
-        $this->assertNotNull($match);
 
         //Try reporting now that the brackets have started - it shouldn't let us
         $this->assertFalse($match->report());

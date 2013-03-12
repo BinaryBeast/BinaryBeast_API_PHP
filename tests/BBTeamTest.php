@@ -118,7 +118,7 @@ class BBTeamTest extends bb_test_case {
         }
         $this->assertTrue(sizeof($this->tournament->teams()) == 8);
         //
-        $this->assertID($this->tournament->save());
+        $this->assertSave($this->tournament->save());
         $this->assertTrue($this->tournament->start());
         $this->assertEquals('Active', $this->tournament->status);
         //Simply return the a team from the first open match we can find
@@ -157,7 +157,7 @@ class BBTeamTest extends bb_test_case {
      */
     public function test_save() {
         $this->assertNull($this->team->id);
-        $this->assertID($this->team->save());
+        $this->assertSave($this->team->save());
     }
     /**
      * Test save() to update a team - then reload externally
@@ -165,11 +165,11 @@ class BBTeamTest extends bb_test_case {
      */
     public function test_update() {
         $this->assertNull($this->team->id);
-        $this->assertID($this->team->save());
+        $this->assertSave($this->team->save());
         //
         $this->team->display_name = 'updated + banned';
         $this->assertTrue($this->team->ban());
-        $this->assertID($this->team->save());
+        $this->assertSave($this->team->save());
         //
         $this->AssertTeamValueExternally($this->team->id, 'display_name', 'updated + banned');
         $this->AssertTeamValueExternally($this->team->id, 'status', -1);
@@ -201,12 +201,12 @@ class BBTeamTest extends bb_test_case {
         $this->set_object_with_open_match();
         //To guarnatee elimination, change it to single elimination
         $this->tournament->elimination = 1;
-        $this->assertID($this->tournament->save());
+        $this->assertSave($this->tournament->save());
         //Make sure that $team loses
         $this->assertInstanceOf('BBMatch', $match = $this->team->match());
         $this->assertInstanceOf('BBTeam', $opponent = $this->team->opponent);
         $this->assertTrue($match->set_winner($opponent));
-        $this->assertID($match->report());
+        $this->assertSave($match->report());
         //Eliminated!!
         $this->assertFalse($this->team->opponent());
     }
@@ -220,7 +220,7 @@ class BBTeamTest extends bb_test_case {
         //Make sure that $team wins, so his next match won't have an opponent yet
         $this->assertInstanceOf('BBMatch', $match = $this->team->match());
         $this->assertTrue($match->set_winner($this->team));
-        $this->assertID($match->report());
+        $this->assertSave($match->report());
         //Eliminated!!
         $this->assertNull($this->team->opponent());
     }
@@ -233,12 +233,12 @@ class BBTeamTest extends bb_test_case {
         //Single elim, disable bronze - to guarnatee he's eliminated after reporting, and not simply sent to the LB
         $this->tournament->elimination = 1;
         $this->tournament->bronze = false;
-        $this->assertID($this->tournament->save());
+        $this->assertSave($this->tournament->save());
         //Make sure that $team wins, so his next match in the WB should be without an opponent
         $this->assertInstanceOf('BBMatch', $match = $this->team->match());
         $this->assertInstanceOf('BBTeam', $opponent = $match->toggle_team($this->team));
         $this->assertTrue($match->set_winner($opponent));
-        $this->assertID($match->report());
+        $this->assertSave($match->report());
         //Eliminated!!
         $this->assertEquals($opponent, $this->team->eliminated_by());
     }
@@ -253,7 +253,7 @@ class BBTeamTest extends bb_test_case {
         //Make sure that $team wins, so his next match won't have an opponent yet
         $this->assertInstanceOf('BBMatch', $match = $this->team->match());
         $this->assertTrue($match->set_winner($this->team));
-        $this->assertID($match->report());
+        $this->assertSave($match->report());
         //Eliminated!!
         $this->assertFalse($this->team->eliminated_by());
     }
@@ -274,7 +274,7 @@ class BBTeamTest extends bb_test_case {
         $this->assertEquals(-1, $opponent->lb_wins);
         //
         $this->assertTrue($match->set_winner($this->team));
-        $this->assertID($this->team->match->report());
+        $this->assertSave($this->team->match->report());
         //opponent should have lb_wins now, and team should have wins
         $this->assertTrue($this->team->wins > 0);
         $this->assertEquals(-1, $this->team->lb_wins);
@@ -295,7 +295,7 @@ class BBTeamTest extends bb_test_case {
         $unconfirmed = $this->tournament->team();
         $unconfirmed->display_name = 'unconfirmed team';
         $this->assertTrue($unconfirmed->unconfirm());
-        $this->assertID($unconfirmed->save());
+        $this->assertSave($unconfirmed->save());
 
         //Make 100% sure it's confirmed from BinaryBeast's POV
         $this->AssertTeamValueExternally($unconfirmed->id, 'status', BinaryBeast::TEAM_STATUS_UNCONFIRMED);
@@ -331,7 +331,7 @@ class BBTeamTest extends bb_test_case {
         //Should start with default status of confirmed
         $this->assertEquals(BinaryBeast::TEAM_STATUS_CONFIRMED, $this->team->status);
         $this->assertTrue($this->team->unconfirm());
-        $this->assertID($this->team->save());
+        $this->assertSave($this->team->save());
 
         //Verify with reload
         $this->AssertTeamValueExternally($this->team->id, 'status', BinaryBeast::TEAM_STATUS_UNCONFIRMED);
@@ -354,7 +354,7 @@ class BBTeamTest extends bb_test_case {
         //Should start with default status of confirmed
         $this->assertEquals(BinaryBeast::TEAM_STATUS_CONFIRMED, $this->team->status);
         $this->assertTrue($this->team->ban());
-        $this->assertTrue($this->team->save());
+        $this->assertSave($this->team->save());
 
         //Verify with reload
         $this->AssertTeamValueExternally($this->team->id, 'status', BinaryBeast::TEAM_STATUS_BANNED);
