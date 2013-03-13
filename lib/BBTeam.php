@@ -268,9 +268,6 @@ class BBTeam extends BBModel {
 	 * Overrides BBModel::save() so we can return false if trying to save an oprhaned team
 	 */
 	public function save($return_result = false, $child_args = null) {
-		//Orphaned team - don't save
-		if($this->orphan_error()) return false;
-
 		//Tournament must be saved first
 		if(is_null($this->tournament->id)) {
 			return $this->set_error('Tournament must be saved before adding teams');

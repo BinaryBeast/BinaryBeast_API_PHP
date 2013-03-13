@@ -1,18 +1,14 @@
 <?php
 
-require_once('lib/includes.php');
-
 /**
  * Test local mysql caching 
  * @group cache
  * @group library
  * @group all
  */
-class BBCacheTest extends bb_test_case {
+class BBCacheTest extends BBTest {
     
-    /**
-     * @var BinaryBeast
-     */
+    /** @var BinaryBeast */
     protected $object;
 
     protected function setUp() {

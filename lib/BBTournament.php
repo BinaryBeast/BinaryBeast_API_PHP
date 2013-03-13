@@ -648,7 +648,7 @@ class BBTournament extends BBModel {
         //BBModel's default action first
         parent::reset();
 
-        //Now let BBmodel remove any unsaved teams from $this->teams
+        //Now let BBModel remove any unsaved teams from $this->teams
         $this->remove_new_children($this->teams);
     }
 
@@ -811,9 +811,9 @@ class BBTournament extends BBModel {
      *  search purely on tourney_team_id
      * 
      * @param BBModel $child
-     * @param type $children
+     * @param BBModel[] $children
      */
-    public function remove_child(BBModel &$child, &$children = null, $preserve = false) {
+    public function remove_child(BBModel &$child, &$children = null, $preserve = true) {
         if($child instanceof BBTeam) {
             //Rely on team() to insure that even if changed, that we at LEAST get the correct reference using team_id
             if(!is_null($team = &$this->team($child))) {
@@ -824,8 +824,7 @@ class BBTournament extends BBModel {
         if($child instanceof BBMatch) {
             //Like team(), we use match() to standardize, in case the input has changed from our cached version
             if(!is_null($match = &$this->match($child))) {
-                return parent::remove_child($child, $this->open_matches(), true);
-                
+                return parent::remove_child($child, $this->open_matches(), $preserve);
             }
             return false;
         }

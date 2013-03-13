@@ -222,6 +222,24 @@ class BBMatch extends BBModel {
     }
 
     /**
+     * Overload BBModel::__get so that when score and o_score are accessed, we can
+     *  return the number of game_wins instead of the not-likely-to-be-used score and o_score values
+     * 
+     * @param string $name
+     * @return mixed
+     */
+    public function &__get($name) {
+        if($name == 'score' || $name == 'o_score') {
+            if(!$this->winner_set) {
+                if(sizeof($this->games()) > 0) {
+                    return $this->bb->ref( $this->get_game_wins($name == 'score' ? $this->team() : $this->opponent()) );
+                }
+            }
+        }
+        return parent::__get($name);
+    }
+
+    /**
      * Overload BBModel's __set so we can handle setting team ids, and draw manually
      * @param string $name
      * @param mixed $value
@@ -247,7 +265,7 @@ class BBMatch extends BBModel {
         //For new matches, reset the winner if defined
         if(is_null($this->id)) $this->winner_set = false;
 
-        //Now let BBmodel remove any unsaved teams from $this->teams
+        //Now let BBModel remove any unsaved teams from $this->teams
         $this->remove_new_children($this->games());
     }
 
@@ -420,8 +438,9 @@ class BBMatch extends BBModel {
      * 
      * returns null if the match hasn't been reported
      * 
-     * @return BBTeam
-     *      Note: returns false if this match was defined as a draw - use team() and opponent() instead
+     * @return BBTeam|team|false
+     *      NULL if no team yet defined
+     *      FALSE if this match is a draw
      */
     public function &winner() {
         //Draw - return false
@@ -440,9 +459,9 @@ class BBMatch extends BBModel {
     /**
      * Return the BBTeam object of this match's losing team
      * 
-     * returns null if the match hasn't been reported
-     * 
-     * @return BBTeam
+     * @return BBTeam|team|false
+     *      NULL if no team yet defined
+     *      FALSE if this match is a draw
      */
     public function &loser() {
         //Draw - return false
@@ -885,7 +904,7 @@ class BBMatch extends BBModel {
      * @param BBMatchGame|int   $winner
      * @param int               $match_winner_score     Optionally define the match winner's score for this game
      * @param int               $match_loser_score      Optionally define the match loser's score for this game
-     * @return BBMatchGame
+     * @return BBMatchGame|null
      *      Null if there are already enough games to satisfy the $round->best_of value
      */
     public function &game($winner = null, $match_winner_score = null, $match_loser_score = null) {
@@ -949,15 +968,13 @@ class BBMatch extends BBModel {
      *      is actually part of this match
      * 
      * @param BBTeam|int $team
-     * @return BBTeam
+     * @return BBTeam|false
      */
     public function &team_in_match($team) {
 
-        //If not given a BBTeam, use tournament->team to validate it as part of the tournament first, and to return the BBTeam instance
-        if(!($team instanceof BBTeam)) {
-            if( is_null($team = &$this->tournament->team($team)) ) {
-                return $this->bb->ref(false);
-            }
+        //Use BBTournament::team to standardize the input and return any obvious errors (like not belonging to the tournament)
+        if( is_null($team = &$this->tournament->team($team)) ) {
+            return $this->bb->ref(false);
         }
 
         //Have to return a reference, so check against team() and opponent, and return if either match

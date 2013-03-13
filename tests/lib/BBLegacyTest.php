@@ -6,7 +6,7 @@
  * @group library
  * @group all
  */
-class BBLegacyTest extends bb_test_case {
+class BBLegacyTest extends BBTest {
 
     /**
      * @var BBLegacy

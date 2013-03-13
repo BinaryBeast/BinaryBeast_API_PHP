@@ -1,7 +1,5 @@
 <?php
 
-require_once('lib/includes.php');
-
 /**
  * Test map listing 
  * @group map
@@ -9,11 +7,9 @@ require_once('lib/includes.php');
  * @group simple_model
  * @group all
  */
-class BBMapTest extends bb_test_case {
+class BBMapTest extends BBTest {
 
-    /**
-     * @var BBMap
-     */
+    /** @var BBMap */
     protected $object;
 
     protected function setUp() {

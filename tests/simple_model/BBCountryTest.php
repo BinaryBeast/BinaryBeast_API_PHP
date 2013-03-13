@@ -1,7 +1,5 @@
 <?php
 
-require_once('lib/includes.php');
-
 /**
  * Test country listing 
  * @group country
@@ -9,11 +7,9 @@ require_once('lib/includes.php');
  * @group simple_model
  * @group all
  */
-class BBCountryTest extends bb_test_case {
+class BBCountryTest extends BBTest {
 
-    /**
-     * @var BBCountry
-     */
+    /** @var BBCountry */
     protected $object;
 
     protected function setUp() {

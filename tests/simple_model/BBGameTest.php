@@ -1,7 +1,5 @@
 <?php
 
-require_once('lib/includes.php');
-
 /**
  * Test game listing / searching
  * @group game
@@ -9,11 +7,9 @@ require_once('lib/includes.php');
  * @group simple_model
  * @group all
  */
-class BBGameTest extends bb_test_case {
+class BBGameTest extends BBTest {
 
-    /**
-     * @var BBGame
-     */
+    /** @var BBGame */
     protected $object;
 
     protected function setUp() {
