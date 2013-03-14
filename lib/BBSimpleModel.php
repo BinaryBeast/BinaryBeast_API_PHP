@@ -136,7 +136,6 @@ class BBSimpleModel {
     protected function set_error($error) {
         //Send to the main BinaryBeast API Library, and locally save whatever is sent back (a standardized format)
         $this->last_error = $this->bb->set_error($error, get_called_class());
-        var_dump(['last_error' => $this->last_error, 'wtf_history' => $this->bb->error_history]);
 
         //Allows return this directly to return false, saves a line of code - don't have to set_error then return false
         return false;

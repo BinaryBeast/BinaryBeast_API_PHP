@@ -22,21 +22,6 @@ class BBTeamTest extends BBTest {
     }
 
     /**
-     * Try deleting the team and resetting the tournament, so that 
-     *  BBTest::tearDown() has a better of chance of having an untouched tournament that it 
-     *  can cache
-     */
-    protected function tearDown() {
-        if($this->object instanceOf BBTeam) {
-            if(!BBHelper::tournament_is_active($this->tournament)) {
-                $this->object->delete();
-                $this->tournament->reset();
-            }
-        }
-        parent::tearDown();
-    }
-
-    /**
      * Set $object to a team that has an open match within group rounds
      */
     private function set_object_with_open_match($groups = false) {

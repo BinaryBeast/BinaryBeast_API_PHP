@@ -12,7 +12,6 @@ class BBTournamentTest extends BBTest {
     protected $object;
 
     protected function setUp() {
-        $this->get_tournament_new();
         $this->object = &$this->tournament;
         parent::setUp();
     }
@@ -22,6 +21,8 @@ class BBTournamentTest extends BBTest {
      * @covers BBTournament::save_settings
      */
     public function test_save_settings() {
+        $this->get_tournament_new();
+
         $this->object->title = 'changed';
         $team = $this->object->team();
         $team1 = $this->object->team();
@@ -46,6 +47,8 @@ class BBTournamentTest extends BBTest {
      * @covers BBTournament::save
      */
     public function test_create() {
+        $this->get_tournament_inactive(false, false, false);
+
         $this->assertTrue($this->object->changed);
         $this->assertTrue($this->object->is_new());
 
@@ -59,6 +62,8 @@ class BBTournamentTest extends BBTest {
      * @covers BBTournament::generate_player_password
      */
     public function test_generate_player_password() {
+        $this->get_tournament_new();
+
         //Should be the default null value
         $this->assertNull($this->object->player_password);
 
@@ -251,7 +256,7 @@ class BBTournamentTest extends BBTest {
         $this->get_tournament_inactive();
         $team = &$this->object->team();
         $this->assertTrue(in_array($team, $this->object->teams()));
-        $this->assertTrue($this->object->remove_child($team));
+        $this->assertTrue($this->object->remove_child($team, null, false));
         //
         $this->assertNull($team);
     }
@@ -266,7 +271,8 @@ class BBTournamentTest extends BBTest {
 
         //Should now have 8 teams with ids
         $this->assertSave($this->object->save());
-        foreach($this->object->teams() as &$team) {
+        $this->assertArraySize($this->object->teams(), 8);
+        foreach($this->object->teams as $team) {
             $this->assertID($team->id);
         }
 
@@ -278,7 +284,9 @@ class BBTournamentTest extends BBTest {
         $this->assertArraySize($this->object->banned_teams(), 8);
 
         //Deleted!!!
-        foreach($this->object->teams() as $team) $team->delete();
+        foreach($this->object->teams as $team) {
+            $team->delete();
+        }
 
         $this->assertArraySize($this->object->teams(), 0);
         $this->assertArraySize($this->object->confirmed_teams(), 0);
@@ -304,16 +312,15 @@ class BBTournamentTest extends BBTest {
      * Test starting group rounds with random seeding
      */
     public function test_start_groups() {
-        $this->get_inactive_with_rounds(true);
-        $this->object->type_id = 1;
-        $this->object->save();
+        $this->get_tournament_ready(true);
         $this->assertTrue($this->object->start());
+        $this->assertEquals('Active-Groups', $this->object->status);
     }
     /**
      * Test re-opening brackets to confirmation
      */
     public function test_reopen_elimination() {
-        $this->get_active();
+        $this->get_tournament_with_open_matches();
         $this->assertEquals('Active', $this->object->status, 'object created from get_active is not Active');
         $result = $this->object->reopen();
         $this->assertTrue($result);
@@ -323,17 +330,16 @@ class BBTournamentTest extends BBTest {
      * Test re-opening brackets to confirmation
      */
     public function test_reopen_groups() {
-        $result = $this->get_active_groups();
+        $this->get_tournament_with_open_matches(true);
         $this->assertEquals('Active-Groups', $this->object->status, 'object created from get_active is not get_active_groups, it\'s ' . $this->object->Status);
-        $result = $this->object->reopen();
-        $this->assertTrue($result);
+        $this->assertTrue($this->object->reopen());
         $this->assertEquals('Confirmation', $this->object->status);
     }
     /**
      * Test re-opening brackets to confirmation
      */
     public function test_reopen_brackets_to_groups() {
-        $this->get_active_groups();
+        $this->get_tournament_with_open_matches(true);
         $this->assertEquals('Active-Groups', $this->object->status, 'object created from get_active is not Active');
         $this->assertTrue($this->object->start());
         $this->assertEquals('Active-Brackets', $this->object->status);
@@ -344,7 +350,7 @@ class BBTournamentTest extends BBTest {
      * Test re-openining brackets to groups
      */
     public function test_start_manual() {
-        $this->get_inactive_with_teams();
+        $this->get_tournament_ready();
         //Simply start manually, alphabetical (default order when loading teams of non-active tournaments)
         $this->assertTrue($this->object->start('manual', $this->object->teams));
         $this->assertEquals('Active', $this->object->status);
@@ -354,7 +360,7 @@ class BBTournamentTest extends BBTest {
      * Test starting brackets using "balanced" seeding
      */
     public function test_start_balanced() {
-        $this->get_inactive_with_teams();
+        $this->get_tournament_ready();
         $this->assertTrue($this->object->start('balanced', $this->object->teams));
         $this->assertEquals('Active', $this->object->status);
         $this->assertEquals(0, $this->object->teams[0]->position);
@@ -363,7 +369,7 @@ class BBTournamentTest extends BBTest {
      * Test starting brackets using "sports" seeding
      */
     public function test_start_sports() {
-        $this->get_inactive_with_teams();
+        $this->get_tournament_ready();
         $this->assertTrue($this->object->start('balanced', $this->object->teams));
         $this->assertEquals('Active', $this->object->status);
         $this->assertEquals(0, $this->object->teams[0]->position);
@@ -372,7 +378,7 @@ class BBTournamentTest extends BBTest {
      * Test starting brackets with pending changes - it SHOULD fail
      */
     public function test_start_unsaved() {
-        $this->get_inactive_with_teams(true);
+        $this->get_tournament_ready();
         $this->object->title = 'unsaved!!!';
         $this->assertFalse($this->object->start());
         $this->object->reset();
@@ -399,7 +405,7 @@ class BBTournamentTest extends BBTest {
      * Test loading a list of unplayed matches
      */
     public function test_list_open_matches() {
-        $this->get_active();
+        $this->get_tournament_with_open_matches();
         $matches = $this->object->open_matches();
         $this->assertTrue(is_array($matches), 'BBTournament::open_matches() did not return an array)');
         foreach($matches as $match) $this->assertInstanceOf('BBMatch', $match);
@@ -433,6 +439,7 @@ class BBTournamentTest extends BBTest {
      * @group list
      */
     public function test_list_my() {
+        $this->get_tournament_new();
         $list = $this->object->list_my();
         $this->assertListFormat($list, array('tourney_id', 'title', 'status', 'date_start', 'game_code', 'game', 'team_mode', 'max_teams'));
     }
@@ -441,6 +448,7 @@ class BBTournamentTest extends BBTest {
      * @group list
      */
     public function test_list_popular() {
+        $this->get_tournament_new();
         $list = $this->object->list_popular();
         $this->assertListFormat($list, array('tourney_id', 'title', 'status', 'date_start', 'game_code', 'game', 'team_mode', 'max_teams'));
     }

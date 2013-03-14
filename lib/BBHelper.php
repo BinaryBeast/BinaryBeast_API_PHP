@@ -274,7 +274,8 @@ class BBHelper {
      * @param BBTournament $tournament
      * @return boolean
      */
-    public static function tournament_is_active(BBTournament &$tournament) {
+    public static function tournament_is_active($tournament) {
+        if(!($tournament instanceof BBTournament)) return false;
         return in_array($tournament->status, array('Active', 'Active-Groups', 'Active-Brackets', 'Complete'));
     }
 

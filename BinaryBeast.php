@@ -590,7 +590,8 @@ class BinaryBeast {
         }
 
         //Invalid access
-        return $this->ref($this->set_error('Attempted to access invalid property "' . $name . '"'));
+        $this->set_error('Attempted to access invalid property "' . $name . '"');
+        return $this->ref(false);
     }
 
     /**

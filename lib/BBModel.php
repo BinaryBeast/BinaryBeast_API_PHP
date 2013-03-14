@@ -632,7 +632,7 @@ class BBModel extends BBSimpleModel {
         //Now that we've deleted successfully, we can remove ourselves from our parent (if we have one)
         if(!is_null($this->parent)) {
             $this->parent->remove_child($this);
-            $this->parent = null;
+            $this->parent = &$this->bb->ref(null);
             $this->orphan = true;
         }
 
@@ -895,7 +895,7 @@ class BBModel extends BBSimpleModel {
      *          is remove it from the list of open_matches
      * @return boolean      true if removed
      */
-    public function remove_child(BBModel &$child, &$children = null, $preserve = false) {
+    protected function remove_child_from_list(BBModel &$child, &$children = null, $preserve = false) {
         if(!is_array($children)) return false;
 
         //First - run the unflag method to remove from teams_changed - and re-calculate the $changed flag
@@ -919,6 +919,16 @@ class BBModel extends BBSimpleModel {
         //Didn't find anything
         return false;
     }
+
+    /**
+     * Overloaded by models so that they can decide which array to use, and then to pass
+     *  the input along to remove_child 
+     * 
+     * @param BBModel $child
+     * @param bool    $preserve - enable to attempt setting any references to null
+     */
+    public function remove_child(BBModel &$child, $preserve = false) {}
+
     /**
      * Used internally to remove any children being tracked internally, that do not exist on the API - 
      *      aka they don't have an id - so we're deleting all unsaved children

@@ -612,9 +612,9 @@ class BBMatchTest extends BBTest {
         $this->assertInstanceOf('BBMatchGame', $match1->game($match1->loser()));
         $this->assertInstanceOf('BBMatchGame', $match1->game());
         //
-        $this->assertInstanceOf('BBMatchGame', $match1->game($match2->loser()));
-        $this->assertInstanceOf('BBMatchGame', $match1->game());
-        $this->assertInstanceOf('BBMatchGame', $match1->game());
+        $this->assertInstanceOf('BBMatchGame', $match2->game($match2->loser()));
+        $this->assertInstanceOf('BBMatchGame', $match2->game());
+        $this->assertInstanceOf('BBMatchGame', $match2->game());
 
         //GOGOGO!
         $this->assertSave($this->tournament->save());

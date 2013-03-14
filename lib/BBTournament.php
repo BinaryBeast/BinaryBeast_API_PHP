@@ -387,7 +387,7 @@ class BBTournament extends BBModel {
      */
     private function &filter_teams_by_status($ids, $status) {
         //Use teams() to guarantee up to date values, and so we can return false if there are errors set by it
-        if(!$teams = &$this->teams()) return $this->bb->ref(false);
+        if(is_null($teams = &$this->teams())) return $this->bb->ref(false);
 
         //Initialize the output
         $filtered = array();
@@ -813,18 +813,18 @@ class BBTournament extends BBModel {
      * @param BBModel $child
      * @param BBModel[] $children
      */
-    public function remove_child(BBModel &$child, &$children = null, $preserve = true) {
+    public function remove_child(BBModel &$child, $preserve = true) {
         if($child instanceof BBTeam) {
             //Rely on team() to insure that even if changed, that we at LEAST get the correct reference using team_id
             if(!is_null($team = &$this->team($child))) {
-                return parent::remove_child($team, $this->teams(), $preserve);
+                return $this->remove_child_from_list($team, $this->teams(), $preserve);
             }
             return false;
         }
         if($child instanceof BBMatch) {
             //Like team(), we use match() to standardize, in case the input has changed from our cached version
             if(!is_null($match = &$this->match($child))) {
-                return parent::remove_child($child, $this->open_matches(), $preserve);
+                return $this->remove_child_from_list($child, $this->open_matches(), $preserve);
             }
             return false;
         }

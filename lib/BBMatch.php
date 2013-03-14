@@ -640,13 +640,11 @@ class BBMatch extends BBModel {
     public function report($strict = false) {
         //Already reported
         if(!is_null($this->id)) {
-            var_dump('here 0');
             return $this->set_error('This match has already been reported, please use save() if you wish to change the details');
         }
 
         //No winner defined
         if(!$this->winner_set) {
-            var_dump('here 1');
             return $this->set_error('Please define a winner before reporting ($team->set_winner($winning_team)) You can refer to $match->team and $match->opponent for participant details');
         }
 
@@ -657,7 +655,6 @@ class BBMatch extends BBModel {
          */
         $tournament = &$this->tournament();
         if(!in_array($this, $tournament->open_matches())) {
-            var_dump('here 1');
             return $this->set_error('This match is no longer listed as an open match for this tournament, perhaps it was reported elsewhere, or the tournament has begun the next stage');
         }
 
@@ -667,7 +664,6 @@ class BBMatch extends BBModel {
         if(!is_null($round)) {
             //Stop now - round has to be saved first
             if($round->changed) {
-                var_dump('here 2');
                 return $this->set_error('The round for this match has unsaved changes, please save them first (either with $round->save(), $tournament->save_rounds, or $tournament->save()');
             }
 
@@ -680,15 +676,10 @@ class BBMatch extends BBModel {
         }
 
 		//Let BBModel handle this
-		$result = parent::save(false, array('tourney_id' => $this->tournament->id));
-        if(!$result) {
-            var_dump(['raw' => parent::save(true, array('tourney_id' => $this->tournament->id))]);
-        }
+		if( !($result = parent::save(false, array('tourney_id' => $this->tournament->id))) ) return false;
 
 		//Report all of the game details
-		if($result) {
-			if(!$this->save_games()) return $this->set_error('Error saving game details');
-		}
+		if(!$this->save_games()) return $this->set_error('Error saving game details');
 
 		//Wipe all tournament cache, and tournament opponent cache / wins lb_wins losses draws bronze_draws etc
 		$this->tournament->clear_id_cache();
@@ -702,7 +693,6 @@ class BBMatch extends BBModel {
         $this->tournament->remove_child($this);
 
 		//Return the save() result
-        var_dump('here 3');
 		return $result;
     }
 	/**
@@ -948,10 +938,10 @@ class BBMatch extends BBModel {
      * @param BBModel $child
      * @param type $children
      */
-    public function remove_child(BBModel &$child, &$children = null, $preserve = false) {
+    public function remove_child(BBModel &$child, $preserve = false) {
         if($child instanceof BBMatchGame) {
             if(!is_null($game = $this->get_child($child, $this->games())) ) {
-                return parent::remove_child($game, $this->games(), $preserve);
+                return $this->remove_child_from_list($game, $this->games(), $preserve);
             }
         }
         return false;

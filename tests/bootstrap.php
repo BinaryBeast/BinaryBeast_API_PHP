@@ -24,19 +24,9 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
 
     /** @var BBTournament */
     protected $tournament;
-
-    /** @var BBTournament[] */
-    protected static $tournaments_inactive;
-    /** @var BBTournament[] */
-    protected static $tournaments_ready;
-    /** @var BBTournament[] */
-    protected static $tournaments_open_matches_brackets;
-    /** @var BBTournament[] */
-    protected static $tournaments_open_matches_groups;
-    /** @var BBTournament[] */
-    protected static $tournaments_to_delete;
-
-
+    
+    /** var BBTournament[] */
+    private static $tournaments = array();
 
     function __construct($name = NULL, array $data = array(), $dataName = '') {
         global $bb;
@@ -45,16 +35,20 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
 
         parent::__construct($name, $data, $dataName);
     }
-
-    /**
-     * Intercept failed tests so that we can dump any logged errors in $bb
-     * @param \Exception $e
-     */
-    protected function onNotSuccessfulTest(\Exception $e) {
-        $this->dump_errors();
-        parent::onNotSuccessfulTest($e);
+    
+    function __destruct() {
+        foreach(self::$tournaments as $tournament) {
+            if($tournament instanceof BBTournament) {
+                $tournament->delete();
+            }
+        }
     }
     
+    protected function tearDown() {
+        if(!is_null($this->tournament)) $this->tournament->delete();
+        else if($this->object instanceof BBModel) $this->object->delete();
+    }
+
     protected function dump_history() {
         var_dump(array('errors' => $this->bb->error_history, 'results' => $this->bb->result_history));
     }
@@ -64,9 +58,7 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
     protected function dump_results() {
         var_dump(array('history' => $this->bb->result_history));
     }
-    
-    
-    
+
     /**
      * Check against a returned list to verify that each object in the array has the 
      *  specified attributes
@@ -213,6 +205,11 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         self::assertTrue(is_array($array));
         self::assertTrue(sizeof($array) == $size, "Array size $size expected, " . sizeof($array) . ' found');
     }
+    public static function assertChildrenArray($array, $class) {
+        self::assertTrue(is_array($array));
+        self::assertTrue(sizeof($array) > 0);
+        foreach($array as $child) self::assertInstanceOf($class, $child);
+    }
     public static function assertArrayContains($array, $search) {
         self::assertTrue(is_array($array));
         self::assertTrue(in_array($search, $array));
@@ -248,61 +245,6 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
 
 
 
-    /*
-     * 
-     * 
-     * Tournament fetching / caching helper methods - cut down
-     *  on the ridiculous number of API calls made just to create tournaments
-     * 
-     * 
-     */
-    
-    
-    
-    
-    
-    
-    /**
-     * Returns and removes a tournament from the requested list
-     * @param BBTournament[] $list
-     * @return BBTournament|null
-     */
-    private function fetch_tournament(array &$list) {
-        return array_pop($list);
-    }
-    /**
-     * Stores a touranemnt into the given local array reference
-     * @param BBTournament[] $list
-     * @param BBTournament $tournament
-     * @return null
-     */
-    private function stash_tournament(array &$list, BBTournament $tournament) {
-        $list[] = $tournament;
-        return null;
-    }
-    /**
-     * Stashes a tournament if it's active / complete
-     * @param BBTournament $tournament
-     * @return BBTournament|null
-     */
-    private function stash_active_tournament(BBTournament $tournament) {
-        if($tournament->status == 'Complete') {
-            $tournament = $this->stash_tournament(self::$tournaments_to_delete, $tournament);
-        }
-        else if($tournament->status == 'Active-Brackets' || $tournament->status == 'Active') {
-            $tournament = $this->stash_tournament(self::$tournaments_open_matches_brackets, $tournament);
-        }
-        else if($tournament->status == 'Active-Groups') {
-            $tournament = $this->stash_tournament(self::$tournaments_open_matches_groups, $tournament);
-        }
-        else {
-            $teams_size = sizeof($tournament->teams());
-            if($teams_size > 0) {
-                $tournament = $this->stash_tournament($teams_size == 8 ? self::$tournaments_ready : self::$tournaments_to_delete, $tournament);
-            }
-        }
-        return $tournament;
-    }
     /**
      * Configures tournament reference settings and saves
      * 
@@ -321,9 +263,23 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         $tournament->team_mode = 1;
         $tournament->group_count = 2;
         $tournament->type_id = $groups ? 1 : 0;
-         $this->assertSave($tournament->save());
 
-        //All matches are BO3, bronze / finals are BO5
+        if($save) $this->add_tournament_rounds($tournament, $double_elimination);
+
+        return $this->tournament = $tournament;
+    }
+    /**
+     * Configure BO3 for all rounds in the given tournament, and BO5 for the finals or bronze
+     * 
+     * @param BBTournament $tournament
+     * @param boolean $groups
+     * @param boolean $save
+     * @return void
+     */
+    protected function add_tournament_rounds(BBTournament &$tournament, $double_elimination = false, $save = true) {
+        //Must start with an ID
+        $this->assertSave($tournament->save());
+
         $maps = array('Abyssal Caverns', 614, 'Akilon Flats', 71, 'Arid Plateau', 337, 'Backwater Gulch', 225);
         foreach($tournament->rounds as &$bracket) {
             foreach($bracket as $x => &$round) {
@@ -340,7 +296,10 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
      * Adds 8 confirmed teams to the tournament reference
      * @param BBTournament $tournament
      */
-    private function add_tournament_teams(BBTournament &$tournament, $save = true) {
+    protected function add_tournament_teams(BBTournament &$tournament, $save = true) {
+        //Must start with an ID
+        $this->assertSave($tournament->save());
+
         //Add 8 players
         $countries = array('USA', 'GBR', 'USA', 'NOR', 'JPN', 'SWE', 'NOR', 'GBR');
         for($x = 0; $x < 8; $x++) {
@@ -349,14 +308,18 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
             $team->display_name = 'Player ' . ($x + 1);
             $team->country_code = $countries[$x];
         }
-        if($save) $this->assertTrue($tournament->save_teams());
+        if($save) {
+            $this->assertTrue($tournament->save_teams());
+        }
     }
     /**
      * Returns a brand new unsaved tournament
      * @return BBTournament
      */
     protected function get_tournament_new() {
-        return $this->tournament = $this->bb->tournament();
+        $this->tournament = $this->bb->tournament();
+        self::$tournaments[] = &$this->tournament;
+        return $this->tournament;;
     }
     /**
      * Returns a saved inactive tournament - aka hasn't started, no teams added - rounds have been setup though
@@ -365,17 +328,10 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
      * @return BBTournament
      */
     protected function get_tournament_inactive($groups = false, $double_elimination = false, $save = true) {
-        //If we found an existing tour, make sure it's still valid
-        if(!is_null($tournament = $this->fetch_tournament(self::$tournaments_inactive))) {
-            $tournament = $this->stash_active_tournament($tournament);
-        }
-        if(is_null($tournament)) $tournament = $this->get_tournament_new();
+        $this->tournament = $this->get_tournament_new();
+        $this->configure_tournament($this->tournament, $groups, $double_elimination, $save);
 
-        //Tournament settings
-        $this->configure_tournament($tournament, $groups, $double_elimination, $save);
-
-        //Success!
-        return $this->tournament = $tournament;
+        return $this->tournament;
     }
     /**
      * Returns a tournament that is ready to start(), with settings, teams, round format
@@ -385,32 +341,8 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
      * @return BBTournament
      */
     protected function get_tournament_ready($groups = false, $double_elimination = false) {
-        //Make sure it's still ready
-        if(!is_null($tournament = $this->fetch_tournament(self::$tournaments_ready))) {
-            //Make sure it hasn't started yet
-            if(!is_null($tournament = $this->stash_active_tournament($tournament))) {
-                //Must have 8 confirmed saved teams
-                if(sizeof($tournament->confirmed_teams()) != 8) {
-                    $tournament = $this->stash_tournament(self::$tournaments_to_delete, $tournament);
-                }
-                //Confirmed teams must be saved + unchanged
-                else foreach($tournament->confirmed_teams() as $team) {
-                    if($team->is_new() || $team->changed) {
-                        $tournament = $this->stash_tournament(self::$tournaments_to_delete, $tournament);
-                        break;
-                    }
-                }
-            }
-        }
-
-        //New tournament - configure + add teams
-        if(is_null($tournament)) {
-            $tournament = $this->get_tournament_inactive($groups, $double_elimination, false);
-            $this->add_tournament_teams($tournament, true);
-        }
-
-        //Existing - update configuration to be sure we return consistent tournaments
-        else $this->configure_tournament($tournament, $groups, $double_elimination);
+        $tournament = $this->get_tournament_inactive($groups, $double_elimination, false);
+        $this->add_tournament_teams($tournament, true);
 
         //Success!
         return $this->tournament = $tournament;
@@ -422,44 +354,10 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
      * @return BBTournament
      */
     protected function get_tournament_with_open_matches($groups = false, $double_elimination = false) {
-        if(!is_null($tournament = $this->fetch_tournament($groups ? self::$tournaments_open_matches_brackets : self::$tournaments_open_matches_groups))) {
-            //Must be in brackets phase
-            if($tournament->status != 'Active' && $tournament->status != 'Active-Brackets') {
-                $tournament = $this->stash_tournament(self::$tournaments_to_delete, $tournament);
-            }
+        $tournament = $this->get_tournament_ready($groups, $double_elimination);
+        $this->assertTrue($tournament->start());
+        $this->assertEquals($groups ? 'Active-Groups' : 'Active', $tournament->status);
 
-            //Keep track of how many removed, to make sure the array count matches afterwards
-            $matches_count = sizeof($tournament->open_matches());
-
-            //Must have open matches
-            if($matches_count == 0) {
-                $tournament = $this->stash_tournament(self::$tournaments_to_delete, $tournament);
-            }
-
-            //Remove any saved / changed matches
-            else {
-                foreach($tournament->open_matches as &$match) {
-                    if(!$match->is_new() || $match->changed) {
-                        $this->assertTrue($tournament->remove_child($match, null, false));
-                        $this->assertNull($match);
-                        --$matches_count;
-                    }
-                }
-                //open_matches should now be equal to matches_count
-                if( (sizeof($tournament->open_matches) != $matches_count) || $matches_count <= 0) {
-                    $tournament = $this->stash_tournament(self::$tournaments_to_delete, $tournament);
-                }
-            }
-        }
-
-        //new tournament - star the brackets!
-        if(is_null($tournament)) {
-            $tournament = $this->get_tournament_ready($groups, $double_elimination);
-            $this->assertTrue($tournament->start());
-            $this->assertEquals($groups ? 'Active-Brackets' : 'Active', $tournament->status);
-        }
-
-        //Success!
         return $this->tournament = $tournament;
     }
 }
