@@ -293,13 +293,17 @@ class BBMatchGame extends BBModel {
 	 * Set winner to null to indiciate a draw
      * 
      * @param BBTeam|int    $winner        The winning team - can be a BBTeam instance of a tourney_team_id integer
-     *  returns false if provided team is invalid
+     *      returns false if provided team is invalid
+     * @param int           $match_winner_score
+     *      The score of the team who won the match 
+     * @param int           $match_loser_score
+     *      The score of the team who lost the match 
      */
     public function set_winner($winner, $match_winner_score = null, $match_loser_score = null) {
         if($this->orphan_error()) return false;
 
 		//Set winner as "null", indicating a draw
-		if(is_null($winner) || $winner == false) return $this->set_draw();
+		if(is_null($winner) || $winner == false) return $this->set_draw($match_winner_score, $match_loser_score);
 
         //Use the match's team_in_match to give us the BBTeam, and to verify that it's actually in the match
         if(($winner = &$this->match->team_in_match($winner)) == false) {
@@ -340,7 +344,7 @@ class BBMatchGame extends BBModel {
 	 * Set the winner of this game to null, indicating a draw
 	 * @return boolean
 	 */
-	public function set_draw() {
+	public function set_draw($match_winner_score = null, $match_loser_score = null) {
         if($this->orphan_error()) return false;
 
 		//Draws are only valid in group rounds
@@ -349,6 +353,8 @@ class BBMatchGame extends BBModel {
         //Set both teams to false, which is the indicator for a draw
 		$this->winner   = false;
 		$this->loser    = false;
+
+        $this->set_scores($match_winner_score, $match_loser_score);
 
 		//Update the values - though the API ignores it, we'll set "draw" too, so that
         //developers can easily check $game->is_draw as a boolean

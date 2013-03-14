@@ -141,7 +141,6 @@ class BBModel extends BBSimpleModel {
 		//For new objects, use default values for values
 		else {
             $this->data = $this->default_values;
-            $this->changed = true;
         }
     }
 
@@ -650,6 +649,19 @@ class BBModel extends BBSimpleModel {
     public function is_new() {
         return is_null($this->id);
     }
+    /**
+     * Returns a boolean that reflects whehter or not this object
+     *  has been orphaned
+     * 
+     * Orphaned objects are BBModel instances that have been removed from their parent BBModel objects,
+     *  for example when you call $team->delete(), if you still have a copy of that team in a variable, it
+     *  will become orphaned - since it no longer has a tournament associated with it
+     * 
+     * @return boolean
+     */
+    public function is_orphan() {
+        return $this->orphan;
+    }
 
     /**
      * Save the unique id of this instance, taking into consideration
@@ -860,10 +872,10 @@ class BBModel extends BBSimpleModel {
 	 * Used by reset_changed_children to loop through an array
 	 *	of children, and to tell each one to reset() themselves
 	 * 
-	 * @param array $children
+	 * @param BBModel[] $children
 	 */
 	private function reset_children(&$children) {
-		foreach($children as $child) $child->reset();
+		foreach($children as &$child) $child->reset();
 	}
 
     /**
