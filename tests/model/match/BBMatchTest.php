@@ -20,31 +20,12 @@ class BBMatchTest extends BBTest {
         parent::setUp();
     }
     /**
-     * Attempts to reset the match so that future tests
-     *  can re-use it
-     */
-    protected function tearDown() {
-        $this->reset_object();
-        parent::tearDown();
-    }
-    /**
-     * Attempts to recycle the object for future tests
-     */
-    private function reset_object() {
-        if(!is_null($this->object)) {
-            if($this->object->is_new()) {
-                $this->object->reset();
-            }
-        }
-    }
-    /**
      * Set $this->object to an open match - based on $groups input it will
      *  either use the default tournament, or create one with group rounds enabled
      * 
      * @param boolean $groups
      */
     private function set_object($groups = false) {
-        $this->reset_object();
         $this->get_tournament_with_open_matches($groups);
         $this->object = &$this->tournament->open_matches[0];
     }
@@ -53,7 +34,6 @@ class BBMatchTest extends BBTest {
      * @return BBTeam
      */
     private function get_invalid_team() {
-        $teams = self::$tournament->teams();
         foreach($this->tournament->teams as $team) {
             if(!$this->object->team_in_match($team)) {
                 return $team;
@@ -67,14 +47,6 @@ class BBMatchTest extends BBTest {
         $winner = $this->object->team2();
         $this->assertTrue($this->object->set_winner($winner));
         $this->assertEquals($winner, $this->object->winner());
-    }
-    /**
-     * Test winner() to make sure it returns null if calling before set_winner()
-     * @covers BBMatch::winner()
-     */
-    public function test_winner_before_setting() {
-        $this->assertNull($this->object->winner());
-        $this->assertNull($this->object->loser());
     }
     /**
      * Tests to make sure that winner() returns the right team after calling set_winner twice to change the expected value

@@ -16,7 +16,7 @@ class BBTeamTest extends BBTest {
      * By default, make sure we have a "new" unsaved tournament to play with
      */
     protected function setUp() {
-        $this->get_tournament_new();
+        $this->get_tournament_inactive();
         $this->object = &$this->tournament->team();
         parent::setUp();
     }
@@ -56,7 +56,6 @@ class BBTeamTest extends BBTest {
     public function test_save_inactive_tournament() {
         //Verify that we're starting with a fresh unchanged tournament - then trigger a change
         $this->assertNull($this->tournament->id);
-        $this->assertFalse($this->tournament->changed);
         $this->tournament->title = 'asdf';
 
         //Create  new team
@@ -273,6 +272,7 @@ class BBTeamTest extends BBTest {
     public function test_ban() {
         //Should start with default status of confirmed
         $this->assertTrue($this->object->ban());
+        $this->assertSave($this->object->save());
 
         //Verify with reload
         $this->assertEquals(BinaryBeast::TEAM_STATUS_BANNED, $this->object->status);
