@@ -53,9 +53,10 @@ class BBTeamTest extends BBTest {
      * Attempt to save a team in a new tournament 
      * @covers BBTeam::save
      */
-    public function test_save_inactive_tournament() {
+    public function test_save_unsaved_tournament() {
         //Verify that we're starting with a fresh unchanged tournament - then trigger a change
-        $this->assertNull($this->tournament->id);
+        $this->get_tournament_new();
+        $this->object = &$this->tournament->team();
         $this->tournament->title = 'asdf';
 
         //Create  new team

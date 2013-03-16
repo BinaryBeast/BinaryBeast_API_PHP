@@ -15,7 +15,7 @@
  * @date 2013-02-09
  * @author Brandon Simmons
  */
-class BBModel extends BBSimpleModel {
+abstract class BBModel extends BBSimpleModel {
 
     /**
      * Public "preview" of current data values, mostly for the benefit

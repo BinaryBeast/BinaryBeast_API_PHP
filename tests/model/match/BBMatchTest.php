@@ -354,6 +354,8 @@ class BBMatchTest extends BBTest {
      *  are inheriting the default draw value - unless a winner is defined
      * @covers BBMatch::set_draw
      * @covers BBMatch::game
+     * @group match_game
+     * @group fail 
      */
     public function test_set_draw_inherited_by_games() {
         $this->set_object(true);
@@ -367,6 +369,7 @@ class BBMatchTest extends BBTest {
 
         //New games with winner specific should not be considered draws
         $game1 = $this->object->game($this->object->team());
+        var_dump([$game1, $this->object->bracket, $this->object->round->round, $this->bb->error_history]);
         $this->assertFalse($game1->is_draw());
         $this->assertEquals($this->object->team(), $game1->winner());
     }

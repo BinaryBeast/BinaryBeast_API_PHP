@@ -907,7 +907,7 @@ class BBMatch extends BBModel {
         //Make sure game_number is within bounds of best_of (only if able to determine round format)
         if(!is_null($round = &$this->round())) {
             if($game_number >= $round->best_of) {
-                $this->set_error("Attempted to set details for game $game_number in a best of {$round->best_of} series");
+                $this->set_error("Attempted to set details for game " . ($game_number+1) . " in a best of {$round->best_of} series");
                 return $this->bb->ref(null);
             }
         }
