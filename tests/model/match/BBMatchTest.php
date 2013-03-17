@@ -112,6 +112,7 @@ class BBMatchTest extends BBTest {
     }
     /**
      * @covers BBMatch::set_loser
+     * @group fail
      */
     public function test_set_loser() {
         $winner = $this->object->team();
@@ -136,6 +137,7 @@ class BBMatchTest extends BBTest {
      * Tests the magic __set when trying to set the winner / loser by directly
      *  setting tourney_team_id (set_winner())
      * @covers BBMatch::__set
+     * @group fail
      */
     public function test_set_o_tourney_team_id() {
         $winner = $this->object->team2();
@@ -172,6 +174,7 @@ class BBMatchTest extends BBTest {
     /**
      * Test to see if the scores and o_scores properties return 
      *  the default 1 and 0 values if we don't define a winner
+     * @group fail
      */
     public function test_scores_property_without_winner() {
         $this->assertEquals(1, $this->object->score);
@@ -180,6 +183,7 @@ class BBMatchTest extends BBTest {
     /**
      * Test to see if the scores and o_scores properties return 
      *  the number of game wins after games have been added
+     * @group fail
      */
     public function test_scores_property_with_games() {
         $this->assertTrue($this->object->set_winner($this->object->team(), 15, 3));
@@ -222,12 +226,14 @@ class BBMatchTest extends BBTest {
     /**
      * Test team_in_match, using an invalid BBTeam object
      * @covers BBMatch::team_in_match
+     * @group fail
      */
     public function test_invalid_team_object_in_match() {
         $this->assertInstanceOf('BBTeam', $this->object->team_in_match($this->get_invalid_team()));
     }
     /**
      * Test team_in_match, using a invalid team id
+     * @group fail
      * @covers BBMatch::team_in_match
      */
     public function test_invalid_team_object_id_match() {
@@ -263,6 +269,7 @@ class BBMatchTest extends BBTest {
      * Test to make sure that reset() resets all possible values within an unsaved match
      * 
      * @covers BBMatch::reset
+     * @group fail
      */
     public function test_reset() {
         $winner = $this->object->team2();
@@ -320,6 +327,7 @@ class BBMatchTest extends BBTest {
     /**
      * Test the accuracy of toggle_team() with an invalid BBTeam object
      * @covers BBMatch::test_toggle_team
+     * @group fail
      */
     public function test_toggle_team_invalid_object() {
         $this->assertFalse($this->object->toggle_team($this->get_invalid_team()));
@@ -327,6 +335,7 @@ class BBMatchTest extends BBTest {
     /**
      * Test the accuracy of toggle_team() with an invalid team id
      * @covers BBMatch::test_toggle_team
+     * @group fail
      */
     public function test_toggle_team_invalid_id() {
         $invalid = $this->get_invalid_team();
@@ -456,6 +465,7 @@ class BBMatchTest extends BBTest {
     /**
      * Test validate_games, which will check to see if you 
      *  gave the match winner enough game wins, based on the round's best_of setting
+     * @group fail
      */
     public function test_validate_games() {
         //Determine winner
@@ -770,6 +780,7 @@ class BBMatchTest extends BBTest {
     }
     /**
      * Test unreport()
+     * @group fail
      */
     public function test_unreport() {
         $this->assertTrue(false, 'build this - also have to build fetching latest match in BBTeam');
@@ -778,6 +789,7 @@ class BBMatchTest extends BBTest {
      * Test unreport() on a match that is not allowed
      *  to be unreported - because either team has 
      *  reported other wins since
+     * group fail
      */
     public function test_unreport_bracket_invalid() {
         $this->assertTrue(false, 'build this');

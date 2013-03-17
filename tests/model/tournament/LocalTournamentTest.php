@@ -8,7 +8,7 @@
  * @group custom_model
  * @group all
  */
-class BBTournamentTest extends BBTest {
+class LocalTournamentTest extends BBTest {
 
     /** @var LocalTournament */
     protected $object;
