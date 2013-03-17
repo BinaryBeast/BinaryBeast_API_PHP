@@ -53,7 +53,6 @@ class BBLegacyTest extends BBTest {
 
     /**
      * @covers BBLegacy::tournament_list
-     * @todo   Implement testTournament_list().
      */
     public function testTournament_list_my() {
         $this->assertServiceListSuccessful($this->object->tournament_list_my(null, 1));
@@ -111,7 +110,6 @@ class BBLegacyTest extends BBTest {
 
     /**
      * @covers BBLegacy::tournament_confirm
-     * @todo   Implement testTournament_confirm().
      */
     public function testTournament_confirm() {
         $this->assertServiceSuccessful($this->object->tournament_confirm($this->get_id()));
@@ -119,7 +117,6 @@ class BBLegacyTest extends BBTest {
 
     /**
      * @covers BBLegacy::tournament_unconfirm
-     * @todo   Implement testTournament_unconfirm().
      */
     public function testTournament_unconfirm() {
         $this->assertServiceSuccessful($this->object->tournament_unconfirm($this->get_id()));
@@ -212,7 +209,6 @@ class BBLegacyTest extends BBTest {
     }
     /**
      * @covers BBLegacy::match_report_games
-     * @todo   Implement testMatch_report_games().
      */
     public function testMatch_report_games() {
         //Array pointing to the winner of each match, $tourney_team_id wins first game, $o_tourney_team_id wins second, and $tourney_team_id takes the 3rd
@@ -282,7 +278,6 @@ class BBLegacyTest extends BBTest {
     }
     /**
      * @covers BBLegacy::country_search
-     * @todo   Implement testCountry_search().
      */
     public function testCountry_search() {
         $result = $this->object->country_search('united');

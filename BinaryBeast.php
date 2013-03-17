@@ -176,7 +176,7 @@ class BinaryBeast {
      * Object that stores our application-specific configuration values
      * @var BBConfiguration
      */
-    private static $config;
+    private $config;
 
     /**
      * A few constants to make a few values a bit easier to read / use
@@ -245,10 +245,11 @@ class BinaryBeast {
      * Constructor - import the API Key
      * 
      * If you want to use an email / password instead, you'd use login, like this:
-     *  @example $bb = new BinaryBeast();
+     * @example $bb = new BinaryBeast();
      *      $bb->login('name@domain.tld', 'your_password');
      *
-     * @param string		Optional: your api_key
+     * @param string|BBConfiguration
+     *      You can pass in either the api_key, or a customized BBConfiguration object
      * 
      * @return CustomBinaryBeast
      */
@@ -262,8 +263,14 @@ class BinaryBeast {
         //Execute the static "constructor", but only for the first instantiation
         if(self::$first) self::init($this);
 
+        //Store configuration
+        $this->config = new BBConfiguration();
+
         //Cache the api key
-        $this->api_key = $api_key;
+        if(!is_null($api_key)) $this->config->api_key = $api_key;
+
+        //Use a custom BBConfiguration object
+        if($api_key instanceof BBConfiguration) $this->config = $api_key;
     }
 
     /**
@@ -395,8 +402,8 @@ class BinaryBeast {
         $args['api_use_underscores'] = true;
 
         //Authenticate ourselves
-        if (!is_null($this->api_key)) {
-            $args['api_key'] = $this->api_key;
+        if (!is_null($this->config->api_key)) {
+            $args['api_key'] = $this->config->api_key;
         }
 
         /*
@@ -714,7 +721,7 @@ class BinaryBeast {
         if(!is_null($this->cache) || $this->cache === false) return $this->cache;
 
         //Instantiate a new BBCache objec into $this->cache (will automatically try to connect)
-        $this->cache = new BBCache($this);
+        $this->cache = new BBCache($this, $this->config);
 
         //If BBCache can't connect, simply set it to false
         if(!$this->cache->connected()) $this->cache = false;
@@ -727,20 +734,25 @@ class BinaryBeast {
      * if we actually need to load the file
      * 
      * @param string        $library        Full library class name / file name
-     * @return boolean      False if the library name is invalid
+     * @param string        $lib_path       Optionally override the default /lib 
+     *      Usefulf or loading extended model classes from a specific directory
      */
-    private function load_library($library) {
+    private function load_library($library, $lib_path = null) {
+
+        //If not defined, default to /lib 
+        if(is_null($lib_path)) $lib_path = 'lib/';
 
         //require(), only if the class isn't already defined
         if(!class_exists($library)) {
             //Does the file even exist??
-            if(file_exists("lib/$library.php")) {
-                require("lib/$library.php");
+            $path = $lib_path . $library . '.php';
+            if(file_exists($path)) {
+                require($path);
             }
 
-            //Invalid library name
+            //Invalid filename
             else {
-                $this->set_error("Unable to load file \"lib/$library.php\" - file does not exist");
+                $this->set_error("Unable to load file \"$path\" - file does not exist");
                 return false;
             }
         }
@@ -754,19 +766,6 @@ class BinaryBeast {
 
         //Success!
         return true;
-    }
-    /**
-     * Converts a simplified library name to the full
-     * class name (@example tournament => BBTournament, match_game => BBMatchGame)
-     * @param string $library
-     */
-    private function full_library_name($library) {
-        //replace underscores with spaces, capitalize each word, then "implode" 
-        return 'BB' . str_replace(' ', '', ucwords(
-            str_replace('_', ' ', (
-                strtolower($library)
-            ))
-        ));
     }
 
     /**
@@ -810,6 +809,20 @@ class BinaryBeast {
             return false;
         }
 
+        //Try to honor any defined extensions
+        $extension = null;
+        if(isset($this->config->models_extensions[$model])) {
+            $extension = $this->config->models_extensions[$model];
+            $extension_lib = $this->config->models_extensions_lib;
+        }
+
+        //Extension defined - load it and instantiate it
+        if(!is_null($extension)) {
+            if(!$this->load_library($extension, $extension_lib)) {
+                return false;
+            }
+            
+        }
         //Load it first, so we can test it to make sure it's actually a model (we only want to return models)
         $instance = new $model($this, $data);
 

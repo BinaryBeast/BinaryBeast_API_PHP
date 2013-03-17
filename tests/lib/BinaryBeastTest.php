@@ -15,12 +15,10 @@ class BinaryBeastTest extends BBTest {
 
     protected function setUp() {
         $this->object = &$this->bb;
-        $tour = $this->object->tournament();
     }
 
     /**
      * @covers BinaryBeast::login
-     * @todo   Implement testLogin().
      */
     public function testLogin() {
         $this->assertTrue($this->object->login('APITester@binarybeast.com', 'password', true), 'Email/Password login failed');
@@ -30,7 +28,6 @@ class BinaryBeastTest extends BBTest {
 
     /**
      * @covers BinaryBeast::test_login
-     * @todo   Implement testTest_login().
      */
     public function testTest_login() {
         $this->assertTrue($this->object->test_login(), 'API Key Login failed');
@@ -54,7 +51,6 @@ class BinaryBeastTest extends BBTest {
 
     /**
      * @covers BinaryBeast::enable_ssl_verification
-     * @todo   Implement testEnable_ssl_verification().
      */
     public function testEnable_ssl_verification() {
         $this->object->enable_ssl_verification();
@@ -135,27 +131,23 @@ class BinaryBeastTest extends BBTest {
     }
 
     /**
-     * @covers BinaryBeast::ref
-     */
-    public function test_ref() {
-        //Make sure multiple references are independent etc
-        $this->assertTrue(false, 'implement this');
-    }
-    
-    /**
-     * Test to make sure that allowing __get to call any method can't result
-     *  in opening up too much to developers
-     */
-    public function test_malicious() {
-        $this->assertTrue(false, 'implement this');
-    }
-    
-    /**
      * Test to make sure that BBModels do not allow
      *  loading data from a specific ID, if it already had an ID and you are
      *  specifying a new one
      */
     public function test_load_different_id() {
-        $this->assertTrue(false, 'Implement this - also move it to a BBmodel test');
+        $tournament = $this->object->tournament();
+        $tournament->title = 'load() test';
+        $this->assertSave($tournament->save());
+
+        $tournament2 = $this->object->tournament();
+        $tournament2->title = 'load() test';
+        $this->assertSave($tournament2->save());
+        
+        $this->assertFalse($tournament->load($tournament2->id));
+        $this->assertFalse($tournament2->load($tournament->id));
+        
+        $tournament->delete();
+        $tournament2->delete();
     }
 }

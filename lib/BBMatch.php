@@ -14,6 +14,11 @@
  * @author Brandon Simmons
  * 
  * ******* Property documentation *********
+ * @property-read string $tourney_id
+ *  <pre>
+ *      The id of the tournament this match is in
+ *  </pre>
+ * 
  * @property int $tourney_team_id
  *  <pre>
  *      The ID of the match's overall winner
@@ -103,11 +108,12 @@
 class BBMatch extends BBModel {
 
     //Service names for the parent class to use for common tasks
-    const SERVICE_LOAD   = 'Tourney.TourneyLoad.Match'; 
-    const SERVICE_CREATE = 'Tourney.TourneyTeam.ReportWin';
-    const SERVICE_UPDATE = 'Tourney.TourneyMatch.Update';
-    const SERVICE_DELETE = 'Tourney.TourneyMatch.Delete';
-	//
+    const SERVICE_LOAD          = 'Tourney.TourneyLoad.Match'; 
+    const SERVICE_CREATE        = 'Tourney.TourneyTeam.ReportWin';
+    const SERVICE_UPDATE        = 'Tourney.TourneyMatch.Update';
+    const SERVICE_DELETE        = 'Tourney.TourneyMatch.Delete';
+    //
+    const SERVICE_UNREPORT      = 'Tourney.TourneyTeam.UnreportWin';
 	const SERVICE_UPDATE_GAMES  = 'Tourney.TourneyMatchGame.ReportBatch';
 
     //Cache setup (cache for 10 minutes)
@@ -181,20 +187,33 @@ class BBMatch extends BBModel {
      * Import parent tournament class
      * 
      * @param BBTournament  $tournament
-     * @param int           $bracket
      * @return void
      */
-    public function init(BBTournament &$tournament, $bracket = null) {
+    public function init(BBTournament &$tournament) {
         $this->tournament = &$tournament;
 
         //Associate tournament as parent, so BBModel will flag child changes for us
         $this->parent = &$this->tournament;
 
-        //Import bracket if defined
-        if(!is_null($bracket)) $this->set_current_data('bracket', $bracket);
-
 		//Update any games we may have (necessary to allow directly loaded matches ($match = $bb->match(id) without calling init())
 		foreach($this->games as &$game) $game->init($this->tournament, $this);
+    }
+    
+    /**
+     * Delete the match - can only be done if this match hasn't been reported
+     * 
+     * If you wish to delete a match that has already been reported, please see {@link BBMatch::unreport()}
+     * 
+     * @return boolean
+     */
+    public function delete() {
+        //Only continue if the match hasn't been reported
+        if(!is_null($this->id)) {
+            return $this->set_error('You cannot delete matches that have been reported, please see BBMatch::unreport()');
+        }
+
+        //Hand control over to BBModel
+        return parent::delete();
     }
 
     /**
@@ -274,17 +293,17 @@ class BBMatch extends BBModel {
      * 
      * returns null if unable to determine the round format
      * 
-     * @return BBRound - null if unavailable
+     * @return BBRound|null - null if unavailable
      */
     public function &round() {
         //Already set
         if(!is_null($this->round)) return $this->round;
-
+        
         //If we have a value for round and bracket, grab the round from the tournament now
         if(isset($this->current_data['round']) && isset($this->current_data['bracket'])) {
             //The tournament's rounds array is keyed by "friendly" bracket, determine ours now
             $bracket = BBHelper::get_bracket_label($this->current_data['bracket'], true);
-            $round  = $this->current_data['round'];
+            $round  = $bracket == 'groups' ? 0 : $this->current_data['round'];
 
             //Found it!
             $this->round = &$this->tournament->rounds->{$bracket}[$round];
@@ -328,7 +347,7 @@ class BBMatch extends BBModel {
      * @param array $args   ignored
      * @param boolean   $skip_cache     Disabled by default - set true to NOT try loading from local cache
      * 
-     * @return self - false if there was an error loading
+     * @return self|false - false if there was an error loading
      */
     public function &load($id = null, $args = array(), $skip_cache = false) {
         //Let BBModal handle this, just pass it extra paramater
@@ -832,50 +851,48 @@ class BBMatch extends BBModel {
      * @return boolean
      */
     public function unreport() {
+        //Derp - can't unreport if not reported yet
+        if(is_null($this->id)) return $this->set_error('Can\'t unreport a match that hasn\'t been reported yet!');
+
         //Only possible from the tournament's current stage
-        /*
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * TODO
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         * 
-         */
-        return $this->set_error('unreport is not yet implemented');
+        if(!BBHelper::bracket_matches_tournament_status($this->tournament(), $this->bracket)) {
+            return $this->set_error('This match was played a previous stage of the touranment, and therefore can no longer be changed');
+        }
+
+        //If NOT from the group rounds, we must make sure that neither team has reported any wins after this match
+        if($this->bracket !== 0) {
+            if(is_null($this->team->last_match())) return false;
+            if(is_null($this->oppopnent->last_match())) return false;
+
+            if($this->team->last_match->id != $this->id) {
+                return $this->set_error("You cannot unreport this match, because there are depedent matches that have been reported by team {$this->team->id} after this match, check \$match->team->last_match for details");
+            }
+            if($this->opponent->last_match->id != $this->id) {
+                return $this->set_error("You cannot unreport this match, because there are depedent matches that have been reported by team {$this->opponent->id} after this match, check \$match->team2->last_match for details");
+            }
+        }
+
+        //GOGOGO!
+        $result = $this->call(self::SERVICE_UNREPORT, array(
+            'tourney_team_id'   => $this->team->id,
+            'o_tourney_team_id' => $this->opponent->id)
+        );
+
+        //Failure!
+        if($result->result != BinaryBeast::RESULT_SUCCESS) return false;
+
+        //Success! Simply set the id to null, we can leave the rest as-is
+        $this->set_id(null);
+
+        //Remove ids from each game
+        foreach($this->games as &$game) $game->set_id(null);
+
+		//Wipe all tournament cache, and tournament opponent cache / wins lb_wins losses draws bronze_draws etc
+		$this->tournament->clear_id_cache();
+        $this->team->reload();
+        $this->opponent->reload();
+
+        return true;
     }
 
     /**

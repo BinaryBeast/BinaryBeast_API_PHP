@@ -12,7 +12,7 @@
  * <pre>
  *      If you want to take advantage of the integrate API response caching in this class,
  *      you must have PDO_MySLQ installed, and you must define the connection details
- *      in BBConfig.php!
+ *      in lib/BBConfiguration.php !
  * </pre>
  * 
  * 
@@ -22,71 +22,14 @@
  */
 class BBCache {
 
-    /************************* DEVELOPERS: SET THE VALUES BELOW! ********************
-     ********************************************************************************
-     ********************************************************************************
-     ********************************************************************************
-     ********************************************************************************
-     ********************************************************************************/
-
-    /**
-     * Database type, currently supported values: 'mysql' ('postgresql' next probably)
-     * @var string
-     */
-    private $type = 'mysql';//null;
-    /**
-     * Server to connect to, ie 'localhost', 'mydb.site.com', etc
-     * @var string
-     */
-    private $server = 'localhost';//null;
-    /**
-     * Optional port to use when connecting to $server
-     *      If not provided, we will use the default port
-     *      based on the database $type defined
-     * @var int
-     */
-    private $port = null;
-    /**
-     * Database name
-     * @var string
-     */
-    private $database = 'test';//null;
-    /**
-     * Name of the table to use
-     *      This class will create the table, since we expect it to be in a certain format
-     * @var string
-     */
-    private $table = 'bb_api_cache';
-    /**
-     * Username for logging into the database
-     * @var string
-     */
-    private $username = 'test_user';//null;
-    /**
-     * Password for logging into the database
-     * @var string
-     */
-    private $password = null;
-
-    /************************* DEVELOPERS: SET THE VALUES ABOVE! ********************
-     ********************************************************************************
-     ********************************************************************************
-     ********************************************************************************
-     ********************************************************************************
-     ********************************************************************************/
-
     /** @var PDO */
-    private static $static_db;
-    /**
-     * Referenc to static $db simply because I wanted to.
-     * @var PDO
-     */
     private $db;
-    //For standardized name shared across all instances
-    private static $static_type;
 
     /** @var BinaryBeast */
     private $bb;
+
+    /** @var BBConfiguration */
+    private $config;
 
     /**
      * DSN Prefix values for each database type
@@ -102,7 +45,7 @@ class BBCache {
     /**
      * After successfully connecting and checking for the existance
      */
-    private static $connected = false;
+    private $connected = false;
 
     /**
      * PDO connection options per db type
@@ -127,28 +70,12 @@ class BBCache {
      * 
      * @param BinaryBeast   $bb
      */
-    function __construct(BinaryBeast &$bb) {
-        $this->bb   = $bb;
+    function __construct(BinaryBeast &$bb, BBConfiguration &$config) {
+        $this->bb       = &$bb;
+        $this->config   = &$config;
 
-        /**
-         * Already connected :)
-         * store a reference to the static $db in $this->db, for cleaner code / less hair pullage
-         * also make sure that this instance's $type value is lower case
-         */
-        if(self::$connected) {
-            $this->type = self::$static_type;
-            $this->db = &self::$static_db;
-            return;
-        }
-
-        /**
-         * If the class hasn't been configured with any values at all, we'll simply fail
-         *      silently
-         * 
-         * However if we DO have values, try to connect now, and call $bb->set_error if 
-         *      we encounter any problems
-         */
-        if(self::check_values()) {
+        //If an error was returned while trying to connect, add it to BinaryBeast::$error_history
+        if($this->check_values()) {
             if(($error = $this->connect()) !== true) {
                 $bb->set_error($error, 'BBCache');
             }
@@ -159,18 +86,17 @@ class BBCache {
      * Simply returns a boolean to indicate whether or not
      *  all required values have been defined, becauase we'll
      *  simply fail silently if not configured
+     * 
+     * @return boolean
      */
     private function check_values() {
-        if(is_null($this->type)
-            || is_null($this->server)
-            || is_null($this->database)
-            || is_null($this->table)
-            || is_null($this->username) ) {
-            return false;
-        }
-        //Success! Make sure $type is all lower case to be standard, and return true
-        self::$static_type = strtolower($this->type);
-        $this->type = self::$static_type;
+        $values = array($this->config->cache_db_type, $this->config->cache_db_server, $this->config->cache_db_database,
+            $this->config->cache_db_table, $this->config->cache_db_username);
+
+        //Invalid
+        if(in_array(null, $values)) return false;
+
+        //Success!
         return true;
     }
 
@@ -184,16 +110,16 @@ class BBCache {
      */
     private function connect() {
         //Determine the DSN prefix and port
-        if(!isset($this->dsn_prefix[$this->type])) {
-            return 'Invalid database type: ' . $this->type;
+        if(!isset($this->dsn_prefix[$this->config->cache_db_type])) {
+            return 'Invalid database type: ' . $this->config->cache_db_type;
         }
         else {
-            $dsn_prefix = $this->dsn_prefix[$this->type];
+            $dsn_prefix = $this->dsn_prefix[$this->config->cache_db_type];
         }
 
         //Use default port if not specified
-        if(is_null($this->port))    $port = $this->db_ports[$dsn_prefix];
-        else                        $port = $this->port;
+        if(is_null($this->config->cache_db_port))   $port = $this->db_ports[$dsn_prefix];
+        else                                        $port = $this->config->cache_db_port;
 
         /**
          * Make sure PDO for our database type is enabled
@@ -206,26 +132,23 @@ class BBCache {
 
         //Try to establish the connection, and store it staticly
         try {
-            self::$static_db = new PDO("$dsn_prefix:host=" . $this->server . ';dbname=' . $this->database . ';port=' . $port,
-                $this->username, $this->password, $this->pdo_options[$dsn_prefix]
+            $this->db = new PDO("$dsn_prefix:host=" . $this->config->cache_db_server . ';dbname=' . $this->config->cache_db_database . ';port=' . $port,
+                $this->config->cache_db_username, $this->config->cache_db_password, $this->pdo_options[$dsn_prefix]
             );
         } catch(PDOException $error) {
             return 'Error connecting to the database (' . $error->getMessage() . ')';
         }
 
-        //Store an instance reference to the new PDO object, and set the connection flag to true
-        $this->db = &self::$static_db;
-
         //Success! Now, make sure the table exists, create it if not
         if(!$this->check_table()) {
             if(!$this->create_table()) {
                 return $this->db->errorInfo();
-                return 'Error creating the table "' . $this->table . '", please make sure user "' . $this->username . '" has permission to create tables on database "' . $this->database . '"';
+                return 'Error creating the table "' . $this->config->cache_db_table . '", please make sure user "' . $this->config->cache_db_username . '" has permission to create tables on database "' . $this->config->cache_db_database . '"';
             }
         }
 
         //Success!
-        self::$connected = true;
+        $this->connected = true;
         return true;
     }
 
@@ -234,7 +157,7 @@ class BBCache {
      * @return boolean
      */
     private function check_table() {
-        return $this->db->query("SELECT COUNT(*) FROM {$this->table}") !== false;
+        return $this->db->query("SELECT COUNT(*) FROM {$this->config->cache_db_table}") !== false;
     }
     /**
      * Attempt to create the table 
@@ -242,7 +165,7 @@ class BBCache {
      */
     private function create_table() {
         return $this->db->exec("
-            CREATE TABLE IF NOT EXISTS `{$this->table}` (
+            CREATE TABLE IF NOT EXISTS `{$this->config->cache_db_table}` (
             `id`                int(10)         unsigned NOT NULL AUTO_INCREMENT,
             `service`           varchar(100)    NOT NULL,
             `object_type`       int(4)          unsigned NULL DEFAULT NULL,
@@ -263,7 +186,7 @@ class BBCache {
      * @return boolean
      */
     public function connected() {
-        return self::$connected;
+        return $this->connected;
     }
 
     /**
@@ -272,7 +195,7 @@ class BBCache {
      */
     public function clear_expired() {
         return $this->db->exec("
-            DELETE FROM {$this->table}
+            DELETE FROM {$this->config->cache_db_table}
             WHERE TIMESTAMPDIFF(SECOND, UTC_TIMESTAMP(), expires) <= 0
         ") !== false;
     }
@@ -293,7 +216,7 @@ class BBCache {
 		
         //GOGOGO!!!
         return $this->db->exec("
-            DELETE FROM {$this->table} $where
+            DELETE FROM {$this->config->cache_db_table} $where
         ") !== false;
     }
 
@@ -320,7 +243,7 @@ class BBCache {
         $id = null;
         $result = $this->db->query("
             SELECT id, result, TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), expires) AS minutes_remaining
-            FROM {$this->table}
+            FROM {$this->config->cache_db_table}
             $where
         ");
 
@@ -368,7 +291,7 @@ class BBCache {
      */
     private function update($id, $result, $ttl) {
         $statement = $this->db->prepare("
-            UPDATE {$this->table}
+            UPDATE {$this->config->cache_db_table}
             SET result = :result, expires = DATE_ADD(UTC_TIMESTAMP(), INTERVAL '$ttl' MINUTE)
             WHERE id = $id
         ");
@@ -385,7 +308,7 @@ class BBCache {
      */
     private function insert($svc, $object_type, $object_id, $ttl, $result) {
         $statement = $this->db->prepare("
-            INSERT INTO {$this->table}
+            INSERT INTO {$this->config->cache_db_table}
             (service, object_type, object_id, result, expires)
             VALUES('$svc', $object_type, $object_id, :result, DATE_ADD(UTC_TIMESTAMP(), INTERVAL '$ttl' MINUTE))
         ");

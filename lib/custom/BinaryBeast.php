@@ -1,6 +1,11 @@
 <?php
 
 /**
+ * @todo - figure out how to write over code hinting from BinaryBeast, to hint
+ *  at our custom classes here 
+ */
+
+/**
  * This class is never used, and in fact the file should never even be loaded
  * 
  * It allows developers to define custom code hinting documentaiton, @param and @method values for example

@@ -113,14 +113,14 @@
  *      Same goes for steam, xbox live, etc etc
  *  </pre>
  * 
- * @property BBTournament $tournament
+ * @property-read BBTournament $tournament
  *  <b>Alias for {@link BBTeam::tournament()}</b>
  *  <pre>
  *      The tournament this team is in
  *  </pre>
  *  <b>NULL returned if created from BinaryBeast::team() without running {@link BBTeam::init()}</b>
  * 
- * @property BBMatch $match
+ * @property-read BBMatch $match
  *  <b>Alias for {@link BBTeam::match()}</b>
  *  <pre>
  *      If this team has an opponent waiting, this method can be used to get the
@@ -128,7 +128,14 @@
  *  </pre>
  *  <b>NULL if no match available</b>
  * 
- * @property BBTeam $opponent
+ * @property-read BBMatch $last_match
+ *  <b>Alias for {@link BBTeam::last_match()}</b>
+ *  <pre>
+ *      Returns the last match that this team was a part of
+ *  </pre>
+ *  <b>NULL if no match available</b>
+ * 
+ * @property-read BBTeam $opponent
  *  <b>Alias for {@link BBTeam::opponent()}</b>
  *  <pre>
  *      the BBTeam object of this team's current opponent
@@ -136,7 +143,7 @@
  *  <b>NULL return means the team doesn't have an opponent yet</b>
  *  <b>FALSE return means the team has been eliminated</b>
  * 
- * @property BBTeam $eliminated_by
+ * @property-read BBTeam $eliminated_by
  *  <b>Alias for {@link BBTeam::eliminated_by()}</b>
  *  <pre>
  *      the BBTeam object of the team that eliminated this team, if applicable
@@ -155,6 +162,8 @@ class BBTeam extends BBModel {
 	const SERVICE_UNCONFIRM		= 'Tourney.TourneyTeam.Confirm';
 	const SERVICE_BAN			= 'Tourney.TourneyTeam.Ban';
 	//
+	const SERVICE_GET_LAST_MATCH    = 'Tourney.TourneyTeam.LoadLastMatch';
+    //
 	const SERVICE_GET_OPPONENT		= 'Tourney.TourneyTeam.GetOTourneyTeamID';
 	const SERVICE_LIST_OPPONENTS	= 'Tourney.TourneyTeam.GetOpponentsRemaining';
 
@@ -192,10 +201,15 @@ class BBTeam extends BBModel {
     private $opponents;
 
 	/**
-	 * This team's current match, use current_match or match() to get
+	 * This team's current / unreported match
 	 * @var BBMatch
 	 */
 	protected $match;
+	/**
+	 * This team's previous match
+	 * @var BBMatch
+	 */
+	protected $last_match;
 	/**
 	 * If eliminated, store the team that eliminated us here
 	 * @var BBTeam
@@ -387,6 +401,7 @@ class BBTeam extends BBModel {
     
     /**
      * Overloaded so that we can invoke reset_opponents() when a reload is required
+     * 
      * @return self
      */
     public function &reload() {
@@ -412,6 +427,16 @@ class BBTeam extends BBModel {
 	 *		cached opponent results this team may have saved
 	 */
 	public function reset_opponents() {
+        //If the current match was reported, save it as the last_match
+        $this->last_match       = &$this->bb->ref(null);
+        if(!is_null($this->match)) {
+            if($this->match->team_in_match($this)) {
+                if(!$this->match->is_new()) {
+                    $this->last_match = $this->match;
+                }
+            }
+        }
+
         //Assign to a new reference, so that we're not changing the original team value in Tournament::$teams
         $this->opponent         = &$this->bb->ref(null);
         $this->match            = &$this->bb->ref(null);
@@ -485,7 +510,7 @@ class BBTeam extends BBModel {
 	 * If this team has an opponent waiting, this method can be used to get the
 	 *		BBMatch object for the match, so that it can be reported
 	 * 
-	 * @return BBMatch
+	 * @return BBMatch|null
 	 */
 	public function &match() {
         if($this->orphan_error()) return $this->bb->ref(null);
@@ -497,7 +522,36 @@ class BBTeam extends BBModel {
 		if(is_null($this->opponent())) return $this->bb->ref(null);
 
 		//Use tournament to create the BBModel object, cache it, and return
-		return $this->match = &$this->tournament->match($this, $this->opponent);
+        $this->match = &$this->tournament->match($this, $this->opponent);
+		return $this->match;
+	}
+
+	/**
+	 * Returns the last reported match that this team participated in
+	 * 
+	 * @return BBMatch|null
+	 */
+	public function &last_match() {
+        if($this->orphan_error()) return $this->bb->ref(null);
+
+		//Already cached
+		if(!is_null($this->last_match)) return $this->last_match;
+
+		//Simply rely on the API
+        $this->tournament();
+        $result = $this->call(self::SERVICE_GET_LAST_MATCH, array('tourney_team_id' => $this->id), 10, BBCache::TYPE_TOURNAMENT, $this->tournament->id);
+
+        //Failure!
+        if($result->result != BinaryBeast::RESULT_SUCCESS) return $this->ref(null);
+
+        //Import settings, and associate the tournament
+        $match = $this->bb->match($result);
+        $match->init($this->tournament());
+
+        $this->last_match = $match;
+
+        //Success!
+        return $this->last_match;
 	}
 
 }

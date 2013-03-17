@@ -7,7 +7,7 @@ $path = str_replace('\\', '/', dirname(__DIR__ ));
 chdir($path);
 
 require_once('BinaryBeast.php');
-$bb = new BinaryBeast('e17d31bfcbedd1c39bcb018c5f0d0fbf.4dcb36f5cc0d74.24632846');
+$bb = new BinaryBeast();
 $bb->disable_ssl_verification();
 
 
@@ -143,7 +143,7 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
      */
     public static function assertServiceListSuccessful($result, $list_name = 'list') {
         self::assertServiceSuccessful($result);
-        self::assertObjectHasAttribute($list_name, $result, $msg);
+        self::assertObjectHasAttribute($list_name, $result, 'Returned value does not contain the key ' . $list_name);
         self::assertTrue(is_array($result->$list_name), "Result $list_name value is not an array");
         if(sizeof($result->$list_name) > 0) {
             self::assertTrue(is_object($result->{$list_name}[0]), "Values in $list_name are not objects!");
@@ -287,8 +287,8 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
                 $round->map = isset($maps[$x]) ? $maps[$x] : null;
             }
         }
-        if($double_elimination) $tournament->rounds->finals[0]->best_of = 5;
-        else                    $tournament->rounds->bronze[0]->best_of = 5;
+        if(isset($tournament->rounds->finals)) $tournament->rounds->finals[0]->best_of = 5;
+        if(isset($tournament->rounds->bronze)) $tournament->rounds->bronze[0]->best_of = 5;
 
         if($save) $this->assertSave($tournament->save());
     }
@@ -342,7 +342,8 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
      */
     protected function get_tournament_ready($groups = false, $double_elimination = false) {
         $tournament = $this->get_tournament_inactive($groups, $double_elimination, false);
-        $this->add_tournament_teams($tournament, true);
+        $this->add_tournament_teams($tournament, false);
+        $this->add_tournament_rounds($tournament, $double_elimination, true);
 
         //Success!
         return $this->tournament = $tournament;

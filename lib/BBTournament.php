@@ -69,6 +69,7 @@
  *      Tournament type - defines the stages of the tournament
  *      Use {@link BinaryBeast::TOURNEY_TYPE_BRACKETS} and {@link BinaryBeast::ELIMINATION_SINGLE}
  *  </pre>
+ * <b>warning: you cannot change this setting after the tournament has started, you'll have to {@link BBTournament::reopen()} first</b>
  * 
  * @property int $elimination
  *  <b>Default: 1 (Single Elimination)</b>
@@ -214,6 +215,8 @@ class BBTournament extends BBModel {
     const SERVICE_LIST_POPULAR              = 'Tourney.TourneyList.Popular';
     const SERVICE_LIST_OPEN_MATCHES         = 'Tourney.TourneyLoad.OpenMatches';
     /** Child listing / manipulation**/
+    const SERVICE_LOAD_MATCH                = 'Tourney.TourneyLoad.Match';
+    const SERVICE_LOAD_TEAM_PAIR_MATCH      = 'Tourney.TourneyMatch.Match';
     const SERVICE_LOAD_TEAMS                = 'Tourney.TourneyLoad.Teams';
     const SERVICE_LOAD_ROUNDS               = 'Tourney.TourneyLoad.Rounds';
     const SERVICE_UPDATE_ROUNDS             = 'Tourney.TourneyRound.BatchUpdate';
@@ -226,9 +229,10 @@ class BBTournament extends BBModel {
 	const CACHE_TTL_LOAD				= 60;
     const CACHE_TTL_LIST				= 60;
     const CACHE_TTL_TEAMS				= 30;
+    const CACHE_TTL_MATCH				= 10;
     const CACHE_TTL_ROUNDS				= 60;
     const CACHE_TTL_LIST_OPEN_MATCHES	= 20;
-    
+
     /**
      * Array of participants within this tournament
      * @var BBTeam[]
@@ -285,7 +289,7 @@ class BBTournament extends BBModel {
         'replay_downloads'  => BinaryBeast::REPLAY_DOWNLOADS_ENABLED,
         'description'       => '',
         'hidden'            => null,
-        'player_password'       => null,
+        'player_password'   => null,
     );
 
     /**
@@ -294,6 +298,23 @@ class BBTournament extends BBModel {
      * Not that it honestly really matters, the API only changes acceptable values submitted anyway
      */
     protected $read_only = array('status', 'tourney_id');
+    
+    /**
+     * Overload BBModel::__set so we can prevent setting the type_id of an active tournament
+     * 
+     * The API would have prevented it, but this way it doesn't even update $data, so developers don't have to 
+     *  wait to save() to realize the type_id didn't change
+     * 
+     * @param string $name
+     * @param mixed $value
+     */
+    public function __set($name, $value) {
+        if(strtolower($name) == 'type_id') {
+            if(BBHelper::tournament_is_active($this)) return;
+        }
+
+        parent::__set($name, $value);
+    }
 
     /**
      * Returns an array of players/teams/participants within this tournament
@@ -488,8 +509,8 @@ class BBTournament extends BBModel {
      */
     public function save($return_result = false, $child_args = null) {
 
-        //For new tournaments - use save_new for special import instructions, otherwise use the standard save() method
-        $result = is_null($this->id) ? $this->save_new() : parent::save();
+        //Save settings first
+        $result = $this->save_settings(false);
 
         //Oh noes!! save failed, so return false - developer should check the value of $bb->last_error
         if(!$result) return false;
@@ -507,10 +528,23 @@ class BBTournament extends BBModel {
     }
     /**
      * Save the tournament without updating any children
+     * 
+     * @param boolean $settings_only - true by default
      */
-    public function save_settings() {
-        //For new tournaments - use save_new for special import instructions, otherwise use the standard save() method
-        return is_null($this->id) ? $this->save_new(true) : parent::save();
+    public function save_settings($settings_only = true) {
+        //If saving a new touranment, pass control to save_new
+        if(is_null($this->id)) {
+            return $this->save_new($settings_only);
+        }
+
+        //Let BBModel::save handle it, but request the return so that we can import the new tourney_info
+        if(is_array($result = parent::save(true, array('dump' => true))) ) {
+            $this->import_values($result);
+        }
+        else if($result === false) return false;
+
+        //Success!
+        return $this->id;
     }
     /**
      * If creating a new tournament, we want to make sure that when the data is sent
@@ -926,7 +960,7 @@ class BBTournament extends BBModel {
      * 
      * @param int $id       Optionally attempt to retrieve a reference to the BBTeam of an existing team
      * 
-     * @return BBTeam       Returns null if invalid
+     * @return BBTeam|null       Returns null if invalid
      */
     public function &team($id = null) {
 
@@ -937,7 +971,7 @@ class BBTournament extends BBModel {
          */
 		if(!is_null($this->id)) {
 			if($this->teams() === false) {
-				return $this->bb->ref(false);
+				return $this->bb->ref(null);
 			}
 		}
         //If it's a new object, allow devs to add teams before save(), so we need to make sure $teams is initialized
@@ -953,7 +987,8 @@ class BBTournament extends BBModel {
 
         //We can't add new players to an active-tournament
         if(BBHelper::tournament_is_active($this)) {
-            return $this->bb->ref($this->set_error('You cannot add players to active tournaments!!'));
+            $this->set_error('You cannot add players to active tournaments!!');
+            return $this->bb->ref(null);
         }
 
         //Instantiate, and associate it with this tournament
@@ -961,7 +996,7 @@ class BBTournament extends BBModel {
         $team->init($this, false);
 
         //use add_team to add it to $teams - it will return the key so we can return a direct reference
-        if(($key = $this->add_team($team)) === false) return $this->bb->ref(false);
+        if(($key = $this->add_team($team)) === false) return $this->bb->ref(null);
 
         //Success! return a reference directly from the teams array
         return $this->teams[$key];
@@ -1247,16 +1282,14 @@ class BBTournament extends BBModel {
         return $this->open_matches;
     }
 	/**
-	 * Given two teams / team ids, this method can be used to 
-	 *		create a new BBMatch object with the new teams
-	 * 
-	 * returns false if either team provided does not belong to this tournament
-	 * 
-	 * You can use this method to load a match using a match id
-	 *		param 1 = match id, param 2 = null
+     * Can be used 2 ways:
+     *  1) Returns the open BBMatch object where the $team1 and $team2 meet
+     *      it will try to return an unreported BBMatch from the open_matches array
      * 
-     * also like team(), this can be used to validate a match belongs to this tournament, and to
-     *  return an updated reference
+     *  2) Verifies that the provided BBMatch object is valid / part of this tournament
+     *      In which case, we return the valid most up-to-date object instance possible, even if the only thing that matches
+     *      from your BBMatch, is the id
+     * 
 	 * 
 	 * @param int|BBTeam|BBMatch        $team1
 	 * @param int|BBTeam                $team2
@@ -1264,43 +1297,65 @@ class BBTournament extends BBModel {
 	 * @return BBMatch|null
 	 */
 	public function &match($team1 = null, $team2 = null) {
-        //Could already be in open_matches
+        //If given BBMatch, verify or return null
+        if($team1 instanceof BBMatch) {
+            //if unreported - check it against our open_matches list
+            if($team1->is_new()) {
+                return $this->get_child($team1, $this->open_matches());
+            }
+
+            //If reported, simply load a fresh copy from the API and return
+            else {
+                //Cast as a BBMatch
+                $match = $this->bb->match($team1->id);
+                $match->init($this);
+                if($match->tourney_id != $this->id) {
+                    return $this->bb->ref(null);
+                }
+
+                //success!
+                return $match;
+            }
+        }
+
+        //If team1 is a number, and team 2 is null, treat team1 as a tourney_match_id
+        if(is_numeric($team1) && is_null($team2)) {
+            $match = $this->bb->match($team1);
+            $match->init($this);
+            return $match->load();
+        }
+
+        //Let open_match() take over
+        return $this->open_match($team1, $team2);
+	}
+
+	/**
+     * Used to either verify that the given BBMatch is in this tournametns' open_match list, or to 
+     *  fetch the open match that contains the provided $team1 and $team2
+     * 
+	 * 
+	 * @param int|BBTeam|BBMatch        $team1
+	 * @param int|BBTeam|null           $team2
+     *      Can be null if the first argument is an instance of BBMatch
+	 * 
+	 * @return BBMatch|null
+	 */
+    public function &open_match($team1, $team2 = null) {
+        //If given a match, match it against our open_matches array
         if($team1 instanceof BBMatch) {
             return $this->get_child($team1, $this->open_matches());
         }
 
-		//If asking for an existing match, load that now
-		if(is_null($team2) && is_numeric($team1)) {
-			$match = $this->bb->match($team1);
-			$match->init($this);
-            //Existing matches must be from this tournament
-            if($match->tournament() != $this) {
-                $this->set_error('Requested match id (' . $team1 . ') is not from this tournament (' . $this->id . ')');
-                return $this->bb->ref(null);
+        //Try to find the match with these two teams
+        foreach($this->open_matches() as $match) {
+            if($match->team_in_match($team1) && $match->team_in_match($team2) ) {
+                return $match;
             }
-			return $match;
-		}
+        }
 
-		if(is_null($team1 = &$this->team($team1))) return false;
-		if(is_null($team2 = &$this->team($team2))) return false;
-
-		//Return from open_matches, but make sure it's populated first
-		$this->open_matches();
-		foreach($this->open_matches as $key => &$match) {
-			if(($match->team() == $team1 && $match->team2() == $team2)
-			|| ($match->team() == $team2 && $match->team2() == $team1)) {
-				return $this->open_matches[$key];
-			}
-		}
-        
-        /**
-         * @todo support loading a match that has already been reported - but require that they specify which bracket to look in
-         */
-
-		//Invalid
-		$this->set_error("{$team1->id} vs {$team2->id} is not a valid match in this tournament, unable to createa a match object for this pair");
-		return $this->bb->ref(null);
-	}
+        //Failure!
+        return $this->bb->ref(null);
+    }
 }
 
 ?>

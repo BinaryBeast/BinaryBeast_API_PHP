@@ -296,4 +296,19 @@ class BBTeamTest extends BBTest {
         $this->set_object_with_open_match();
         $this->assertInstanceOf('BBMatch', $this->object->match);
     }
+    
+    /**
+     * @covers BBTeam::last_match
+     */
+    public function test_last_match() {
+        $this->set_object_with_open_match();
+        $match = $this->object->match();
+        //
+        $this->assertEquals($match, $this->object->match);
+        $this->assertTrue($match->set_winner($this->object));
+        $this->assertSave($match->report());
+        //
+        $this->assertNotEquals($match, $this->object->match());
+        $this->assertEquals($match, $this->object->last_match());
+    }
 }

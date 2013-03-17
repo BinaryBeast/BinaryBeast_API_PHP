@@ -49,6 +49,19 @@ class BBMatchTest extends BBTest {
         $this->assertEquals($winner, $this->object->winner());
     }
     /**
+     * Calling set_winner after reporting should not be allowed
+     * @covers BBMatch::winner
+     */
+    public function test_winner_after_report() {
+        $winner = $this->object->team2();
+        $loser  = $this->object->team();
+        $this->assertTrue($this->object->set_winner($winner));
+        $this->assertEquals($winner, $this->object->winner());
+        $this->assertSave($this->object->save());
+        //
+        $this->assertFalse($this->object->set_winner($loser));
+    }
+    /**
      * Tests to make sure that winner() returns the right team after calling set_winner twice to change the expected value
      * @covers BBMatch::winner
      */
@@ -355,7 +368,6 @@ class BBMatchTest extends BBTest {
      * @covers BBMatch::set_draw
      * @covers BBMatch::game
      * @group match_game
-     * @group fail 
      */
     public function test_set_draw_inherited_by_games() {
         $this->set_object(true);
@@ -369,7 +381,6 @@ class BBMatchTest extends BBTest {
 
         //New games with winner specific should not be considered draws
         $game1 = $this->object->game($this->object->team());
-        var_dump([$game1, $this->object->bracket, $this->object->round->round, $this->bb->error_history]);
         $this->assertFalse($game1->is_draw());
         $this->assertEquals($this->object->team(), $game1->winner());
     }
@@ -771,6 +782,4 @@ class BBMatchTest extends BBTest {
     public function test_unreport_bracket_invalid() {
         $this->assertTrue(false, 'build this');
     }
-
-
 }

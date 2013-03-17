@@ -8,64 +8,45 @@
  */
 final class BBConfiguration {
     /**
-     *     <b>Your BinaryBeast Account API Key<b>
-     *     <pre>
-     *         You can find / manage your API key in your user settings at BinaryBeast.com
-     *         {@link http://binarybeast.com/user/settings/api}
+     *  <b>Your BinaryBeast Account API Key<b>
+     *  <pre>
+     *      You can find / manage your API key in your user settings at BinaryBeast.com
+     *          {@link http://binarybeast.com/user/settings/api}
      *     
-     *         Side note, here's a useful tool to debug as you develop: {@link http://binarybeast.com/user/settings/api_history}
-     *     </pre>
+     *      Side note, here's a useful tool to debug as you develop: {@link http://binarybeast.com/user/settings/api_history}
+     *  </pre>
      * 
      * 
      * @var string
      */
     public $api_key = 'e17d31bfcbedd1c39bcb018c5f0d0fbf.4dcb36f5cc0d74.24632846';
 
-    /*
-     * 
-     * Custom Libraries
-     * 
-     */
-
     /**
-     * Path to custom classes made to extend core BBModel classes
+     * Path to class names used to extend the core BBModel library classes
      * 
      * You can extend any of the following classe:
      *  BBTournament, BBTeam, BBMatch, and BBMatchGame
      * 
      * @var string
      */
-    public $custom_library_path = 'lib/custom/';
-
+    public $models_extensions_lib = 'lib/custom/';
+    
     /**
-     * The name of the class used to extend BBTournament 
-     * <b>Filename must be {$custom_tournament}.php</b>
+     * Custom model extension class names
      * 
-     * @var string
-     */
-    public $custom_tournament = 'LocalTournament';
-    /**
-     * The name of the class used to extend BBTeam 
-     * <b>Filename must be {$custom_team}.php</b>
+     * Each class must be in a file name that exactly matches the class name
      * 
-     * @var string
-     */
-    public $custom_team = 'LocalTeam';
-    /**
-     * The name of the class used to extend BBMatch 
-     * <b>Filename must be {$custom_match}.php</b>
+     * For exmaple, if you override BBTournament with LocalTournament, you must save it in 
+     *      in lib/custom/LocalTournament.php
      * 
-     * @var string
+     * @var string[]
      */
-    public $custom_match = null;
-    /**
-     * The name of the class used to extend BBMatchGame
-     * <b>Filename must be {$custom_match_game}.php</b>
-     * 
-     * @var string
-     */
-    public $custom_match_game = null;
-
+    public $models_extensions = array(
+        //'BBTournament'          => 'LocalTournament',
+        //'BBTeam'                => 'LocalTeam',
+        //'BBMatch'               => null,
+        //'BBMatchGame'           => null,
+    );
 
     /*
      * 

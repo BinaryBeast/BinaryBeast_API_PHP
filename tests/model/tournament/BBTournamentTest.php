@@ -101,6 +101,16 @@ class BBTournamentTest extends BBTest {
         }
     }
     /**
+     * Make sure that we are not allowed to change the type_id after the tournament has started
+     */
+    public function test_update_type_id_active() {
+        $this->get_tournament_with_open_matches();
+        $this->assertEquals(BinaryBeast::TOURNEY_TYPE_BRACKETS, $this->object->type_id);
+        $this->object->type_id = BinaryBeast::TOURNEY_TYPE_CUP;
+        $this->assertEquals(BinaryBeast::TOURNEY_TYPE_BRACKETS, $this->object->type_id);
+    }
+
+    /**
      * Test adding a single team to an active tournament, through BBTeam::save
      * @covers BBTeam::save
      */
@@ -150,7 +160,6 @@ class BBTournamentTest extends BBTest {
     }
     /**
      * @covers BBTournament::confirmed_teams
-     * @todo   Implement testConfirmed_teams().
      */
     public function test_confirmed_teams() {
         $this->get_tournament_ready();
@@ -390,16 +399,55 @@ class BBTournamentTest extends BBTest {
     /**
      * Test loading a match by providing the two teams that are in it
      */
-    public function test_match_teams() {
-        //Test an open match, and an existing match
-        $this->assertTrue(false, 'implement this');
+    public function test_match_valid_teams() {
+        $this->get_tournament_with_open_matches();
+
+        $match = $this->object->open_matches[0];
+
+        $this->assertEquals($match, $this->object->match($match->team(), $match->team2(), $match->bracket));
+    }
+    /**
+     * Test loading a match by providing the two teams that are in it
+     */
+    public function test_match_invalid_teams() {
+        $this->get_tournament_with_open_matches();
+
+        $match = $this->object->open_matches[0];
+
+        //Get an invalid team
+        foreach($this->object->teams as &$team) {
+            if(!$match->team_in_match($team)) break;
+        }
+
+        $this->assertNotNull($match, $this->object->match($match->team(), $team, $match->bracket));
     }
     /**
      * Test loading a match by providing the match id
+     * @covers BBTournament::match
      */
-    public function test_match_id() {
-        //Todo test a valid match, a valid match from another touranment, and an invalid match
-        $this->assertTrue(false, 'implement this');
+    public function test_match_id_after_report() {
+        $this->get_tournament_with_open_matches();
+
+        $match = $this->object->open_matches[0];
+        $match->set_winner($match->team());
+        $this->assertSave($match->report());
+
+        $fresh_match = $this->object->match($match->id);
+        $this->assertEquals($match->id, $fresh_match->id);
+    }
+    /**
+     * Test loading a match by providing the match id
+     * @covers BBTournament::match
+     */
+    public function test_match_after_report() {
+        $this->get_tournament_with_open_matches();
+
+        $match = $this->object->open_matches[0];
+        $match->set_winner($match->team());
+        $this->assertSave($match->report());
+
+        $fresh_match = $this->object->match($match);
+        $this->assertEquals($match->id, $fresh_match->id);
     }
     /**
      * Test loading a list of unplayed matches
@@ -412,18 +460,76 @@ class BBTournamentTest extends BBTest {
     }
     /**
      * @covers BBTournament::save_matches
-     * @todo   Implement testSave_matches().
      */
-    public function test_save_matches() {
-        $this->assertTrue(false, 'Please implement this test');
+    public function test_save_matches_with_report() {
+        $this->get_tournament_with_open_matches();
+
+        $match1 = $this->object->open_matches[0];
+        $match2 = $this->object->open_matches[2];
+        $match3 = $this->object->open_matches[3];
+
+        $match1->set_winner($match1->team2());
+        $match2->set_winner($match2->team());
+
+        $this->assertSave($this->object->save_matches());
+        
+        //First 3 matches should have ids, match 4 should NOT have one
+        $this->assertID($match1->id);
+        $this->assertID($match2->id);
+        $this->assertNull($match3->id);
+    }
+    /**
+     * @covers BBTournament::save_matches
+     */
+    public function test_save_matches_without_report() {
+        $this->get_tournament_with_open_matches();
+
+        $match1 = $this->object->open_matches[0];
+        $match2 = $this->object->open_matches[2];
+        $match3 = $this->object->open_matches[3];
+        
+        //report the first match - leave 2 and 3 alone
+        $match1->set_winner($match1->team2());
+        $this->assertSave($match1->report());
+
+        //update the notes for first 2 matches
+        $match1->notes = 'updated notes for match 1';
+        $match2->notes = 'updated notes for match 2';
+
+        //Now set the winners for the second 2 matches - but they should never be reported
+        $match2->set_winner($match2->team());
+        $match3->set_winner($match2->team());
+
+        //Update matches without reporting
+        $this->assertSave($this->object->save_matches(false));
+        
+        //Match 1 should have an id, but not the second 2
+        $this->assertID($match1->id);
+        $this->assertNull($match2->id);
+        $this->assertNull($match3->id);
+        
+        //Externally verify notes updated on match 1
+        $this->AssertMatchValueExternally($match1, 'notes', 'updated notes for match 1');
     }
     /**
      * Test team()'s ability to return the object of an existing team
-     * @todo build this
      */
-    public function test_team() {
-        //Test valid team, invalid team, valid team from another tournament, by both directly providing a BBTeam and by providing a tourney_team_id
-        $this->assertTrue(false, 'Please implement this');
+    public function test_team_object() {
+        $this->get_tournament_ready();
+        
+        $team = $this->object->teams[0];
+        
+        $this->assertEquals($team, $this->object->team($team));
+    }
+    /**
+     * Test team()'s ability to return the object of an existing team
+     */
+    public function test_team_id() {
+        $this->get_tournament_ready();
+        
+        $team = $this->object->teams[0];
+        
+        $this->assertEquals($team, $this->object->team($team->id));
     }
     /**
      * Test the ability to delete a tournament
@@ -452,5 +558,95 @@ class BBTournamentTest extends BBTest {
         $list = $this->object->list_popular();
         $this->assertListFormat($list, array('tourney_id', 'title', 'status', 'date_start', 'game_code', 'game', 'team_mode', 'max_teams'));
     }
+    
+    /**
+     * @covers BBTournament::match() in context of returning a list/history of reported matches
 
+     *      */
+    public function test_match_list() {
+        $this->get_tournament_with_open_matches(true);
+
+        $match_groups = $this->object->open_matches[0];
+
+        //Give both teams a win in the group rounds, so when we load their match history later, we should get two results
+        $team1 = $match_groups->team();
+        $team2 = $match_groups->opponent();
+
+        //Report this match, then report team 2's next match
+        $match_groups->set_winner($team1);
+        $this->assertSave($match_groups->report());
+
+        //Now give team2 a win, so they should both progress to brackets
+        $this->assertNotEquals($match_groups, $team2->match);
+        $this->assertTrue($team2->match->set_winner($team2));
+        $this->assertSave($team2->match->report());
+        
+        //Start brackets manually, to guarantee team1 and team2 play eachother immediately
+        $teams = array($team1->id, $team2->id);
+        foreach($this->object->teams() as $team) {
+            if($team->id != $team1->id && $team->id != $team2->id) $teams[] = $team->id;
+        }
+        $this->assertTrue($this->object->start('manual', $teams));
+
+        //Next team1's next match should be against team2
+        $this->assertInstanceOf('BBMatch', $match_brackets = $team1->match());
+        $this->assertEquals($team2, $match_brackets->toggle_team($team2));
+
+        //Give the win to team 2
+        $this->assertTrue($match_brackets->set_winner($team2));
+        $this->assertSave($match_brackets->report());
+
+        //Now load an array of all matches between these two teams, translate into an array of ids for easier matching
+        $ids = array();
+        $this->assertTrue(is_array($matches = $this->object->match($team1, $team2)));
+        foreach($matches as $match) $ids[] = $match->id;
+
+        //Make sure we have the id of both the match in group rounds, and from the brackets
+        $this->assertArrayContains($ids, $match_groups->id);
+        $this->assertArrayContains($ids, $match_groups->id);
+    }
+
+    /**
+     * Tests open_match by providing a match object
+     * @covers open_match()
+     */
+    public function test_open_match_valid_match_object() {
+        $this->get_tournament_with_open_matches();
+
+        $match = $this->object->open_matches[0];
+
+        $this->assertEquals($match, $this->object->open_match($match));
+    }
+    /**
+     * Tests open_match by providing a match object
+     * @covers open_match()
+     */
+    public function test_open_match_valid_team_pair() {
+        $this->get_tournament_with_open_matches();
+
+        $match = $this->object->open_matches[0];
+        $team1 = $match->team();
+        $team2 = $match->opponent();
+
+        $this->assertEquals($match, $this->object->open_match($team1, $team2));
+    }
+    /**
+     * Tests open_match by providing a match object
+     * @covers open_match()
+     */
+    public function test_open_match_invalid_team_pair() {
+        $this->get_tournament_with_open_matches();
+
+        $match = $this->object->open_matches[0];
+        $team1 = $match->team();
+        $invalid_team = null;
+        foreach($this->object->teams() as $team) {
+            if(!$match->team_in_match($team)) {
+                $invalid_team = $team;
+                break;
+            }
+        }
+
+        $this->assertNull($this->object->open_match($team1, $invalid_team));
+    }
 }

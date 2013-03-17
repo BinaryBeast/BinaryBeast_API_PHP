@@ -415,6 +415,20 @@ class BBHelper {
         //Success!
         return $groups;
     }
+    
+    /**
+     * Returns a boolean flagging whehter or not the provided $bracket integer is relative
+     *  to the tournament's current $status
+     * 
+     * @param BBTournament $tournament
+     * @param int $bracket
+     * @return boolean
+     */
+    public static function bracket_matches_tournament_status(BBTournament &$tournament, $bracket) {
+        if($bracket == 0) return $tournament->status == 'Active-Groups';
+        else if($bracket >= 1 && $bracket <= 4) return $tournament->status == 'Active' || $tournament->status == 'Active-Brackets';
+        return false;
+    }
 
     /**
      * Returns the standardized (all lower case) value for the provided $seeding value
