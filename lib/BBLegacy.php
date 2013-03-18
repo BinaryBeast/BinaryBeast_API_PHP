@@ -1,6 +1,8 @@
 <?php
 
 /**
+ * Provides legacy service wrappers found in prior versions of this library
+ * 
  * Version 3.0.0 completely revamped the way the API library worked, moving from more of a
  * procedural flow to an object-oriented one
  *
@@ -12,13 +14,14 @@
  * This is basically a snap-shot 1:1 legacy version of what we had released with 2.7.4, and is in
  * itself even backwards compatible with older version than that :)
  *
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
- *
- * @author BinaryBeast.com
- * @version 2.7.5
- * @date 2013-01-22
+ * @package BinaryBeast
+ * @subpackage Library
+ * 
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBLegacy {
 

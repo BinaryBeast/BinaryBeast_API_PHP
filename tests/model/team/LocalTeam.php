@@ -2,15 +2,14 @@
 
 /**
  * Test the extended BBTeam class: LocalTeam
- * 
- * and it depends on the LocalTournament override
+ *  and it depends on the LocalTournament override
  * 
  * @group local_tournament
  * @group model
  * @group custom_model
  * @group all
  */
-class BBTournamentTest extends BBTest {
+class LocalTeamTest extends BBTest {
 
     /** @var LocalTeam */
     protected $object;

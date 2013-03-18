@@ -1,20 +1,36 @@
 <?php
 
 /**
- * A very basic class that provides some convenience methods, for helping
- * developers determine tournament-specific values.. such 
- * as calculating the number of rounds in a bracket, or 
- * determining the next power of 2 (like 11 would become 16)
+ * Simple class that helpers translating and verifying
  * 
- * This class is used statically by the way
+ * ## Tournament validation
  * 
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
+ * This class can be used to check the tournament to see if it's in the 
+ * right condition for certain tasks
  * 
- * @version 1.0.0
- * @date 2013-02-03
- * @author Brandon Simmons
+ * For example, {@link BBHelper::tournament_can_start} checks to make sure the provided
+ *  tournament has enough confirmed teams to start, and takes into account
+ *  starting group rounds
+ * 
+ * ## Translation
+ * 
+ * Most of the funcionality in this class is for translating values, to make them more friendly
+ * 
+ * For example, {@link BinaryBeast::call()} automatically translates all API result codes, 
+ *  and stores them in {@link BinaryBeast::last_result}, so you can always access <b>$bb->last_result_friendly</b> 
+ *  after an API call
+ * 
+ * There are many other translations methods, just look through the documentation to see what's available
+ * 
+ * 
+ * @package BinaryBeast
+ * @subpackage Library
+ * 
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBHelper {
 

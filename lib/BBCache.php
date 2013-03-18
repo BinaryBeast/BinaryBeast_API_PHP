@@ -1,10 +1,12 @@
 <?php
 
 /**
- * This class is used to cache API Request results
+ * Locally Caches API request results
  * 
- * drastically cuts down on API requests that you need to make, without having to do any
- *      extra coding
+ * Uses a local MySQL database through PDO to store the values, it uses service-defined TTL values 
+ *  to handle expired cache, and also provides methods that can be used to manually clear cache
+ * 
+ * The main focus of this class was to cut down on the number of API requests an application must make
  * 
  * It can cache anything that you could get through $bb->call
  * 
@@ -12,13 +14,17 @@
  * <pre>
  *      If you want to take advantage of the integrate API response caching in this class,
  *      you must have PDO_MySLQ installed, and you must define the connection details
- *      in lib/BBConfiguration.php !
+ *      in {@link lib/BBConfiguration.php}!
  * </pre>
  * 
+ * @package BinaryBeast
+ * @subpackage Library
  * 
- * @version 1.0.2
- * @date 2013-02-12
- * @author Brandon Simmons
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBCache {
 

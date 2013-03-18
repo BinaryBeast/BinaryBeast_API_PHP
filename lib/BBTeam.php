@@ -1,154 +1,114 @@
 <?php
 
 /**
- * This class represents a participant within a Tournament
+ * Model object representing a participant within a {@link BBTournament}
  * 
  * The naming may be a bit misleading, seeing as you can do 1v1s (players) as well 2v2+'s (teams).
  * 
  * This is because in the BinaryBeast back end, all 1v1 "players" are actually treated as
  * teams with only a single member, this was to simplify the development process
  * 
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
  * 
- * @version 1.0.0
- * @date 2013-02-05
- * @author Brandon Simmons
- * 
- * 
- * ******* Property documentation *********
  * @property string $display_name
- *  <pre>
- *      The name displayed on the brackets for this participant
- *  </pre>
+ *  The name displayed on the brackets for this participant
  * 
  * @property string $country_code
- *  <b>Default: null</b>
- *  <b>3 characters (ISO 3166-1 alpha-3)</b>
- *  <pre>
- *      This team's country, defined by the 3-character country code
- *  </pre>
- * 
- *  <b>Where to find the country codes:</b>
- *  <pre>
- *      Wikipedia: {@link http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3}
- *      BinaryBeast API: {@link BBCountry::country_search()}
- *  </pre>
+ * <b>Default: null</b><br />
+ * <b>3 characters (ISO 3166-1 alpha-3)</b><br />
+ * This team's country, defined by the 3-character country code<br />
+ * <b>Where to find the country codes:</b><br />
+ * Wikipedia: {@link http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3}<br />
+ * BinaryBeast API: {@link BBCountry::search()}<br />
  * 
  * @property int $status
- *  <b>Default: 1 (confirmed)</b>
- *  <pre>
- *      The status of this team - Unconfirmed, Confirmed, and Banned
- *  </pre>
+ *  <b>Default: 1 (confirmed)</b><br />
+ *      The status of this team - Unconfirmed, Confirmed, and Banned<br />
  * 
- *  <b>Translate into a string:</b>
- *      Use the BBHelper library: {@link BBHelper::translate_team_status()}
+ * <b>Friendly translation:</b><br />
+ *  Use the BBHelper library: {@link BBHelper::translate_team_status()}<br /><br />
  * 
- *  <b>Values found from BinaryBeast constants:</b>
- *  <pre>
- *      Confirmed: {@link BinaryBeast::TEAM_STATUS_CONFIRMED}
- *      Unconfirmed: {@link BinaryBeast::TEAM_STATUS_UNCONFIRMED}
- *      Banned: {@link BinaryBeast::TEAM_STATUS_BANNED}
- *  </pre>
+ * <b>Values found from BinaryBeast constants:</b>
+ * <ul>
+ *  <li>Confirmed: {@link BinaryBeast::TEAM_STATUS_CONFIRMED}</li>
+ *  <li>Unconfirmed: {@link BinaryBeast::TEAM_STATUS_UNCONFIRMED}</li>
+ *  <li>Banned: {@link BinaryBeast::TEAM_STATUS_BANNED}</li>
+ * </ul>
  * 
  * @property-read int $wins
- *  <b>Read Only</b>
- *  <pre>
- *      The number of wins this team has in the winners' bracket
- *      For brackets, it also represents which round he has progressed to
- *          in the bracket
- *  </pre>
+ * <b>Read Only</b><br />
+ * The number of wins this team has in the winners' bracket<br />
+ * For brackets, it also represents which round he has progressed to in the bracket
  * 
  * @property-read int $lb_wins
- *  <b>Read Only</b>
- *  <pre>
- *      The number of wins this team has in the losers' bracket
- *      For brackets, it also represents which round he has progressed to
- *          in the bracket
- *  </pre>
+ * <b>Read Only</b><br />
+ * The number of wins this team has in the losers' bracket<br />
+ * For brackets, it also represents which round he has progressed to in the bracket
  * 
  * @property-read int $bronze_wins
- *  <b>Read Only</b>
- *  <pre>
- *      Number of wins this team has in the bronze / 3rd place bracket
- *  </pre>
+ * <b>Read Only</b><br />
+ * Number of wins this team has in the bronze / 3rd place bracket
  * 
  * @property-read int $losses
- *  <b>Read Only</b>
- *  <b>Group Rounds Only</b>
- *  <pre>
+ *  <b>Read Only</b><br />
+ *  <b>Group Rounds Only</b><br />
  *      Number of losses this team has in his group
- *  </pre>
  * 
  * @property-read int $draws
- *  <b>Read Only</b>
- *  <b>Group Rounds Only</b>
- *  <pre>
+ *  <b>Read Only</b><br />
+ *  <b>Group Rounds Only</b><br />
  *      Number of draws this team has in his group
- *  </pre>
  * 
  * @property-read int $position
- *  <b>Read Only</b>
- *  <b>Elimination Brackets Only</b>
- *  <pre>
+ *  <b>Read Only</b><br />
+ *  <b>Elimination Brackets Only</b><br />
  *      The team's starting position in the winner brackets
- *  </pre>
  * 
  * @property string $notes
- *  <pre>
- *      This is a special value that could take a while to explain.. but in short:
+ *  Special hidden value that you can use to store custom data<br /><br />
  * 
- *      It's a special hidden value that allows developers to store custom data.. for example you could store
- *          a json encoded string that stores some data about this team that's specific to your site, like
- *          the local user_id, or his local email address. etc etc
- *  </pre>
+ *  The recommended use is to store a json_encoded string that contains a local user_id, or similiar data
  * 
  * @property string $network_display_name
- *  <pre>
- *      If your tournament is using a game that is associated with a network (like sc2 => bnet2),
- * 
- *      This is the value you can use to define his character code / aka his in-game name
- * 
- *      Same goes for steam, xbox live, etc etc
- *  </pre>
+ *  If your tournament is using a game that is associated with a network (like sc2 => bnet2),<br />
+ *  This is the value you can use to define his character code / aka his in-game name<br /><br />
+ *  Same goes for steam, xbox live, etc etc
  * 
  * @property-read BBTournament $tournament
- *  <b>Alias for {@link BBTeam::tournament()}</b>
- *  <pre>
- *      The tournament this team is in
- *  </pre>
+ *  <b>Alias for {@link BBTeam::tournament()}</b><br />
+ *      The tournament this team is in<br />
  *  <b>NULL returned if created from BinaryBeast::team() without running {@link BBTeam::init()}</b>
  * 
  * @property-read BBMatch $match
- *  <b>Alias for {@link BBTeam::match()}</b>
- *  <pre>
- *      If this team has an opponent waiting, this method can be used to get the
- *          BBMatch object for the match, so that it can be reported
- *  </pre>
+ *  <b>Alias for {@link BBTeam::match()}</b><br />
+ *  If this team has an opponent waiting, this method can be used to get the<br />
+ *      BBMatch object for the match, so that it can be reported<br />
  *  <b>NULL if no match available</b>
  * 
  * @property-read BBMatch $last_match
- *  <b>Alias for {@link BBTeam::last_match()}</b>
- *  <pre>
- *      Returns the last match that this team was a part of
- *  </pre>
+ *  <b>Alias for {@link BBTeam::last_match()}</b><br />
+ *      Returns the last match that this team was a part of<br />
  *  <b>NULL if no match available</b>
  * 
  * @property-read BBTeam $opponent
- *  <b>Alias for {@link BBTeam::opponent()}</b>
- *  <pre>
- *      the BBTeam object of this team's current opponent
- *  </pre>
- *  <b>NULL return means the team doesn't have an opponent yet</b>
- *  <b>FALSE return means the team has been eliminated</b>
+ *  <b>Alias for {@link BBTeam::opponent()}</b><br />
+ *  the BBTeam object of this team's current opponent<br />
+ *  <b>NULL return</b> means the team doesn't have an opponent yet<br />
+ *  <b>FALSE return</b> means the team has been eliminated<br />
  * 
  * @property-read BBTeam $eliminated_by
- *  <b>Alias for {@link BBTeam::eliminated_by()}</b>
- *  <pre>
- *      the BBTeam object of the team that eliminated this team, if applicable
- *  </pre>
+ *  <b>Alias for {@link BBTeam::eliminated_by()}</b><br />
+ *  the BBTeam object of the team that eliminated this team, if applicable<br />
  *  <b>FALSE return means the team has not yet been eliminated</b>
+ * 
+ * 
+ * @package BinaryBeast
+ * @subpackage Model
+ * 
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBTeam extends BBModel {
 

@@ -150,4 +150,17 @@ class BinaryBeastTest extends BBTest {
         $tournament->delete();
         $tournament2->delete();
     }
+
+    /**
+     * @group fail
+     */
+    public function test_last_error() {
+        $this->assertTrue(false, 'Implement this test');
+    }
+    /**
+     * @group fail
+     */
+    public function test_error_history() {
+        $this->assertTrue(false, 'Implement this test');
+    }
 }

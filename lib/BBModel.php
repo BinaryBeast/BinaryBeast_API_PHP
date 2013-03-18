@@ -1,19 +1,20 @@
 <?php
 
 /**
- * Base class for all other object-specific binarybeast service classes (tournaments, teams, etc)
+ * Base class for all manipulatable/CRUD model objects
  * 
  * Extends the functionality defined in the SimpleModel class.  Simple model provides most
  *      functionality for error handling / result storage / API interaction etc, 
  *      while this function provides logic for data manipulation + synchronizing the changes with BinaryBeast
  * 
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
+ * @package BinaryBeast
+ * @subpackage Library
  * 
- * @version 1.0.0
- * @date 2013-02-09
- * @author Brandon Simmons
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 abstract class BBModel extends BBSimpleModel {
 

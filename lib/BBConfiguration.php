@@ -5,6 +5,9 @@
  * 
  * This is stored in a seperate file to make it easier to pull changes to the library, without losing
  *  any configuration values
+ * 
+ * @package BinaryBeast
+ * @subpackage Library
  */
 final class BBConfiguration {
     /**

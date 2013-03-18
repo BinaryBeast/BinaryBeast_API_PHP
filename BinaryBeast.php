@@ -1,62 +1,140 @@
 <?php
 
 /**
- * Entry point for the BinaryBeast PHP API Library
+ * === BinaryBeast PHP API Library ===
  * 
- * <b>Important note for developers!</b><br />
- * <b>You MUST define the configuration values before using this library</b><br />
- * <b>Configuration is saved in {@link lib/BBConfiguration.php}</b>
+ * This class handles all of the actual API interaction, and is used to generate model classes
  * 
- * This is the 3rd release of our public library written in PHP.  The biggest change from the 
- * previous being that it now takes on a more object-oriented approach in exchange for
- * the more procedural feel of the former version
+ * Instantiation can be done in a few different ways
  * 
- * However we have included all of the originally wrapper methods defined previously, and 
- * moved them into a new library class called BBLegacy - so you confidently upgrade your code
- * without worrying about breaking anything
+ * ## Important note for developers!
+ * <b>Please setup the values in {@link lib/BBConfiguration} !
  * 
- * This class is depedent on classes included in the /lib directory, so please make sure
- * to include both BinaryBeast.php, and /lib
  * 
- * This class in fact, does not offer any wrapper methods at all any more, you should be using
- * models for everything.   For example use BBGame even for loading a list of games, and
- * BBCountry for listing / searching countries, and BBMap for listing maps for specific games
+ * ### Getting started ###
  * 
- * As for the object oriented approach, note that most values returned are instances of BBModel. 
- * Note for example $tour = $bb->tournament('x12345'); - this will return an instance of BBTournament, 
- * and it will autoamtically assume it's for tournament id x12345
+ * This class is your starting point for everything - and there are a few ways to instantiate it
+ * Here are a few examples of how to instantiate this class
  * 
- * Note that BBModel classes do not automatically load any data from the API, it is actually
- * loaded on-demand.  So until you try to access a property from $tour, it will be blank
+ * <b>Example: Minimal setup, use settings from {@link lib/BBConfiguration.php}</b>
+ * <code>
+ *  $bb = new BinaryBeast();
+ * </code>
  * 
- * But the moment you do try to access $tour->title for example, it will first execute the 
- *  API request required to load the tournament information, then try to return that value
- *  to you
+ * <b>Example: Manually define your api_key</b>
+ * <code>
+ *  $bb = new BinaryBeast('e17d31bfcbedd1c39bcb018c5f0d0fbf.4dcb36f5cc0d74.24632846');
+ * </code>
  * 
- * Same goes for lists of child models within models, like BBRound instances within BBTournament,
- *  $tour->rounds is an array of rounds within that tournament, but the list is not populated
- *  until you try to access it
+ * <b>Example: Use a custom BBConfiguration object, and define custom tournament team model extensions</b>
+ * Of course you could define these in {@link lib/BBConfiguration.php}, but this demonstrates how to do it manually
+ * <code>
+ *  $config = new BBConfiguration;
+ *  $config->models_extensions['BBTournament']  = 'LocalTournament';
+ *  $config->models_extensions['BBTeam']        = 'LocalTeam';
  * 
- * We will be releasing new documntnation on the site soon,
- *      meanwhile, please direct all questions to contact@binarybeast.com
+ *  $bb = new BinaryBeast($config);
+ * </code>
  * 
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
+ * ### Model Objects
  * 
- * @version 3.0.0
- * @date 2013-03-10
- * @author Brandon Simmons <contact@binarybeast.com>
+ * Models are the heart and soul of this library
+ * 
+ * Each model represnts a remote object stored on BinaryBeast's servers
+ * 
+ * For example, you can have one object to represent a tournament, and that tournament can have many 
+ *  child models, such as teams, matches, and rounds
+ * 
+ * Also for loading models with an existing id, note that the data is loaded only on-demand, so you don't have to 
+ * worry about an excessive number of API calls if you load large objects with a lot of children'
+ * (for example, loading a tournament with a hundred teams and matches in it)
+ * 
+ * Full model objects are provide basic CRUD functionality, as well as a lot of object-specific functionality
+ * 
+ * All models provide the delete(); method for deleting, and save() for creating and updating
+ * 
+ * The main model objects include:
+ * <ul>
+ *  <li>{@link BBTournament}</li>
+ *  <li>{@link BBTeam}</li>
+ *  <li>{@link BBRound}</li>
+ *  <li>{@link BBMatch}</li>
+ *  <li>{@link BBMatchGame}</li>
+ * </ul>
+ * 
+ * ### Simple models
+ * 
+ * Simple models are objects that basically do nothing more than host some API wrappers for loading / listing data
+ * 
+ * The best way to access these wrappers is to use the psuedo-attribute for each, and execute, see the example below
+ * 
+ * <b>Simple model example: printing out a list of popular games:</b>
+ * <code>
+ *      $games = $bb->game->list_popular();
+ *      foreach($games as $game) {
+ *          echo '<div class="game">' .
+ *              $game->game . '(' . $game->game_code . ')' .
+ *              '<img src="' . $game->game_icon . '" /></div>';
+ *      }
+ * </code>
+ * 
+ * <b>Simple model classes:</b>
+ * 
+ * <ul>
+ *  <li>{@link BBCountry}</li>
+ *  <li>{@link BBGame}</li>
+ *  <li>{@link BBMap}</li>
+ *  <li>{@link BBRace}</li>
+ * </ul>
+ * 
+ * 
+ * ### Error Handling
+ * 
+ * Any time an error is encountered, false or null is returned when you expected an object.. 
+ * check {@link BinaryBeast::last_error} and {@link BinaryBeast::error_history}, there is likely
+ * an explanation in there
+ * 
+ * 
+ * ### Backwards Compatability
+ * 
+ * If your application is currently using an older version of this library, it will still work with this one
+ * 
+ * To make that possible, we've included {@link lib/BBLegacy.php}, which hosts all of the old
+ * legacy api service wrappers from the previous version of this library
+ * 
+ * 
+ * ### Quick Tutorials and Examples ###
+ * 
+ * Each example assumes the following has already been executed,
+ * and that <b>you've set the values in {@link lib/BBConfiguration.php}</b>
+ * 
+ * <code>
+ *  require('BinaryBeast.php');
+ *  $bb = new BinaryBeast();
+ * </code>
+ * 
+ * ### Model tutorials
+ * 
+ * The following models have documentation that contains examples and quick tutorials:
+ * <ul>
+ *  <li>{@link BBTournament}</li>
+ *  <li>{@link BBTeam}</li>
+ *  <li>{@link BBRound}</li>
+ *  <li>{@link BBMatch}</li>
+ *  <li>{@link BBMatchGame}</li>
+ * </ul>
  * 
  * 
  * @property BBTournament $tournament
  * <b>Alias for {@link BinaryBeast::tournament()}</b><br />
- * <pre>
- *  Returns a new BBTournamament object
- *  The recommended use of this would be loading tournament lists, without
- *      having to handle the $tournament object directly
- *  {@example $my_tournaments = $bb->tournament->list_my()}
+ *  Returns a new BBTournamament object {@link lib/BBTournament.php}<br />
+ *  Treating new tournaments as a property offers the convenience of executing non-object specific methods without
+ *      having to handle the $tournament object directly - like loading / searching lists of tournaments
  * </pre>
+ * <b>Example:</b><code>
+ *      $my_tournaments = $bb->tournament->list_my();
+ *      $popular_touranments = $bb->tournament->list_popular();
+ * </code>
  * 
  * @property BBTeam $team
  * <b>Alias for {@link BinaryBeast::team()}</b><br />
@@ -76,19 +154,38 @@
  * 
  * @property BBMap $map
  * <b>Alias for {@link BinaryBeast::map()}</b><br />
- *  Returns a BBMap object, that you can use to search for maps and map_ids
+ *  Returns a BBMap object, that you can use to search for maps and map_ids<br />
+ * <b>Example - list all maps available in Team Fortress 2:</b><br />
+ * <code>
+ *      $sc2_races = $bb->map->game_list('TF2');
+ * </code>
  * 
  * @property BBCountry $country
  * <b>Alias for {@link BinaryBeast::country()}</b><br />
- *  Returns a BBCountry object, that you can use to search for countries and country_codes
+ *  Returns a BBCountry object, that you can use to search for countries and country_codes<br />
+ * <b>Example - list all countries that contain the word 'great':</b><br />
+ * <code>
+ *      $countries = $bb->country->search('great');
+ * </code>
  * 
  * @property BBGame $game
  * <b>Alias for {@link BinaryBeast::game()}</b><br />
- *  Returns a BBGame object, that you can use to search for games and game_codes
+ *  Returns a BBGame object, that you can use to search for games and game_codes<br />
+ * <b>Example - list all games that contain the word 'star':</b><br />
+ * <code>
+ *      $games = $bb->game->search('start');
+ * </code><br />
+ * <b>Example - list the 15 most popular games on BinaryBeast:</b><code>
+ *      $games = $bb->game->list_top(15);
+ * </code>
  * 
  * @property BBRace $race
  * <b>Alias for {@link BinaryBeast::race()}</b><br />
  *  Returns a BBRace object, that you can use to search for races and race_ids
+ * <b>Example - list all races available in StarCraft 2:</b><br />
+ * <code>
+ *      $sc2_races = $bb->race->game_list('SC2');
+ * </code>
  * 
  * @property BBLegacy $legacy
  * <b>Alias for {@link BinaryBeast::legacy()}</b><br />
@@ -97,6 +194,16 @@
  * @property BBCache $cache
  * <b>Alias for {@link BinaryBeast::cache()}</b><br />
  *  Returns the BBCache class, which is used to save and retrieve API responses from a local database, to cut down on API calls
+ * 
+ * 
+ * @package BinaryBeast
+ * 
+ * 
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BinaryBeast {
 
@@ -130,14 +237,28 @@ class BinaryBeast {
     /**
      * Store the result codes / values for the previous
      * API Request response
+     * @var object
      */
     public $last_error;
+    /**
+     * A summary of the last API call made
+     * @var object
+     */
     public $last_result;
+    /**
+     * A friendly translation of the last result code sent back from the API
+     * @var string
+     */
     public $last_friendly_result;
     /**
-     * When a new error or result is set, we stash previous values in these arrays
+     * A history of error messages
+     * @var object[]
      */
     public $error_history   = array();
+    /**
+     * A history of API call results
+     * @var object[]
+     */
     public $result_history  = array();
 
     /**
@@ -178,80 +299,305 @@ class BinaryBeast {
      */
     private $config;
 
-    /**
-     * A few constants to make a few values a bit easier to read / use
+    /*
+     * Simple constant that contains the library version
+     * @var string
      */
     const API_VERSION = '3.0.0';
-    //
+    /**
+     * Each bracket is idenetifed by a number,
+     * 0 indicates group roundes
+     * @var int
+     */
     const BRACKET_GROUPS    = 0;
+    /**
+     * Each bracket is idenetifed by a number,
+     * 1 indicates winners' bracket
+     * @var int
+     */
     const BRACKET_WINNERS   = 1;
+    /**
+     * Each bracket is idenetifed by a number,
+     * 2 indicates loser' bracket
+     * @var int
+     */
     const BRACKET_LOSERS    = 2;
+    /**
+     * Each bracket is idenetifed by a number,
+     * 3 indicates grand finals
+     * @var int
+     */
     const BRACKET_FINALS    = 3;
+    /**
+     * Each bracket is idenetifed by a number,
+     * 4 indicates bronze / 3rd place decider
+     * @var int
+     */
     const BRACKET_BRONZE    = 4;
-    //
+    /**
+     * Single elimination mode
+     * @var int
+     */
     const ELIMINATION_SINGLE = 1;
+    /**
+     * Double elimination mode
+     * @var int
+     */
     const ELIMINATION_DOUBLE = 2;
-    //
+    /**
+     * <b>Tournament type</b><br />
+     * Elimination brackets only
+     * @var int
+     */
     const TOURNEY_TYPE_BRACKETS = 0;
+    /**
+     * <b>Tournament type</b><br />
+     * group rounds following by elimination brackets
+     * @var int
+     */
     const TOURNEY_TYPE_CUP      = 1;
-    //
+    /**
+     * <b>Seeding type</b><br />
+     * Randomized seeds / ranks / groups
+     * Affects both group rounds and brackets
+     * @var string
+     */
     const SEEDING_RANDOM        = 'random';
+    /**
+     * <b>Seeding type</b><br />
+     * Positions are determined by rank
+     * Affects elimination brackets only
+     * @var string
+     */
     const SEEDING_SPORTS        = 'sports';
+    /**
+     * <b>Seeding type</b><br />
+     * Positions are determined by rank, but matchups are more 
+     *  fair than traditional / sports seeding type
+     * Affects elimination brackets only
+     * @var string
+     */
     const SEEDING_BALANCED      = 'balanced';
+    /**
+     * <b>Seeding type</b><br />
+     * Positions are manually defined 
+     * Affects both group rounds and brackets
+     * @var string
+     */
     const SEEDING_MANUAL        = 'manual';
-    //
+    /**
+     * <b>Replay download mode</b><br />
+     * Replays can never be downloaded
+     * @var int
+     */
     const REPLAY_DOWNLOADS_DISABLED         = 0;
+    /**
+     * <b>Replay download mode</b><br />
+     * Replays can be downloaded at any time
+     * @var int
+     */
     const REPLAY_DOWNLOADS_ENABLED          = 1;
+    /**
+     * <b>Replay download mode</b><br />
+     * Replays can only be downloaded once the tournament is complete
+     * @var int
+     */
     const REPLAY_DOWNLOADS_POST_COMPLETE    = 2;
-    //
+    /**
+     * <b>Replay upload mode</b><br />
+     * Replays cannot be uploaded
+     * @var int
+     */
     const REPLAY_UPLOADS_DISABLED   = 0;
+    /**
+     * <b>Replay upload mode</b><br />
+     * Replays can be uploaded
+     * @var int
+     */
     const REPLAY_UPLOADS_OPTIONAL   = 1;
+    /**
+     * <b>Replay upload mode</b><br />
+     * Replays <b>MUST</b> be uploaded
+     * @var int
+     */
     const REPLAY_UPLOADS_MANDATORY  = 2;
     /**
-     * Team int "status" values
+     * <b>Team status</b><br />
+     * Unconfirmed - the team will NOT be included in the tournament 
+     * @var int
      */
     const TEAM_STATUS_UNCONFIRMED           = 0;
+    /**
+     * <b>Team status</b><br />
+     * Confirmed - the team will be included in the tournament 
+     * @var int
+     */
     const TEAM_STATUS_CONFIRMED             = 1;
+    /**
+     * <b>Team status</b><br />
+     * Banned - the team will NOT be included in the tournament, and has no permission to take any action<br />
+     * This means if a user had permisssion to this team, he would not be able to report wins, confirm, leave the tournament, etc
+     * @var int
+     */
     const TEAM_STATUS_BANNED                = -1;
     /**
-     * Result code values
+     * <b>API Result Code</b><br />
+     * The API call was successful
+     * @var int
      */
     const RESULT_SUCCESS                        = 200;
+    /**
+     * <b>API Result Code</b><br />
+     * Your api_key or email/password is invalid - you were not logged in
+     * @var int
+     */
     const RESULT_NOT_LOGGED_IN                  = 401;
+    /**
+     * <b>API Result Code</b><br />
+     * Your account does not have the authority to perform that action
+     * @var int
+     */
     const RESULT_AUTH                           = 403;
+    /**
+     * <b>API Result Code</b><br />
+     * Invalid service name, or ID
+     * @var int
+     */
     const RESULT_NOT_FOUND                      = 404;
+    /**
+     * <b>API Result Code</b><br />
+     * That service is not enabled for public API use
+     * @var int
+     */
     const RESULT_API_NOT_ALLOWED                = 405;
+    /**
+     * <b>API Result Code</b><br />
+     * The email you tried to log in with is invalid
+     * @var int
+     */
     const RESULT_LOGIN_EMAIL_INVALID            = 406;
+    /**
+     * <b>API Result Code</b><br />
+     * The email provied is already being used
+     * @var int
+     */
     const RESULT_EMAIL_UNAVAILABLE              = 415;
+    /**
+     * <b>API Result Code</b><br />
+     * The email provided is not a valid email address
+     * @var int
+     */
     const RESULT_INVALID_EMAIL_FORMAT           = 416;
+    /**
+     * <b>API Result Code</b><br />
+     * Your account is currently pending activation
+     * @var int
+     */
     const RESULT_PENDING_ACTIVIATION            = 418;
+    /**
+     * <b>API Result Code</b><br />
+     * Your account has been banned
+     * @var int
+     */
     const RESULT_LOGIN_USER_BANNED              = 425;
+    /**
+     * <b>API Result Code</b><br />
+     * Incorrect login password
+     * @var int
+     */
     const RESULT_PASSWORD_INVALID               = 450;
-    const GAME_CODE_INVALID                     = 461;
-    const INVALID_BRACKET_NUMBER                = 465;
+    /**
+     * <b>API Result Code</b><br />
+     * The game_code value you provided does not exist
+     * @var int
+     */
+    const RESULT_GAME_CODE_INVALID               = 461;
+    /**
+     * <b>API Result Code</b><br />
+     * Invalid bracket integer
+     * @var int
+     */
+    const RESULT_INVALID_BRACKET_NUMBER         = 465;
+    /**
+     * <b>API Result Code</b><br />
+     * Duplicate entry - must be unique
+     * @var int
+     */
     const RESULT_DUPLICATE_ENTRY                = 470;
+    /**
+     * <b>API Result Code</b><br />
+     * General processing error<br />
+     * <b>Please report these to BinaryBeast <contact@binarybeast.com>
+     * @var int
+     */
     const RESULT_ERROR                          = 500;
+    /**
+     * <b>API Result Code</b><br />
+     * The search filter value is too short, please include at least 2 characters
+     * @var int
+     */
     const RESULT_SEARCH_FILTER_TOO_SHORT        = 601;
+    /**
+     * <b>API Result Code</b><br />
+     * Provided user_id does not exist
+     * @var int
+     */
     const RESULT_INVALID_USER_ID                = 604;
+    /**
+     * <b>API Result Code</b><br />
+     * Invalid tournament id
+     * @var int
+     */
     const RESULT_TOURNAMENT_NOT_FOUND           = 704;
+    /**
+     * <b>API Result Code</b><br />
+     * The given team and tournament do not belong to eachother
+     * @var int
+     */
     const TEAM_NOT_IN_TOURNEY_ID                = 705;
+    /**
+     * <b>API Result Code</b><br />
+     * Invalid team id
+     * @var int
+     */
     const TOURNEY_TEAM_ID_INVALID               = 706;
+    /**
+     * <b>API Result Code</b><br />
+     * Invalid match id
+     * @var int
+     */
     const RESULT_MATCH_ID_INVALID               = 708;
+    /**
+     * <b>API Result Code</b><br />
+     * Invalid match_game id
+     * @var int
+     */
     const RESULT_MATCH_GAME_ID_INVALID          = 709;
+    /**
+     * <b>API Result Code</b><br />
+     * Your tournament does not have enough confirmed teams to fill enough groups to match $group_count<br />
+     * You need at least 2 teams per {@link BBTournament::$group_count}
+     * @var int
+     */
     const RESULT_NOT_ENOUGH_TEAMS_FOR_GROUPS    = 711;
+    /**
+     * <b>API Result Code</b><br />
+     * The current tournament status does not allow that action<br />
+     * Could be anything from trying to add / remove teams in an active tournament, or trying to start
+     *  a tournament that has already finished
+     * @var int
+     */
     const RESULT_TOURNAMENT_STATUS              = 715;
 
     /**
-     * Constructor - import the API Key
+     * Library constructor
      * 
-     * If you want to use an email / password instead, you'd use login, like this:
-     * @example $bb = new BinaryBeast();
-     *      $bb->login('name@domain.tld', 'your_password');
-     *
+     * You can either provide a BBConfiguration instance, or an api_key as the argument
+     * 
      * @param string|BBConfiguration
      *      You can pass in either the api_key, or a customized BBConfiguration object
      * 
-     * @return CustomBinaryBeast
+     * @return BinaryBeast
      */
     function __construct($api_key = null) {
         /**
@@ -465,12 +811,12 @@ class BinaryBeast {
      * 
      * @param mixed     $error          Error value to save
      * @param string    $class          Name of the class setting this error
-     * @return array
+     * @return object
      */
     public function set_error($error = null, $class = null) {
 
-        //Convert objects into arrays
-        if(is_object($error)) $error = (array)$error;
+        //Convert arrays into objects
+        if(is_array($error)) $error = (object)$error;
 
         //Either store it into a new array, or add some values to the input
         if(!is_null($error)) {
@@ -478,13 +824,13 @@ class BinaryBeast {
             if(is_null($class)) $class = get_called_class();
 
             //Compile an array using the input
-            $details = array('class' => $class);
+            $details = (object)array('class' => $class);
 
-            //For existing arrays, simply add our details
-            if(is_array($error)) $error = array_merge($details, $error);
+            //For existing objects, simply add our details
+            if(is_object($error)) $error = (object)array_merge((array)$details, (array)$error);
 
-            //For everything else, add the input into a new array
-            else                 $error = array_merge($details, array('error_message' => $error));
+            //For everything else, add the input into a new object
+            else $error = (object)array_merge((array)$details, array('error_message' => $error));
         }
 
         //Stash it!
@@ -520,7 +866,7 @@ class BinaryBeast {
         $this->last_friendly_result = BBHelper::translate_result($this->last_result);
 
         //Store it in the result history array too
-        $this->result_history[] = array('result' => $this->last_result, 'friendly' => $this->last_friendly_result, 'svc' => $svc, 'args' => $args);
+        $this->result_history[] = (object)array('result' => $this->last_result, 'friendly' => $this->last_friendly_result, 'svc' => $svc, 'args' => $args);
     }
 
     /**
@@ -697,7 +1043,7 @@ class BinaryBeast {
      * 
      * @return BBLegacy
      */
-    private function &legacy() {
+    public function &legacy() {
         //Already instantiated
         if(!is_null($this->legacy)) return $this->legacy;
 

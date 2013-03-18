@@ -1,19 +1,9 @@
 <?php
 
 /**
- * This class represents a single match result withint a tournament
+ * Model object representing a match between two teams
  * 
- * Important!  See BBMatch::default_values for possible values and descriptions
  * 
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
- * 
- * @version 1.0.0
- * @date 2013-02-10
- * @author Brandon Simmons
- * 
- * ******* Property documentation *********
  * @property-read string $tourney_id
  *  <pre>
  *      The id of the tournament this match is in
@@ -104,6 +94,16 @@
  *  <pre>
  *      The tournament this match is in
  *  </pre>
+ * 
+ * 
+ * @package BinaryBeast
+ * @subpackage Model
+ * 
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBMatch extends BBModel {
 

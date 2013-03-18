@@ -148,7 +148,7 @@ class BBTournamentTest extends BBTest {
     public function test_add_team_active() {
         $this->get_tournament_with_open_matches();
 
-        $this->assertFalse($this->object->team());
+        $this->assertNull($this->object->team());
     }
     /**
      * Testing loading a list of teams from an active tournament
@@ -561,8 +561,9 @@ class BBTournamentTest extends BBTest {
     
     /**
      * @covers BBTournament::match() in context of returning a list/history of reported matches
-
-     *      */
+     * @group fail
+     *
+     */
     public function test_match_list() {
         $this->get_tournament_with_open_matches(true);
 

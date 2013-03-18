@@ -1,99 +1,74 @@
 <?php
 
 /**
- * This class represents a single game within a match result withint a tournament
- * 
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
- * 
- * @version 1.0.0
- * @date 2013-03-10
- * @author Brandon Simmons
+ * Model object representing a single game within a BBMatch
  * 
  * 
- * ******* Property documentation *********
  * @property int $tourney_team_id
- *  <pre>
  *      The unique int tourney_team_id of this game's winner
- *  </pre>
  * 
  * @property int $score
- *  <pre>
- *      Score of the match's winner
+ * Score of the match's winner<br /><br />
  * 
- *      WARNING: this can be a little bit confusing at first, so be careful
- *          Game scores are tracked based on who won the overall match,
- *          therefore this value represents the score of the team who won the entire match
- *  </pre>
+ * <b>WARNING:</b><br />
+ * This can be a little bit confusing at first, so be careful<br />
+ * Game scores are tracked based on who won the overall match,<br />
+ * therefore this value represents the score of the team who won the entire match<br />
  * 
  * @property int $o_score
- *  <pre>
- *      Score of the match's loser
- * 
- *      WARNING: this can be a little bit confusing at first, so be careful
- *          Game scores are tracked based on who won the overall match,
- *          therefore this value represents the score of the team who lost the entire match
- *  </pre>
+ * Score of the match's loser<br />
+ * Please take note of the warning explained in {@link BBMatchGame::$score}
  * 
  * @property string|int $map
- *  <pre>
- *      The map name this game was played on
- *      You can define this as the map_id integer, or any map name string
- * 
- *      Using a map_id has many benefits, like image preview / stat tracking etc
- *          so if you want to use a map_id, you can use {@link BBMap::game_search()}
- *  </pre>
+ * The map name this game was played on<br />
+ * You can define this as the map_id integer, or any map name string<br />
+ * Use {@link BBMap::game_search()} for possible values
  * 
  * @property-read int $map_id 
- *  <b>Read Only</b>
- *  <pre>
- *      Value set when loading the game - the unique int id of the map 
- *          this game was played on
- *      Warning: attempts to change this value will result in updating the value of $map
- *  </pre>
+ *  <b>Read Only</b><br />
+ *  Value set when loading the game - the unique int id of the map this game was played on<br />
+ *  <b>Warning:</b> attempts to change this value will result in updating the value of $map
  * 
  * @property string|int $race
- *  <pre>
- *      The match winner's race - can be the race_id integer, or a custom race name string
- *      Use {@link BBRace::game_list()} for race_ids values
- *  </pre>
+ * The match winner's race - can be the race_id integer, or a custom race name string<br />
+ * Use {@link BBRace::game_list()} for race_ids values
  * 
  * @property string|int $o_race
- *  <pre>
- *      The match loser's race - can be the race_id integer, or a custom race name string
- *      Use {@link BBRace::game_list()} for race_ids values
- *  </pre>
+ * The match loser's race - can be the race_id integer, or a custom race name string<br />
+ * Use {@link BBRace::game_list()} for race_ids values
  * 
- * @property string $notes General description / notes on the match
+ * @property string $notes
+ *  General description / notes on the match
  * 
  * @property string $replay
- *  <pre>
- *      This will be updated soon to be more flexible, but for now
- *          all this value serves as is as a URL to the replay of this match
- *  </pre>
+ * This will be updated soon to be more flexible, but for now<br />
+ *  all this value serves as is as a URL to the replay of this match
  * 
  * @property BBTeam $winner
- *  <b>Alias for {@link BBMatchGame::winner()}</b>
- *  <pre>
- *      BBTeam object for the winner of the game
- *  </pre>
- *  <b>Returns NULL if winner hasn't been defined ({@link BBMatchGame::set_winner()}</b>
- *  <b>Returns FALSE if match was a draw</b>
+ *  <b>Alias for {@link BBMatchGame::winner()}</b><br />
+ *  BBTeam object for the winner of the game<br />
+ *  <b>NULL return</b> means no winner has been defined ({@link BBMatchGame::set_winner()}<br />
+ *  <b>FALSE return</b> means the match was a draw<<br />
  * 
  * @property BBTeam $loser
- *  <b>Alias for {@link BBMatchGame::loser()}</b>
- *  <pre>
- *      BBTeam object for the loser of the game
- *  </pre>
- *  <b>Returns NULL if winner hasn't been defined ({@link BBMatchGame::set_winner()}</b>
- *  <b>Returns FALSE if match was a draw</b>
+ *  <b>Alias for {@link BBMatchGame::loser()}</b><br />
+ *  BBTeam object for the loser of the game<br />
+ *  <b>NULL return</b> means no winner has been defined ({@link BBMatchGame::set_winner()}<br />
+ *  <b>FALSE return</b> means the match was a draw<<br />
  * 
  * @property BBMatch $match
- *  <b>Alias for {@link BBMatchGame::match()}</b>
- *  <pre>
- *      The match this game is in
- *  </pre>
+ *  <b>Alias for {@link BBMatchGame::match()}</b><br />
+ *  The match this game is in
+ * 
+ * 
+ * @package BinaryBeast
+ * @subpackage Model
+ * 
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBMatchGame extends BBModel {
 

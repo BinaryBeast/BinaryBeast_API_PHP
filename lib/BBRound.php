@@ -1,59 +1,46 @@
 <?php
 
 /**
- * This class represents a single match result withint a tournament
- * 
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
- * 
- * @version 1.0.0
- * @date 2013-02-03
- * @author Brandon Simmons
+ * Model object representing the round format (best_of / date etc) within a {@link BBTournament}
  * 
  * 
- * ******* Property documentation *********
+ * 
  * @property int $best_of
- *  <b>Default: 1</b>
- *  <pre>
- *      Best of value for this round
- *      best_of 1 means first team to win one game wins the match
- *      best_of 3 means first team to win 2 two games wins the match
- *      {@link BBRound::$wins_needed}
- *  </pre>
+ * <b>Default: 1</b><br />
+ * Best of value for this round<br />
+ * best_of 1 means first team to win one game wins the match<br />
+ * best_of 3 means first team to win 2 two games wins the match<br />
+ * {@link BBRound::$wins_needed}
  * 
  * @property-read int $wins_needed
- *  <b>Read Only</b>
- *  <pre>
- *      The number of wins a participant to win a match, based on the value of best_of
- *      Simple formula of ($best_of + 1) / 2
- *      {@link BBRound::$best_of}
- *  </pre>
+ * <b>Read Only</b><br />
+ * The number of wins a participant to win a match, based on the value of best_of<br />
+ * Simple formula of ($best_of + 1) / 2<br />
+ * {@link BBRound::$best_of}<br />
  * 
  * @property string|int $map
- *  <pre>
- *      The first map in this round
- *      You can define this as the map_id integer, or any map name string
- * 
- *      There are plans to extend this functionality, to allow you to define
- *          each map in the best_of series for each round
- *          unfortunately for now, you can only define the first map
- * 
- *      Using a map_id has many benefits, like image preview / stat tracking etc
- *          so if you want to use a map_id, you can use {@link BBMap::game_search()}
- *  </pre>
+ * The first map in this round<br />
+ * You can define this as the map_id integer, or any map name string<br />
+ * Using a map_id is recommended over a simple map string - which may or may not be resolved as a map_id
  * 
  * @property-read int $map_id
- *  <b>Read Only</b>
- *  <pre>
- *      Value set when loading the round - the unique int id for the value of $map
- *  </pre>
+ * <b>Read Only</b><br />
+ * Value set when loading the round - the unique int id for the value of $map
  * 
  * @property string $date
- *  <pre>
- *      A description of when this round should start
- *      For the moment this is a simple unformated string, it does not even validate the format.
- *  </pre>
+ *  A description of when this round should start<br />
+ *  For the moment this is a simple unformated string, it does not even validate the format
+ * 
+ * 
+ * @package BinaryBeast
+ * @subpackage Model
+ * 
+ * 
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBRound extends BBModel {
 
@@ -192,6 +179,35 @@ class BBRound extends BBModel {
     public function is_new() {
         return false;
     }
+}
+
+/**
+ * The object structure used in {@link BBTournament::$rounds} and {@link BBTournament::rounds()}
+ * 
+ * This class is never used, it soley exists for documentation
+ * 
+ * @property-read BBRound[] $groups
+ *  Array of BBRound objects for each round in the group rounds
+ * 
+ * @property-read BBRound[] $winners
+ *  Array of BBRound objects for each round in the Winners' bracket
+ * 
+ * @property-read BBRound[] $losers
+ *  Array of BBRound objects for each round in the Losers' bracket
+ * 
+ * @property-read BBRound[] $finals
+ *  Array of BBRound objects for each round in the grand finals
+ * 
+ * @property-read BBRound[] $bronze
+ *  Array of BBRound objects for each round in the Bronze bracket
+ * 
+ * 
+ * 
+ * @package BinaryBeast
+ * @subpackage Model_ObjectStructure
+ */
+abstract class BBRoundObject {
+    //Nothing here - used for documentation only
 }
 
 ?>

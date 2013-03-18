@@ -17,14 +17,15 @@
  * So this class is used primary for service wrapper hosting (like BBGame)
  *      while BBModel is used for full manipulatable objects for creating/creating/updating - like BBTournament
  *  
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
  * 
+ * @package BinaryBeast
+ * @subpackage Library
  * 
- * @version 1.0.0
- * @date 2013-02-14
- * @author Brandon Simmons
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBSimpleModel {
 

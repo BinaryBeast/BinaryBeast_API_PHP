@@ -13,13 +13,16 @@
  *      of the game_code you provide, you can't load a global list of maps, each game has its
  *      own list of maps
  * 
- * Dual licensed under the MIT and GPL licenses:
- *   http://www.opensource.org/licenses/mit-license.php
- *   http://www.gnu.org/licenses/gpl.html
  * 
- * @version 1.0.0
- * @date 2013-02-11
- * @author Brandon Simmons
+ * @package BinaryBeast
+ * @subpackage SimpleModel
+ * 
+ * 
+ * @version 3.0.0
+ * @date 2013-03-17
+ * @author Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBMap extends BBSimpleModel {
     const SERVICE_LIST      = 'Game.GameMap.LoadList';
@@ -40,7 +43,7 @@ class BBMap extends BBSimpleModel {
      * 
      * @param string $game_code
      * @param string $filter
-     * @return array
+     * @return BBMapObject[]
      */
     public function game_list($game_code) {
         return $this->get_list(self::SERVICE_LIST, array('game_code' => $game_code), 'list');
@@ -49,6 +52,7 @@ class BBMap extends BBSimpleModel {
      * Alias for game_list, or search() if you define a filter
      * @param string $game_code
      * @param string $filter
+     * @return BBMapObject[]
      */
     public function load_list($game_code, $filter = null) {
         if(is_null($filter)) return $this->game_list($game_code);
@@ -59,7 +63,7 @@ class BBMap extends BBSimpleModel {
      * 
      * @param string $game_code
      * @param string $filter
-     * @return array
+     * @return BBMapObject[]
      */
     public function game_search($game_code, $filter) {
         return $this->get_list(self::SERVICE_SEARCH, array(
@@ -67,6 +71,41 @@ class BBMap extends BBSimpleModel {
             'filter' => $filter),
         'list');
     }
+}
+
+/**
+ * The data structure for values returned from the BBMap services
+ * 
+ * This class is never used, it soley exists for documentation
+ * 
+ * @property-read int $map_id
+ *  The unique map id integer<br />
+ *  Used by {@link BBRound::map} and {@link BBMatchGame::map}
+ * 
+ * @property-read string $map
+ *  The name of the map
+ * 
+ * @property-read string $game_code
+ *  The game_code of the game this map belongs to<br />
+ * 
+ * @property-read boolean $approved
+ *  Maps are only public once approved<br />
+ *  There fore this value will always be true here
+ * 
+ * @property-read int $user_id
+ *  The BinaryBeast user_id of the user that submitted the map
+ * 
+ * @property-read int $positions
+ *  The number of starting positions on the map - if applicable
+ * 
+ * @property-read string $description
+ *  Description of the map
+ * 
+ * @package BinaryBeast
+ * @subpackage SimpleModel_ObjectStructure
+ */
+abstract class BBMapObject {
+    //Nothing here - used for documentation only
 }
 
 ?>
