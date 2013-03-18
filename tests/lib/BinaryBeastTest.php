@@ -152,15 +152,19 @@ class BinaryBeastTest extends BBTest {
     }
 
     /**
-     * @group fail
+     * Test format of set_error
      */
     public function test_last_error() {
-        $this->assertTrue(false, 'Implement this test');
+        $this->object->set_error('Custom Error');
+        $this->assertTrue(is_object($this->object->last_error));
+        $this->assertEquals('Custom Error', $this->object->last_error->error_message);
     }
     /**
-     * @group fail
      */
     public function test_error_history() {
-        $this->assertTrue(false, 'Implement this test');
+        $this->object->set_error('Custom Error');
+        $key = sizeof($this->object->error_history) - 1;
+        $this->assertTrue(is_object($this->object->error_history[$key]));
+        $this->assertEquals('Custom Error', $this->object->error_history[$key]->error_message);
     }
 }

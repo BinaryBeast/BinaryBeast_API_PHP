@@ -112,10 +112,9 @@ class BBMatchTest extends BBTest {
     }
     /**
      * @covers BBMatch::set_loser
-     * @group fail
      */
     public function test_set_loser() {
-        $winner = $this->object->team();
+        $winner = $this->object->team2();
         $loser  = $this->object->team();
         $this->assertTrue($this->object->set_loser($loser));
         $this->assertEquals($winner, $this->object->winner());
@@ -137,7 +136,6 @@ class BBMatchTest extends BBTest {
      * Tests the magic __set when trying to set the winner / loser by directly
      *  setting tourney_team_id (set_winner())
      * @covers BBMatch::__set
-     * @group fail
      */
     public function test_set_o_tourney_team_id() {
         $winner = $this->object->team2();
@@ -177,21 +175,20 @@ class BBMatchTest extends BBTest {
      * @group fail
      */
     public function test_scores_property_without_winner() {
-        $this->assertEquals(1, $this->object->score);
+        var_dump(['new_match_data' => $this->object->data]); $this->assertEquals(1, $this->object->score);
         $this->assertEquals(0, $this->object->score);
     }
     /**
      * Test to see if the scores and o_scores properties return 
      *  the number of game wins after games have been added
-     * @group fail
      */
     public function test_scores_property_with_games() {
         $this->assertTrue($this->object->set_winner($this->object->team(), 15, 3));
-        $this->assertInstanceOf('BBGame', $this->object->game());
-        $this->assertInstanceOf('BBGame', $this->object->game($this->object->loser()));
-        $this->assertInstanceOf('BBGame', $this->object->game());
+        $this->assertInstanceOf('BBMatchGame', $this->object->game());
+        $this->assertInstanceOf('BBMatchGame', $this->object->game($this->object->loser()));
+        $this->assertInstanceOf('BBMatchGame', $this->object->game());
         $this->assertEquals(2, $this->object->score);
-        $this->assertEquals(1, $this->object->score);
+        $this->assertEquals(1, $this->object->o_score);
     }
     /**
      * Make sure that when calling set_winner with FALSE, it flags it as a draw
@@ -229,7 +226,7 @@ class BBMatchTest extends BBTest {
      * @group fail
      */
     public function test_invalid_team_object_in_match() {
-        $this->assertInstanceOf('BBTeam', $this->object->team_in_match($this->get_invalid_team()));
+        $this->assertFalse('BBTeam', $this->object->team_in_match($this->get_invalid_team()));
     }
     /**
      * Test team_in_match, using a invalid team id
@@ -237,7 +234,8 @@ class BBMatchTest extends BBTest {
      * @covers BBMatch::team_in_match
      */
     public function test_invalid_team_object_id_match() {
-        $this->assertFalse('BBTeam', $this->object->team_in_match($this->get_invalid_team()));
+        $invalid_team = $this->get_invalid_team();
+        $this->assertFalse('BBTeam', $this->object->team_in_match($invalid_team->id));
     }
     /**
      * @covers BBMatch::tournament
@@ -274,10 +272,11 @@ class BBMatchTest extends BBTest {
     public function test_reset() {
         $winner = $this->object->team2();
         $loser = $this->object->team();
+
         //Set a winner - and define both score and o_score values
-        $this->assertTrue($this->object->set_winner($winner, 99, 98));
+        $this->assertTrue($this->object->set_winner($winner, 99, 88));
         $this->assertEquals(99, $this->object->score);
-        $this->assertEquals(88, $this->object->score);
+        $this->assertEquals(88, $this->object->o_score);
 
         //Add game details now
         $game1 = $this->object->game($loser);
@@ -300,6 +299,10 @@ class BBMatchTest extends BBTest {
         
         $this->assertTrue($this->object->is_new());
         $this->assertFalse($this->object->changed);
+
+        //Scores should reset to 1-0
+        $this->assertEquals(1, $this->object->score);
+        $this->assertEquals(88, $this->object->o_score);
     }
 
     /**
@@ -327,19 +330,17 @@ class BBMatchTest extends BBTest {
     /**
      * Test the accuracy of toggle_team() with an invalid BBTeam object
      * @covers BBMatch::test_toggle_team
-     * @group fail
      */
     public function test_toggle_team_invalid_object() {
-        $this->assertFalse($this->object->toggle_team($this->get_invalid_team()));
+        $this->assertNull($this->object->toggle_team($this->get_invalid_team()));
     }
     /**
      * Test the accuracy of toggle_team() with an invalid team id
      * @covers BBMatch::test_toggle_team
-     * @group fail
      */
     public function test_toggle_team_invalid_id() {
         $invalid = $this->get_invalid_team();
-        $this->assertFalse($this->object->toggle_team($invalid->id));
+        $this->assertNull($this->object->toggle_team($invalid->id));
     }
     /**
      * @covers BBMatch::set_draw
@@ -488,7 +489,7 @@ class BBMatchTest extends BBTest {
 
         //Give $winner a win - 1:1, still shouldn't validate
         $game2 = $this->object->game();
-        $this->assertFalse($this->object->validate_winner_games());
+        var_dump(['winner_games' => $this->object->get_game_wins($winner)]); $this->assertFalse($this->object->validate_winner_games());
         $this->assertFalse($this->object->validate_winner_games(true));
 
         //Give the $winner the first win - 2:1, it should now validate, even in strict mode
@@ -783,7 +784,25 @@ class BBMatchTest extends BBTest {
      * @group fail
      */
     public function test_unreport() {
-        $this->assertTrue(false, 'build this - also have to build fetching latest match in BBTeam');
+        $winner = $this->object->team();
+        $loser = $this->object->team2();
+        $this->assertTrue($this->object->set_winner($winner));
+        //
+        $game1 = $this->object->game($loser);
+        $game2 = $this->object->game();
+        $game3 = $this->object->game();
+        //save and make sure all games now have ids
+        $this->assertSave($this->object->report());
+        $this->assertID($game1->id);
+        $this->assertID($game2->id);
+        $this->assertID($game3->id);
+        //
+        $this->assertTrue($this->object->unreport());
+        //all ids should now be null
+        $this->assertNull($this->object->id);
+        $this->assertNull($game1->id);
+        $this->assertNull($game2->id);
+        $this->assertNull($game3->id);
     }
     /**
      * Test unreport() on a match that is not allowed
@@ -792,6 +811,21 @@ class BBMatchTest extends BBTest {
      * group fail
      */
     public function test_unreport_bracket_invalid() {
-        $this->assertTrue(false, 'build this');
+        $this->assertTrue( $this->object->set_winner($this->object->team()) );
+        $this->assertSave($this->object->report());
+
+        //Game team() another win, but we may have to report other wins until he has an opponent
+        while(is_null($this->object->winner->match())) {
+            $this->assertInstanceOf('BBMatch', $match = $this->object->tournament->open_matches[0]);
+            $this->assertTrue($match->set_winner($match->team2()));
+            $this->assertSave($match->report());
+        }
+
+        //should have an open match now - report it
+        $this->assertInstanceOf('BBMatch', $match = $this->object->winner->match());
+        $this->assertTrue( $match->set_winner($this->object->winner()) );
+        
+        //now that winner() has had reported beyond $this->object, we should no longer be allowed to unreport it
+        $this->assertFalse($this->object->unreport());
     }
 }

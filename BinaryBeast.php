@@ -1,9 +1,7 @@
 <?php
 
 /**
- * === BinaryBeast PHP API Library ===
- * 
- * This class handles all of the actual API interaction, and is used to generate model classes
+ * The main library class, used to communicate with the API and as a factory to generate model objects
  * 
  * Instantiation can be done in a few different ways
  * 

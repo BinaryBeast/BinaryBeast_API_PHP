@@ -182,7 +182,7 @@ class BBRound extends BBModel {
 }
 
 /**
- * The object structure used in {@link BBTournament::$rounds} and {@link BBTournament::rounds()}
+ * The object structure used in {@link BBTournament::rounds()}
  * 
  * This class is never used, it soley exists for documentation
  * 

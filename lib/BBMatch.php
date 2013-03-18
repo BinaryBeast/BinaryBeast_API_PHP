@@ -249,7 +249,7 @@ class BBMatch extends BBModel {
      */
     public function &__get($name) {
         if($name == 'score' || $name == 'o_score') {
-            if(!$this->winner_set) {
+            if($this->winner_set) {
                 if(sizeof($this->games()) > 0) {
                     return $this->bb->ref( $this->get_game_wins($name == 'score' ? $this->team() : $this->opponent()) );
                 }
@@ -276,6 +276,8 @@ class BBMatch extends BBModel {
     /**
      * Overrides BBModel::reset() so we can define the $teams array for removing unsaved teams,
      *  and so we can unflag $winner_set if appropriate
+     * 
+     * @return boolean|true
      */
     public function reset() {
         //BBModel's default action first
@@ -286,6 +288,8 @@ class BBMatch extends BBModel {
 
         //Now let BBModel remove any unsaved teams from $this->teams
         $this->remove_new_children($this->games());
+
+        return true;
     }
 
     /**
@@ -601,7 +605,7 @@ class BBMatch extends BBModel {
      */
     public function set_loser($loser, $winner_score = null, $loser_score = null) {
         if( !is_null($winner = $this->toggle_team($loser)) ) {
-            return $this->set_winner($loser_score, $winner_score, $loser);
+            return $this->set_winner($winner, $loser_score, $winner_score);
         }
         return false;
     }

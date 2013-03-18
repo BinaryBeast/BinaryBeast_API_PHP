@@ -124,7 +124,7 @@ abstract class BBModel extends BBSimpleModel {
         //If provided with data, automatically import the values into this instance
         if(is_object($data) || is_array($data)) {
             //Import the provided values directly into this instance
-            $this->import_values($data);
+            $this->import_values(array_merge($this->default_values, (array)$data));
 
             //Attempt to extract this object's id from the imported data
             $this->extract_id();
