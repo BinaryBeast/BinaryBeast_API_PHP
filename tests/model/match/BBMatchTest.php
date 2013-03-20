@@ -172,11 +172,10 @@ class BBMatchTest extends BBTest {
     /**
      * Test to see if the scores and o_scores properties return 
      *  the default 1 and 0 values if we don't define a winner
-     * @group fail
      */
     public function test_scores_property_without_winner() {
-        var_dump(['new_match_data' => $this->object->data]); $this->assertEquals(1, $this->object->score);
-        $this->assertEquals(0, $this->object->score);
+        $this->assertEquals(1, $this->object->score);
+        $this->assertEquals(0, $this->object->o_score);
     }
     /**
      * Test to see if the scores and o_scores properties return 
@@ -226,14 +225,14 @@ class BBMatchTest extends BBTest {
      * @group fail
      */
     public function test_invalid_team_object_in_match() {
-        $this->assertFalse('BBTeam', $this->object->team_in_match($this->get_invalid_team()));
+        $invalid = $this->get_invalid_team(); var_dump(['id0' => $this->object->team->id, 'id1' => $this->object->team2->id, 'idinvalid' => $invalid->id]); $this->assertFalse('BBTeam', $this->object->team_in_match($this->get_invalid_team()));
     }
     /**
      * Test team_in_match, using a invalid team id
      * @group fail
      * @covers BBMatch::team_in_match
      */
-    public function test_invalid_team_object_id_match() {
+    public function test_invalid_team_id_in_match() {
         $invalid_team = $this->get_invalid_team();
         $this->assertFalse('BBTeam', $this->object->team_in_match($invalid_team->id));
     }
@@ -267,7 +266,6 @@ class BBMatchTest extends BBTest {
      * Test to make sure that reset() resets all possible values within an unsaved match
      * 
      * @covers BBMatch::reset
-     * @group fail
      */
     public function test_reset() {
         $winner = $this->object->team2();
@@ -302,7 +300,7 @@ class BBMatchTest extends BBTest {
 
         //Scores should reset to 1-0
         $this->assertEquals(1, $this->object->score);
-        $this->assertEquals(88, $this->object->o_score);
+        $this->assertEquals(0, $this->object->o_score);
     }
 
     /**
@@ -781,7 +779,6 @@ class BBMatchTest extends BBTest {
     }
     /**
      * Test unreport()
-     * @group fail
      */
     public function test_unreport() {
         $winner = $this->object->team();

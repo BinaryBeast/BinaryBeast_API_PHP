@@ -553,6 +553,47 @@ class BBTournament extends BBModel {
     const CACHE_TTL_LIST_OPEN_MATCHES	= 20;
 
     /**
+     * Callback event id for when a match has been reported
+     * @var int
+     */
+    const CALLBACK_MATCH_REPORTED = 6;
+    /**
+     * Callback event id for when a match has been unreported
+     * @var int
+     */
+    const CALLBACK_MATCH_UNREPORTED = 7;
+    /**
+     * Callback event id for when the tournament is deleted
+     * @var int
+     */
+    const CALLBACK_DELETED = 8;
+    /**
+     * Callback event id for when the group rounds begin
+     * @var int
+     */
+    const CALLBACK_GROUPS_STARTED = 1;
+    /**
+     * Callback event id for when the brackets begin
+     * @var int
+     */
+    const CALLBACK_BRACKETS_STARTED = 2;
+    /**
+     * Callback event id for when the final match is reported, and the tournament finishes
+     * @var int
+     */
+    const CALLBACK_COMPLETE = 3;
+    /**
+     * Callback event id for when a team is added to the tournament
+     * @var int
+     */
+    const CALLBACK_TEAM_ADDED = 4;
+    /**
+     * Callback event id for when a team is removed from the tournament
+     * @var int
+     */
+    const CALLBACK_TEAM_REMOVED = 4;
+
+    /**
      * Array of participants within this tournament
      * @var BBTeam[]
      */
@@ -587,7 +628,7 @@ class BBTournament extends BBModel {
 
     //Define the key to use for extracting data from the API result
     protected $data_extraction_key = 'tourney_info';
-    
+
     /**
      * Default values for a new tournament, also a useful reference for developers
      * @var array

@@ -5,89 +5,60 @@
  * 
  * 
  * @property-read string $tourney_id
- *  <pre>
- *      The id of the tournament this match is in
- *  </pre>
+ * The id of the tournament this match is in
  * 
  * @property int $tourney_team_id
- *  <pre>
- *      The ID of the match's overall winner
- *  </pre>
+ * The ID of the match's overall winner
  * 
  * @property int $o_tourney_team_id
- *  <pre>
- *      The ID of the match's overall loser
- *  </pre>
+ * The ID of the match's overall loser
  * 
  * @property-read int $bracket
- *  <b>Read Only</b>
- *  <pre>
- *      Numeric value of the bracket is in
- *      You can use {@link BBHelper::get_bracket_label()} to get the friendly translation
- *  </pre>
+ * <b>Read Only</b><br />
+ * Numeric value of the bracket is in<br />
+ * You can use {@link BBHelper::get_bracket_label()} to get the friendly translation<br />
  * 
  * @property string $notes
- *  <pre>
- *      General notes / description on the match
- *  </pre>
+ * General notes / description on the match
  * 
  * @property int $score
- *  <pre>
- *      Winner's score - using this is NOT recommended however
- *  </pre>
- *  <b>Please use {@link BBMatch::game()} to defined more detailed results</b>
+ * Winner's score - using this is NOT recommended however<br />
+ * <b>Please use {@link BBMatch::game()} to defined more detailed results</b>
  * 
  * @property int $o_score
- *  <pre>
- *      Loser's score - using this is NOT recommended however
- *  </pre>
- *  <b>Please use {@link BBMatch::game()} to defined more detailed results</b>
+ * Loser's score - using this is NOT recommended however<br />
+ * <b>Please use {@link BBMatch::game()} to defined more detailed results</b>
  * 
  * @property boolean $draw
- *  <b>Group Rounds Only</b>
- *  <pre>
- *      Simple boolean to indicate whether or not this match resulted in a draw
- *  </pre>
+ * <b>Group Rounds Only</b><br />
+ * Simple boolean to indicate whether or not this match resulted in a draw
  * 
  * @property BBMatchGame[] $games
- *  <b>Alias for {@link BBMatch::games()}</b>
- *  <pre>
- *      an array of games in this match
- *  </pre>
+ * <b>Alias for {@link BBMatch::games()}</b><br />
+ * an array of games in this match
  * 
  * @property BBRound $round
- *  <b>Alias for {@link BBMatch::round()}</b>
- *  <pre>
- *      The BBRound object defining the format for this match
- *      Note: null may be returned if for some reason we can't determine
- *          which round within the bracket this match is
- *  </pre>
+ * <b>Alias for {@link BBMatch::round()}</b><br />
+ * The BBRound object defining the format for this match<br />
+ * <b>NULL return:</b> unable to determine which round this match was in
  * 
  * @property BBTeam $team
- *  <b>Alias for {@link BBMatch::team()}</b>
- *  <pre>
- *      BBTeam object for the first player in this match
- *  </pre>
+ * <b>Alias for {@link BBMatch::team()}</b><br />
+ * BBTeam object for the first player in this match
  * 
  * @property BBTeam $team2
- *  <b>Alias for {@link BBMatch::team2()}</b>
- *  <pre>
- *      BBTeam object for the second player in this match
- *  </pre>
+ * <b>Alias for {@link BBMatch::opponent()}</b><br />
+ * BBTeam object for the second player in this match
  * 
  * @property BBTeam $opponent
- *  <b>Alias for {@link BBMatch::opponent()}</b>
- *  <pre>
- *      BBTeam object for the second player in this match
- *  </pre>
+ * <b>Alias for {@link BBMatch::opponent()}</b><br />
+ * BBTeam object for the second player in this match
  * 
  * @property BBTeam $winner
- *  <b>Alias for {@link BBMatch::winner()}</b>
- *  <pre>
- *      BBTeam object for the winner of the match
- *  </pre>
- *  <b>Returns NULL if set_winner hasn't been called</b>
- *  <b>Returns FALSE if match was a draw</b>
+ * <b>Alias for {@link BBMatch::winner()}</b><br />
+ * BBTeam object for the winner of the match<br />
+ * <b>Returns NULL if set_winner hasn't been called</b><br />
+ * <b>Returns FALSE if match was a draw</b>
  * 
  * @property BBTournament $tournament
  *  <b>Alias for {@link BBMatch::tournament()}</b>
@@ -865,8 +836,10 @@ class BBMatch extends BBModel {
 
         //If NOT from the group rounds, we must make sure that neither team has reported any wins after this match
         if($this->bracket !== 0) {
-            if(is_null($this->team->last_match())) return false;
-            if(is_null($this->oppopnent->last_match())) return false;
+            $team1 = &$this->team();
+            $team2 = &$this->opponent();
+            if(is_null($team1->last_match())) return false;
+            if(is_null($team2->last_match())) return false;
 
             if($this->team->last_match->id != $this->id) {
                 return $this->set_error("You cannot unreport this match, because there are depedent matches that have been reported by team {$this->team->id} after this match, check \$match->team->last_match for details");
@@ -970,16 +943,16 @@ class BBMatch extends BBModel {
 
     /**
      * Determines if the given team (Can provide either team_id integer or BBTeam object)
+     *  is part of this match
      * 
      * If the team is in this match, the BBTeam object is returned
      *
      * If it's NOT part of this team, false is returned
      *
-     * Returns a boolean indicating whether or not the provided team (BBModel or id integer)
-     *      is actually part of this match
-     * 
      * @param BBTeam|int $team
      * @return BBTeam|false
+     *      <b>false</b> If not part of the match
+     *      <b>BBTeam</b> If it IS part of the match
      */
     public function &team_in_match($team) {
 

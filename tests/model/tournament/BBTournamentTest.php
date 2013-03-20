@@ -591,7 +591,7 @@ class BBTournamentTest extends BBTest {
 
         //Next team1's next match should be against team2
         $this->assertInstanceOf('BBMatch', $match_brackets = $team1->match());
-        $this->assertEquals($team2, $match_brackets->toggle_team($team2));
+        $this->assertEquals($team2, $match_brackets->toggle_team($team1));
 
         //Give the win to team 2
         $this->assertTrue($match_brackets->set_winner($team2));
