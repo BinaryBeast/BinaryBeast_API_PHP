@@ -802,14 +802,16 @@ class BBMatchTest extends BBTest {
      * Test unreport() on a match that is not allowed
      *  to be unreported - because either team has 
      *  reported other wins since
-     * group fail
+     * @group fail
      */
     public function test_unreport_bracket_invalid() {
+        var_dump(['round' => $this->object->round->round, 'bracket' => $this->object->round->bracket]);
         $this->assertTrue( $this->object->set_winner($this->object->team()) );
         $this->assertSave($this->object->report());
 
         //Game team() another win, but we may have to report other wins until he has an opponent
         while(is_null($this->object->winner->match())) {
+            var_dump(['open' => $this->object->tournament->open_matches]);
             $this->assertInstanceOf('BBMatch', $match = $this->object->tournament->open_matches[0]);
             $this->assertTrue($match->set_winner($match->team2()));
             $this->assertSave($match->report());
