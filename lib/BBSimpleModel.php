@@ -212,7 +212,7 @@ class BBSimpleModel {
      *      By default this method will use cast each object into whatever the current class is
      *      However, this can be overridden by defining the class manually here by setting <$class>
      *      Just beware that it must be a Model class
-     * @return array<BBTournament> $class
+     * @return BBModel[] $class
      */
     protected function wrap_list($list, $class = null) {
         //Determine which class to instantiate if not provided

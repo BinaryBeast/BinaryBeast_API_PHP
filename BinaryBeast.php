@@ -6,7 +6,7 @@
  * Instantiation can be done in a few different ways
  * 
  * ## Important note for developers!
- * <b>Please setup the values in {@link lib/BBConfiguration} !
+ * <b>Please setup the values in {@link BBConfiguration} !
  * 
  * 
  * ### Getting started ###
@@ -34,6 +34,10 @@
  *  $bb = new BinaryBeast($config);
  * </code>
  * 
+ * 
+ * Next step: start using model objects
+ * 
+ * 
  * ### Model Objects
  * 
  * Models are the heart and soul of this library
@@ -51,7 +55,7 @@
  * 
  * All models provide the delete(); method for deleting, and save() for creating and updating
  * 
- * The main model objects include:
+ * <b>Available models: </b>
  * <ul>
  *  <li>{@link BBTournament}</li>
  *  <li>{@link BBTeam}</li>
@@ -62,11 +66,12 @@
  * 
  * ### Simple models
  * 
- * Simple models are objects that basically do nothing more than host some API wrappers for loading / listing data
+ * Simple models are used for <b>searching / listing only</b>
  * 
- * The best way to access these wrappers is to use the psuedo-attribute for each, and execute, see the example below
+ * {@link BinaryBeast} offers some "magic" properties for conveniently and quickly accessing these models
  * 
- * <b>Simple model example: printing out a list of popular games:</b>
+ * <b>Example - Load a list of popular games: </b>
+ * <b>Note:</b> We're using the magic <var>$game</var> property to access {@link BBGame}
  * <code>
  *      $games = $bb->game->list_popular();
  *      foreach($games as $game) {
@@ -76,8 +81,7 @@
  *      }
  * </code>
  * 
- * <b>Simple model classes:</b>
- * 
+ * <b>Available simple models:</b>
  * <ul>
  *  <li>{@link BBCountry}</li>
  *  <li>{@link BBGame}</li>
@@ -92,6 +96,8 @@
  * check {@link BinaryBeast::last_error} and {@link BinaryBeast::error_history}, there is likely
  * an explanation in there
  * 
+ * You can use this page to view a full log your recent API requests, and the response you were given: {@link http://binarybeast.com/user/settings/api_history}
+ * 
  * 
  * ### Backwards Compatability
  * 
@@ -104,94 +110,68 @@
  * ### Quick Tutorials and Examples ###
  * 
  * Each example assumes the following has already been executed,
- * and that <b>you've set the values in {@link lib/BBConfiguration.php}</b>
+ * and that <b>you've set the values in {@link BBConfiguration}</b>
  * 
  * <code>
  *  require('BinaryBeast.php');
  *  $bb = new BinaryBeast();
  * </code>
  * 
- * ### Model tutorials
  * 
- * The following models have documentation that contains examples and quick tutorials:
- * <ul>
- *  <li>{@link BBTournament}</li>
- *  <li>{@link BBTeam}</li>
- *  <li>{@link BBRound}</li>
- *  <li>{@link BBMatch}</li>
- *  <li>{@link BBMatchGame}</li>
- * </ul>
+ * ### More Tutorials
+ * 
+ * <b>Next step:</b> Begin by skimming through the documentation for {@link BBTournament}
+ * 
+ * 
+ * ### Extending the Model Classes
+ * 
+ * Coming soon... 
  * 
  * 
  * @property BBTournament $tournament
  * <b>Alias for {@link BinaryBeast::tournament()}</b><br />
- *  Returns a new BBTournamament object {@link lib/BBTournament.php}<br />
- *  Treating new tournaments as a property offers the convenience of executing non-object specific methods without
- *      having to handle the $tournament object directly - like loading / searching lists of tournaments
- * </pre>
- * <b>Example:</b><code>
- *      $my_tournaments = $bb->tournament->list_my();
- *      $popular_touranments = $bb->tournament->list_popular();
- * </code>
+ *  A new {@link BBTournamament} object<br />
  * 
  * @property BBTeam $team
  * <b>Alias for {@link BinaryBeast::team()}</b><br />
- *  Returns a new BBTeam object
+ *  A new {@link BBTeam} object
  * 
  * @property BBRound $round
  * <b>Alias for {@link BinaryBeast::round()}</b><br />
- *  Returns a new BBRound object
+ *  A new {@link BBRound} object
  * 
  * @property BBMatch $match
  * <b>Alias for {@link BinaryBeast::match()}</b><br />
- *  Returns a new BBMatch object
+ *  A new {@link BBMatch} object
  * 
  * @property BBMatchGame $match_game
  * <b>Alias for {@link BinaryBeast::match_game()}</b><br />
- *  Returns a new BBMatchGame object
+ * A new {@link BBMatchGame} instance, used by {@link BBMatch} to define play-by-play details within the match
  * 
  * @property BBMap $map
  * <b>Alias for {@link BinaryBeast::map()}</b><br />
- *  Returns a BBMap object, that you can use to search for maps and map_ids<br />
- * <b>Example - list all maps available in Team Fortress 2:</b><br />
- * <code>
- *      $sc2_races = $bb->map->game_list('TF2');
- * </code>
+ *  A {@link BBMap} object, that you can use to search for maps and map_ids<br />
  * 
  * @property BBCountry $country
  * <b>Alias for {@link BinaryBeast::country()}</b><br />
- *  Returns a BBCountry object, that you can use to search for countries and country_codes<br />
- * <b>Example - list all countries that contain the word 'great':</b><br />
- * <code>
- *      $countries = $bb->country->search('great');
- * </code>
+ * A {@link BBCountry} object, that you can use to search for countries and country codes<br />
  * 
  * @property BBGame $game
  * <b>Alias for {@link BinaryBeast::game()}</b><br />
- *  Returns a BBGame object, that you can use to search for games and game_codes<br />
- * <b>Example - list all games that contain the word 'star':</b><br />
- * <code>
- *      $games = $bb->game->search('start');
- * </code><br />
- * <b>Example - list the 15 most popular games on BinaryBeast:</b><code>
- *      $games = $bb->game->list_top(15);
- * </code>
+ * Returns a {@link BBGame} object, that you can use to search for games and game_codes<br />
  * 
  * @property BBRace $race
  * <b>Alias for {@link BinaryBeast::race()}</b><br />
- *  Returns a BBRace object, that you can use to search for races and race_ids
- * <b>Example - list all races available in StarCraft 2:</b><br />
- * <code>
- *      $sc2_races = $bb->race->game_list('SC2');
- * </code>
+ *  Returns a {@link BBRace} object, that you can use to search for races and race_ids
  * 
  * @property BBLegacy $legacy
  * <b>Alias for {@link BinaryBeast::legacy()}</b><br />
- *  Returns the BBLegacy class - that's used to execute the old wrapper methods that were provided in earlier versions of this library
+ * Returns the BBLegacy class, that is used to execute the old wrapper methods that were provided in earlier versions of this library
  * 
  * @property BBCache $cache
  * <b>Alias for {@link BinaryBeast::cache()}</b><br />
- *  Returns the BBCache class, which is used to save and retrieve API responses from a local database, to cut down on API calls
+ * The {@link BBCache} class, which is used to save and retrieve API responses from a local database, to cut down on API calls<br />
+ * <b>NULL</b> if your settings in {@link BBConfiguration} are invalid / not set
  * 
  * 
  * @package BinaryBeast
@@ -1156,17 +1136,20 @@ class BinaryBeast {
         //Try to honor any defined extensions
         $extension = null;
         if(isset($this->config->models_extensions[$model])) {
-            $extension = $this->config->models_extensions[$model];
-            $extension_lib = $this->config->models_extensions_lib;
+            $extension      = $this->config->models_extensions[$model];
+            $extension_lib  = $this->config->models_extensions_lib;
+
+            //Load it!
+            if(!is_null($extension)) {
+                if(!$this->load_library($extension, $extension_lib)) {
+                    return false;
+                }
+
+                //Set $model to the extension, which is used to instantiate the object
+                $model = $extension;
+            }
         }
 
-        //Extension defined - load it and instantiate it
-        if(!is_null($extension)) {
-            if(!$this->load_library($extension, $extension_lib)) {
-                return false;
-            }
-            
-        }
         //Load it first, so we can test it to make sure it's actually a model (we only want to return models)
         $instance = new $model($this, $data);
 

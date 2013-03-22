@@ -222,19 +222,17 @@ class BBMatchTest extends BBTest {
     /**
      * Test team_in_match, using an invalid BBTeam object
      * @covers BBMatch::team_in_match
-     * @group fail
      */
     public function test_invalid_team_object_in_match() {
-        $invalid = $this->get_invalid_team(); var_dump(['id0' => $this->object->team->id, 'id1' => $this->object->team2->id, 'idinvalid' => $invalid->id]); $this->assertFalse('BBTeam', $this->object->team_in_match($this->get_invalid_team()));
+        $this->assertFalse($this->object->team_in_match($this->get_invalid_team()));
     }
     /**
      * Test team_in_match, using a invalid team id
-     * @group fail
      * @covers BBMatch::team_in_match
      */
     public function test_invalid_team_id_in_match() {
         $invalid_team = $this->get_invalid_team();
-        $this->assertFalse('BBTeam', $this->object->team_in_match($invalid_team->id));
+        $this->assertFalse($this->object->team_in_match($invalid_team->id));
     }
     /**
      * @covers BBMatch::tournament
@@ -464,13 +462,12 @@ class BBMatchTest extends BBTest {
     /**
      * Test validate_games, which will check to see if you 
      *  gave the match winner enough game wins, based on the round's best_of setting
-     * @group fail
      */
     public function test_validate_games() {
         //Determine winner
         $winner = $this->object->team();
-        $loser = $this->object->loser();
         $this->assertTrue($this->object->set_winner($winner));
+        $loser = $this->object->loser();
 
         //Make sure it's BO3 - so we can also test strict mode
         $this->object->round->best_of = 3;

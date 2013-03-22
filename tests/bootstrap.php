@@ -31,7 +31,7 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
     function __construct($name = NULL, array $data = array(), $dataName = '') {
         global $bb;
         $this->bb = &$bb;
-        if(is_null(self::$bb_static)) self::$bb_static = &$this->bb;
+        self::$bb_static = &$this->bb;
 
         parent::__construct($name, $data, $dataName);
     }
@@ -278,6 +278,9 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
      */
     protected function add_tournament_rounds(BBTournament &$tournament, $double_elimination = false, $save = true) {
         //Must start with an ID
+        if(!$tournament->save()) {
+            var_dump(['wtf' => $this->bb->error_history]);
+        }
         $this->assertSave($tournament->save());
 
         $maps = array('Abyssal Caverns', 614, 'Akilon Flats', 71, 'Arid Plateau', 337, 'Backwater Gulch', 225);
@@ -290,7 +293,9 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         if(isset($tournament->rounds->finals)) $tournament->rounds->finals[0]->best_of = 5;
         if(isset($tournament->rounds->bronze)) $tournament->rounds->bronze[0]->best_of = 5;
 
-        if($save) $this->assertSave($tournament->save());
+        if($save) {
+            $this->assertSave($tournament->save());
+        }
     }
     /**
      * Adds 8 confirmed teams to the tournament reference

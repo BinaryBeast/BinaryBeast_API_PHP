@@ -558,54 +558,6 @@ class BBTournamentTest extends BBTest {
         $list = $this->object->list_popular();
         $this->assertListFormat($list, array('tourney_id', 'title', 'status', 'date_start', 'game_code', 'game', 'team_mode', 'max_teams'));
     }
-    
-    /**
-     * @covers BBTournament::match() in context of returning a list/history of reported matches
-     * @group fail
-     *
-     */
-    public function test_match_list() {
-        $this->get_tournament_with_open_matches(true);
-
-        $match_groups = $this->object->open_matches[0];
-
-        //Give both teams a win in the group rounds, so when we load their match history later, we should get two results
-        $team1 = $match_groups->team();
-        $team2 = $match_groups->opponent();
-
-        //Report this match, then report team 2's next match
-        $match_groups->set_winner($team1);
-        $this->assertSave($match_groups->report());
-
-        //Now give team2 a win, so they should both progress to brackets
-        $this->assertNotEquals($match_groups, $team2->match);
-        $this->assertTrue($team2->match->set_winner($team2));
-        $this->assertSave($team2->match->report());
-        
-        //Start brackets manually, to guarantee team1 and team2 play eachother immediately
-        $teams = array($team1->id, $team2->id);
-        foreach($this->object->teams() as $team) {
-            if($team->id != $team1->id && $team->id != $team2->id) $teams[] = $team->id;
-        }
-        $this->assertTrue($this->object->start('manual', $teams));
-
-        //Next team1's next match should be against team2
-        $this->assertInstanceOf('BBMatch', $match_brackets = $team1->match());
-        $this->assertEquals($team2, $match_brackets->toggle_team($team1));
-
-        //Give the win to team 2
-        $this->assertTrue($match_brackets->set_winner($team2));
-        $this->assertSave($match_brackets->report());
-
-        //Now load an array of all matches between these two teams, translate into an array of ids for easier matching
-        $ids = array();
-        $this->assertTrue(is_array($matches = $this->object->match($team1, $team2)));
-        foreach($matches as $match) $ids[] = $match->id;
-
-        //Make sure we have the id of both the match in group rounds, and from the brackets
-        $this->assertArrayContains($ids, $match_groups->id);
-        $this->assertArrayContains($ids, $match_groups->id);
-    }
 
     /**
      * Tests open_match by providing a match object

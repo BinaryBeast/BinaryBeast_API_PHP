@@ -3,19 +3,19 @@
 /**
  * Model object for a BinaryBeast Tournament
  * 
- * It can be used to <b>create</b>, <b>manipulate</b>, and <b>list</b> BinaryBeast tournaments
+ * It can be used to <b>create</b>, <b>manipulate</b>, <b>delete</b>, and <b>list</b> BinaryBeast tournaments
  * 
  * 
  * ### Quick Examples and Tutorials ###
  * 
- * <b>Note:</b> The following examples assume <b>$bb</b> is an instance of {@link BinaryBeast}
+ * <b>Note:</b> The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
  * 
  * 
  * ## Create a New Tournament
  * 
  * Let's run through a quick example of how to create a new tournament using the {@link BinaryBeast::touranment()} factory method
  * 
- * Be sure to check out the available properties ({@link #magicProperties}), they won't be covered in the example
+ * Be sure to check out the available properties ({@see m#agicProperties}), they won't be covered in the example
  * 
  * The code below will create a 1v1 single elimination tournament, with the bronze / 3rd place round enabled
  * <code>
@@ -33,7 +33,7 @@
  * 
  * By round format, I mean the best_of value for each round in a bracket
  * 
- * Assume <code>$tournament</code> is a double elimination tournament
+ * Assume <var>$tournament</var> is a double elimination tournament
  * 
  * The example below will set ALL rounds in the winners' bracket to best of 3, and the finals with best of 5:
  * <code>
@@ -43,14 +43,15 @@
  *  $tournament->rounds->finals->best_of = 5;
  * </code>
  * 
- * Now we can use either save_rounds() or save() to submit the changes:
- * <b>Using save_rounds()</b>
+ * Now we can use either {@link BBTournament::save_rounds()} or {@link BBTournament::save()} to submit the changes:
+ * 
+ * <b>Using {@link BBTournament::save_rounds()}</b>
  * <code>
  *  if(!$tournament->save_rounds()) {
  *      var_dump($tournament->error());
  *  }
  * </code>
- * <b>Using save()</b>
+ * <b>Using {@link BBTournament::save()}</b>
  * <code>
  *  if(!$tournament->save()) {
  *      var_dump($tournament->error());
@@ -65,10 +66,10 @@
  * You COULD use {@link BinaryBeast::team()}, then call {@link BBTeam::init()}, but doing it through
  * the tournament is faster and more error proof
  * 
- * Note: If {@link BinaryBeast::team()} returns null, check {@link BinaryBeast::last_error}, it's likely that
- *  your tournament has already started and you can't add any more teams to it
  * 
- * The example below assumes <code>$tournament</code> is elimination tournament and hasn't started yet
+ * Note: If {@link BinaryBeast::team()} returns <var>null</var>, check {@link BinaryBeast::last_error} for an explanation
+ * 
+ * The example below assumes <var>$tournament</var> is elimination tournament and hasn't started yet
  * 
  * Please see {@link BBTeam} documentation for a list of attributes and methods available in instances of BBTeam
  * 
@@ -90,21 +91,22 @@
  * </code>
  * 
  * There are 3 ways to save a new team:
- * <b>1) through {@link BBTournament::save()}</b>
+ * 
+ * <b>1) Using {@link BBTournament::save()}</b>
  * <code>
  *  if(!$tournament->save()) {
  *      var_dump($bb->last_error);
  *  }
  * </code>
- * <b>2) through {@link BBTournament::save_teams()}</b>
+ * <b>2) Using {@link BBTournament::save_teams()}</b>
  * <code>
  *  if(!$tournament->save_teams()) {
  *      var_dump($bb->last_error);
  *  }
  * </code>
- * <b>3) through {@link BBTeam::save()}</b>
- * However beware: using this method requires that the tournament already be saved!
- * You will get an error if you try to execute {@link BBTeam::save} in a tournament that does not have an ID yet
+ * <b>3) Using {@link BBTeam::save()}</b>
+ * 
+ * <b>Caution: </b> this method requires that the tournament already be saved!
  * <code>
  *  foreach($tournament->teams as $team) {
  *      if(!$team->save()) {
@@ -125,7 +127,7 @@
  * you can call {@link BBTournament::save()}, {@link BBTournament::save_matches()}, or {@link BBMatch::report()}
  * to save it
  * 
- * Note: You can also use the "magic" property {@link BBTournament::open_matches} to refer to the array directly
+ * Note: You can also use the "magic" property <var>$tournament->open_matches</var> to refer to the array directly
  * 
  * <b>Example using {@link BBTournament::save_matches()}</b>
  * <code>
@@ -199,16 +201,22 @@
  * 
  * You also have the option of starting brackets, and manually defining all of the starting positions
  * 
+ * 
  * To start with specific starting positions, you have to do two things:
+ * 
  *  1) Set the first argument of save() to 'manual', or {@link BinaryBeast::SEEDING_MANUAL}
- *  2) Provide an array of either BBTeam instances, or tourney_team_id integers, in the exact order you want them to appear in the brackets
+ * 
+ *  2) Provide an array of either {@link BBTeam} instances, or tourney_team_id integers, in the exact order you want them to appear in the brackets
+ * 
  * 
  * I won't go into too much detail here on how to setup $order, it's already documented: {@link BBTournament::start()}
+ * 
  * 
  * <b>Note:</b> To define a freewin, just use the (int) 0 to indicate a freewin in that position
  * 
  * <b>First step: </b>Setup an array of teams in order
- * Let's assume we have 7 players, $team1, $team2, .., $team7, and one freewin
+ * 
+ * Let's assume we have 7 players, <var>$team1</var>, <var>$team2</var>, ..., <var>$team7</var>, and one freewin
  * <code>
  *  $order = array($team7, $team2, $team5, $team1, 0, $team3, $team4, $team6);
  * </code>
@@ -230,8 +238,8 @@
  * </code>
  * 
  * <b>We can also verify position values</b>
- * Note: if $team1 was NOT saved using a reference (aka $team = &$tournament->team()),
- * you may have to call {@link BBTeam::reaload} to insure it has the latest values
+ * Note: if <var>$team1</var> was NOT saved using a reference (aka <var>$team</var> = <var>&$tournament->team()</var>),
+ * you may have to call {@link BBTeam::reload} to insure it has the latest values
  * <code>
  *  if($team7->position != 0) {
  *      var_dump(array('Team 7 position exptected to be 7!', 'position' => $team7->position));
@@ -242,13 +250,6 @@
  * </code>
  * etc etc...
  * 
- * <b>Example: start bracket with random seeding</b>
- * The default seeding method is 'random', so all we have to do is call start(), very easy
- * <code>
- *  if(!$tournament->start()) {
- *      var_dump($bb->last_error);
- *  }
- * </code>
  * 
  * ### Starting Brackets - Seeded
  * 
@@ -258,7 +259,7 @@
  * They work much like 'manual' - but instead of defining initial positions,
  * you're defining team rank
  * 
- * So if you want the top 3 ranks to be $team7, $team3, $team1, and randomize the rest,
+ * So if you want the top 3 ranks to be <var>$team7</var>, <var>$team3</var>, <var>$team1</var>, and randomize the rest,
  * just provide an array with those 3 teams, and it will fill in the rest with random
  * ranks
  * 
@@ -334,6 +335,7 @@
  * ### Listing
  * 
  * <b>Example: Load list of tournaments created by your account:</b>
+ * 
  * Includes any tournaments you've marked as private {@link BBTournament::public},
  * as defined in the 3rd paramater
  * <code>
@@ -343,7 +345,8 @@
  *  }
  * </code>
  * 
- * <b>Example: Load a filtered list of your tournaments, using the keyword "starleague":</b>
+ * <b>Example: Load a filtered list of your tournaments, using the keyword 'starleague':</b>
+ * 
  * Note: since we didn't define the 3rd paramater, private tournaments will NOT be included {@link BBTournament::public}
  * <code>
  *  $tournaments = $bb->tournament->list_my('starleague');
@@ -374,6 +377,8 @@
  * Those are the basics, but there's a lot more to it - feel free to look through
  * the documtnation to see what else is available
  * 
+ * 
+ * You should also review the documentation for {@link BBTeam}, {@link BBRound}, {@link BBMatch}, and {@link BBMatchGame}
  * 
  * 
  * 
@@ -520,7 +525,7 @@
  */
 class BBTournament extends BBModel {
 
-    /** Model services / Tournament manipulation **/
+    /* Model services / Tournament manipulation **/
     const SERVICE_LOAD                      = 'Tourney.TourneyLoad.Info';
     const SERVICE_CREATE                    = 'Tourney.TourneyCreate.Create';
     const SERVICE_UPDATE                    = 'Tourney.TourneyUpdate.Settings';
@@ -529,11 +534,11 @@ class BBTournament extends BBModel {
     const SERVICE_REOPEN                    = 'Tourney.TourneyReopen.Reopen';
     const SERVICE_ALLOW_CONFIRMATIONS       = 'Tourney.TourneySetStatus.Confirmation';
     const SERVICE_DISALLOW_CONFIRMATIONS    = 'Tourney.TourneySetStatus.Building';
-    /** Listing / searching **/
+    /* Listing / searching **/
     const SERVICE_LIST                      = 'Tourney.TourneyList.Creator';
     const SERVICE_LIST_POPULAR              = 'Tourney.TourneyList.Popular';
     const SERVICE_LIST_OPEN_MATCHES         = 'Tourney.TourneyLoad.OpenMatches';
-    /** Child listing / manipulation**/
+    /* Child listing / manipulation**/
     const SERVICE_LOAD_MATCH                = 'Tourney.TourneyLoad.Match';
     const SERVICE_LOAD_TEAM_PAIR_MATCH      = 'Tourney.TourneyMatch.Match';
     const SERVICE_LOAD_TEAMS                = 'Tourney.TourneyLoad.Teams';
@@ -541,16 +546,47 @@ class BBTournament extends BBModel {
     const SERVICE_UPDATE_ROUNDS             = 'Tourney.TourneyRound.BatchUpdate';
     const SERVICE_UPDATE_TEAMS              = 'Tourney.TourneyTeam.BatchUpdate';
 
-    /**
+    /*
      * Caching settings
      */
     const CACHE_OBJECT_TYPE				= BBCache::TYPE_TOURNAMENT;
+    /**
+     * Cache the tournament info for 60 minutes
+     * @var int
+     */
 	const CACHE_TTL_LOAD				= 60;
+    /**
+     * Cache list results for 60 minutes
+     * @var int
+     */
     const CACHE_TTL_LIST				= 60;
+    /**
+     * Cache team list results for 30 minutes
+     * @var int
+     */
     const CACHE_TTL_TEAMS				= 30;
+    /**
+     * Cache match load results for 10 minutes
+     * @var int
+     */
     const CACHE_TTL_MATCH				= 10;
+    /**
+     * Cache round format listing results for 60 minutes
+     * @var int
+     */
     const CACHE_TTL_ROUNDS				= 60;
+    /**
+     * Cache queries for unplayed / open matches for 20 minutes
+     * @var int
+     */
     const CACHE_TTL_LIST_OPEN_MATCHES	= 20;
+
+
+    /*
+     * Callbacks
+     * @todo Implement these callbacks
+     */
+
 
     /**
      * Callback event id for when a match has been reported
@@ -612,7 +648,7 @@ class BBTournament extends BBModel {
      */
     public $tourney_id;
     /**
-     * This tournament's ID, using BinaryBeast's naming convention
+     * The tournament id in a standardized naming convention
      * @var string
      */
     public $id;
@@ -623,14 +659,20 @@ class BBTournament extends BBModel {
      */
     private $open_matches;
 
-    //So BBModal knows which property use as the unique id
+    /**
+     * The name BinaryBeast API uses for this object's unique ID - used by {@link BBModel::load()} when determining the local <var>$id</var>
+     * @var string
+     */
     protected $id_property = 'tourney_id';
 
-    //Define the key to use for extracting data from the API result
+    /**
+     * The key to used for extracting data from the API result
+     * @var string
+     */
     protected $data_extraction_key = 'tourney_info';
 
     /**
-     * Default values for a new tournament, also a useful reference for developers
+     * Default values for a new tournament
      * @var array
      */
     protected $default_values = array(
@@ -653,12 +695,11 @@ class BBTournament extends BBModel {
     );
 
     /**
-     * An array of value keys that we would like
-     * to prevent developers from changing
-     * Not that it honestly really matters, the API only changes acceptable values submitted anyway
+     * Read only properties
+     * @var array
      */
     protected $read_only = array('status', 'tourney_id');
-    
+
     /**
      * Overload BBModel::__set so we can prevent setting the type_id of an active tournament
      * 
@@ -693,7 +734,7 @@ class BBTournament extends BBModel {
      * @param boolean   $ids set true to return array of ids only
      * @param array     $args   any additonal arguments to send with the API call
      * 
-     * @return BBTeam[]
+     * @return BBTeam[]|null
      *      Null is returned if there was an error with the API request
      */
     public function &teams($ids = false, $args = array()) {
@@ -709,19 +750,27 @@ class BBTournament extends BBModel {
 
             return $this->teams;
         }
+        
+        //Load from the API
+        $result = $this->call(self::SERVICE_LOAD_TEAMS, array_merge($args, array(
+                'tourney_id' => $this->tourney_id,
+                'full' => true
+            )),
+            self::CACHE_TTL_TEAMS, self::CACHE_OBJECT_TYPE, $this->id
+        );
 
-		/**
-         * Use BBSimpleModels' listing method, for caching etc
-         *  also specify $full to make sure that we get ALL teams if the tournament is active
-         */
-		if( ($this->teams = $this->get_list(self::SERVICE_LOAD_TEAMS, array_merge($args, array('tourney_id' => $this->tourney_id, 'full' => true))
-			, 'teams', 'BBTeam')) === false) {
-			$this->set_error('Error loading the teams in this tournament! see error() for details');
+        //Fail!
+        if($result->result != BinaryBeast::RESULT_SUCCESS) {
             return $this->bb->ref(null);
-		}
+        }
 
-		//Loop through each time, and "initialize" it, telling it which tournament it belongs to
-		foreach($this->teams as &$team) $team->init($this);
+		//Cast each returned team as a BBTeam, and initalize
+        $this->teams = array();
+		foreach($result->teams as $team) {
+            $team = $this->bb->team($team);
+            $team->init($this);
+            $this->teams[] = $team;
+        }
 
 		//Success!
 		return $this->teams;
@@ -1164,7 +1213,7 @@ class BBTournament extends BBModel {
      * @param string $filter        Optionally search through your tournaments using a simple filter
      * @param int    $limit         Number of results returned
      * @param bool   $private       false by default - set this to true if you want your private tournaments included
-     * @return array<BBTournament>
+     * @return BBTournament[]
      */
     public function list_my($filter = null, $limit = 30, $private = true) {
         return $this->get_list(self::SERVICE_LIST, array(
@@ -1187,7 +1236,7 @@ class BBTournament extends BBModel {
      *      In otherwords for example game_code QL will ONLY return the most popular games that are using
      *      Quake Live
      * @param int $limit            Defaults to 10, cannot exceed 100
-     * @return array<object>
+     * @return BBTournament[]
      */
     public function list_popular($game_code = null, $limit = 10) {
         return $this->get_list(self::SERVICE_LIST_POPULAR, array(

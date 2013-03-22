@@ -11,14 +11,8 @@
  */
 final class BBConfiguration {
     /**
-     *  <b>Your BinaryBeast Account API Key<b>
-     *  <pre>
-     *      You can find / manage your API key in your user settings at BinaryBeast.com
-     *          {@link http://binarybeast.com/user/settings/api}
-     *     
-     *      Side note, here's a useful tool to debug as you develop: {@link http://binarybeast.com/user/settings/api_history}
-     *  </pre>
-     * 
+     *  <b>Your BinaryBeast Account API Key</b><br />
+     *  You can find / manage your API key in your user settings here: {@link http://binarybeast.com/user/settings/api}<br />
      * 
      * @var string
      */

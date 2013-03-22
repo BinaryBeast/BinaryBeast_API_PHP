@@ -9,6 +9,66 @@
  * teams with only a single member, this was to simplify the development process
  * 
  * 
+ * ### Quick tutorials
+ * 
+ * Here are a few quick tutorials for some common tasks when working with teams
+ * 
+ * The following examples assume the following:
+ * 
+ * <var>$bb</var> is an instance of {@link BinaryBeast}
+ * 
+ * <var>$tournament</var> is an instance of {@link BBTournament}
+ * 
+ * 
+ * ### Create a New Team
+ * 
+ * Adding teams is rather simple
+ * 
+ * The best way, is to ues {@link BBTouranment::team()}
+ * 
+ * <b>Example: </b>
+ * <code>
+ *  $team = $tournament->team();
+ * </code>
+ * 
+ * It's as simple as that - <var>$team</var> now refers to a new <b>unsaved</b> team in the touranment
+ * 
+ * The team will not exist remotely on BinaryBeast's servers until you execute either {@link BBTournament::save()}, or {@link BBTeam::save()}
+ * 
+ * 
+ * ### Configuring Teams
+ * 
+ * Please refer to the list of properties in this document for all of the available properties you can set
+ * 
+ * Setting a team's property is very simple
+ * 
+ * <b>Example:</b>
+ * <code>
+ *  $team->country_code = 'NOR';
+ *  $team->display_name = 'New norwegian team name';
+ *  $team->save();
+ * </code>
+ * 
+ * 
+ * ### Reporting Matches
+ * 
+ * There are a few key methods/properties you'll need to make reporting matches painless
+ * 
+ * 
+ * {@link BBTeam::opponent} can be used to fetch your <var>$team</var>'s current opponent
+ * 
+ * {@link BBTeam::match} gives you the open/unreported {@link BBMatch} your <var>$team</var> is currently in
+ * 
+ * {@link BBTeam::eliminated_by} can be used to fetch the team that knocked out your <var>$team</var>
+ * 
+ * 
+ * ### More Tutorials
+ * 
+ * The rest is self-explanatory, please review the list of available methods / properties for a team
+ * 
+ * The next step is to review the documentation for {@link BBMatch}
+ * 
+ * 
  * @property string $display_name
  *  The name displayed on the brackets for this participant
  * 

@@ -4,6 +4,95 @@
  * Model object representing a match between two teams
  * 
  * 
+ * 
+ * ### Quick tutorials ###
+ * 
+ * A few quick common tasks 
+ * 
+ * The following examples assume the following:
+ * 
+ * <var>$bb</var> is an instance of {@link BinaryBeast}
+ * 
+ * <var>$tournament</var> is an instance of {@link BBTournament}
+ * 
+ * 
+ * ### Getting Open Matches ###
+ * 
+ * This was covered in the documentation for {@link BBTournament}, see the first part of the heading "Reporting Matches"
+ * 
+ * 
+ * ### Participants ###
+ * 
+ * You can refer to {@link team()} and {@link team()} (or {@link opponent()}) to get the {@link BBTeam} objects of each team in the <var>$match</var>
+ * 
+ * 
+ * If a match has been reported, you can use {@link winner()} and {@link loser()} to get the winning / loser {@link BBTeam} objects
+ * 
+ * 
+ * ### Reporting ###
+ * 
+ * Before you can report a match, you must explicitely define the winner
+ * 
+ * You can do so by using either {@link set_winner()}, or {@link set_loser()}
+ * 
+ * <b>Example: </b>
+ * <code>
+ *  //First let's store the team we want to give the win to, into $winner
+ *  $winner = $match->team();
+ * 
+ *  //Give him the win!
+ *  if(!$match->set_winner($winner)) {
+ *      var_dump($bb->last_error);
+ *  }
+ * </code>
+ * 
+ * 
+ * 
+ * 
+ * Simply defining a winner / loser may not always be enough though, let's look at how we can be more specific
+ * 
+ * 
+ * ### Game Details ###
+ * 
+ * If your <var>$match</var> is part of a <b>best of 3</b> series for examle, you'll may want to define granular details about each match
+ * 
+ * This is where {@link BBMatchGame} comes in
+ * 
+ * 
+ * Use {@link game()} to create new {@link BBMatchGame} instances
+ * 
+ * 
+ * Let's look at an example of a best of 3 series
+ * 
+ * We'll give <var>$winner</var> a 2:0 win over <var>$loser</var>
+ * 
+ * <b>Example - $winner 2:0 $loser</b>
+ * <code>
+ *      $winner = $match->team();
+ *      $loser  = $match->team2();
+ * 
+ *      $match->set_winner($winner);
+ * 
+ *      $game1 = $match->game($winner);
+ *      $game2 = $match->game($winner);
+ * </code>
+ * 
+ * You can also define details for the games:
+ * <code>
+ *  $game1->map = 'Antiga Shipyard';
+ *  $game1->race = 'Zerg';
+ *  $game2->race = 2;
+ * </code>
+ * 
+ * That's all there is to it
+ * 
+ * Of course <var>$game</var> allows a lot of customization too - like defining the {@link BBMatchGame::race} and {@link BBMatchGame::map}
+ * 
+ * Check out the documentation of {@link BBMatchGame} for more details
+ * 
+ * 
+ * 
+ * 
  * @property-read string $tourney_id
  * The id of the tournament this match is in
  * 
