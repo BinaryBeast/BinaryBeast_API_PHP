@@ -19,19 +19,9 @@ final class BBConfiguration {
     public $api_key = 'e17d31bfcbedd1c39bcb018c5f0d0fbf.4dcb36f5cc0d74.24632846';
 
     /**
-     * Path to class names used to extend the core BBModel library classes
-     * 
-     * You can extend any of the following classe:
-     *  BBTournament, BBTeam, BBMatch, and BBMatchGame
-     * 
-     * @var string
-     */
-    public $models_extensions_lib = 'lib/custom/';
-    
-    /**
      * Custom model extension class names
      * 
-     * Each class must be in a file name that exactly matches the class name
+     * Extended models must reside in /lib/custom/{new_class_name}.php
      * 
      * For exmaple, if you override BBTournament with LocalTournament, you must save it in 
      *      in lib/custom/LocalTournament.php

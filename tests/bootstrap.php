@@ -44,11 +44,6 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         }
     }
     
-    protected function tearDown() {
-        if(!is_null($this->tournament)) $this->tournament->delete();
-        else if($this->object instanceof BBModel) $this->object->delete();
-    }
-
     protected function dump_history() {
         var_dump(array('errors' => $this->bb->error_history, 'results' => $this->bb->result_history));
     }
@@ -278,9 +273,6 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
      */
     protected function add_tournament_rounds(BBTournament &$tournament, $double_elimination = false, $save = true) {
         //Must start with an ID
-        if(!$tournament->save()) {
-            var_dump(['wtf' => $this->bb->error_history]);
-        }
         $this->assertSave($tournament->save());
 
         $maps = array('Abyssal Caverns', 614, 'Akilon Flats', 71, 'Arid Plateau', 337, 'Backwater Gulch', 225);
@@ -324,7 +316,7 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
     protected function get_tournament_new() {
         $this->tournament = $this->bb->tournament();
         self::$tournaments[] = &$this->tournament;
-        return $this->tournament;;
+        return $this->tournament;
     }
     /**
      * Returns a saved inactive tournament - aka hasn't started, no teams added - rounds have been setup though

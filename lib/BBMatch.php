@@ -769,6 +769,9 @@ class BBMatch extends BBModel {
         $this->team->reload();
         $this->opponent->reload();
 
+        //Reload open_matches, force it to make a fresh query from the API
+        $this->tournament->open_matches(true);
+
         /**
          * Tell the touranment that this is no longer an open match
          * But specify preserve to avoid this object becoming null

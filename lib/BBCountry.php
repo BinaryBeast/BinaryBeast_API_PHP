@@ -1,16 +1,34 @@
 <?php
 
 /**
- * Very simple non-editable class that hosts
- * a few methods for returning / searching through our
- * list of countries
+ * Country searching / listing simple model
  * 
- * Adding / updating teams or players etc, you have the option 
- * of defining a country_code - you can use this class to find that country_code
  * 
- * Note that on BinaryBeast's end, country_code is the ISO-3 character value, taken directly
- * from wikipedia: http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3
+ * You'll need this class to find country_codes For {@link BBTeam::country_code}
  * 
+ * 
+ * ### Example use
+ * 
+ * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * 
+ * <b>Example - list all countries containing the word 'united'</b>
+ * <code>
+ *  $countries = $bb->country->search('united');
+ *  foreach($countries as $country) {
+ *      echo $country->country . ' (' . $country->country_code . ')<br />';
+ *  }
+ * </code>
+ * <b>Result:</b>
+ * <pre>
+ *  Tanzania, United Republic of (TZA)
+ *  United Arab Emirates (ARE)
+ *  United Kingdom (GBR)
+ *  United States (USA)
+ *  United States Minor Outlying Islands (UMI)
+ * </pre>
+ * 
+ * 
+ * BinaryBeast's list of countries was populated from the ISO_3166-1 listing: {@link http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3}
  * 
  * @package BinaryBeast
  * @subpackage SimpleModel
@@ -24,7 +42,11 @@
 class BBCountry extends BBSimpleModel {
     const SERVICE_SEARCH    = 'Country.CountrySearch.Search';
 
-    //not likely to EVER chance, cache for a week
+    /**
+     * Results are cached for a week, it is highly unlikely that 
+     *  the results will EVER change
+     * @var int
+     */
     const CACHE_TTL_LIST        = 10080;
     const CACHE_OBJECT_TYPE     = BBCache::TYPE_COUNTRY;
 

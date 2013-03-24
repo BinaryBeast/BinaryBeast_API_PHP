@@ -363,7 +363,10 @@ class BBTeam extends BBModel {
      */
     public function &opponent() {
 		//Orphaned team
-		if($this->orphan_error()) return $this->bb->ref(null);
+		if($this->orphan_error()) {
+            var_dump('ORPHAN!!!');
+            return $this->bb->ref(null);
+        }
 
         //Already figured it out
         if(!is_null($this->opponent) || $this->opponent === false) return $this->opponent;
@@ -375,10 +378,10 @@ class BBTeam extends BBModel {
             );
         }
 
-		//Ask the API
+		//Ask the API - cache it as tournament cache
 		$result = $this->call(self::SERVICE_GET_OPPONENT, array(
 			'tourney_team_id' => $this->id
-			), self::CACHE_TTL_OPPONENTS, self::CACHE_OBJECT_TYPE, $this->id);
+			), self::CACHE_TTL_OPPONENTS, BBCache::TYPE_TOURNAMENT, $this->tournament->id);
 
         //Default to false, unless we determine otherwise
         $this->eliminated_by = false;
@@ -562,7 +565,7 @@ class BBTeam extends BBModel {
         $result = $this->call(self::SERVICE_GET_LAST_MATCH, array('tourney_team_id' => $this->id), 10, BBCache::TYPE_TOURNAMENT, $this->tournament->id);
 
         //Failure!
-        if($result->result != BinaryBeast::RESULT_SUCCESS) return $this->ref(null);
+        if($result->result != BinaryBeast::RESULT_SUCCESS) return $this->bb->ref(null);
 
         //Import settings, and associate the tournament
         $match = $this->bb->match($result);

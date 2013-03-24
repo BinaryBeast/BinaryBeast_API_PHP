@@ -3,12 +3,14 @@
 /**
  * Model object for a BinaryBeast Tournament
  * 
+ * @todo Add a magic property for URL
+ * 
  * It can be used to <b>create</b>, <b>manipulate</b>, <b>delete</b>, and <b>list</b> BinaryBeast tournaments
  * 
  * 
  * ### Quick Examples and Tutorials ###
  * 
- * <b>Note:</b> The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
  * 
  * 
  * ## Create a New Tournament
@@ -744,7 +746,9 @@ class BBTournament extends BBModel {
             //Requested an array of ids
             if($ids) {
                 $teams = array();
-                foreach($this->teams as $x => &$team) $teams[$x] = $team->id;
+                foreach($this->teams as $x => &$team) {
+                    $teams[$x] = $team->id;
+                }
                 return $teams;
             }
 
@@ -768,7 +772,7 @@ class BBTournament extends BBModel {
         $this->teams = array();
 		foreach($result->teams as $team) {
             $team = $this->bb->team($team);
-            $team->init($this);
+            $team->init($this, false);
             $this->teams[] = $team;
         }
 
@@ -843,7 +847,11 @@ class BBTournament extends BBModel {
         $this->clear_id_cache();
 
         //Flag reloads for any existing teams, in case any stray references exist after removing child classes
-        if(is_array($this->teams)) foreach($this->teams as &$team) $team->flag_reload();
+        if(is_array($this->teams)) {
+            foreach($this->teams as &$team) {
+                $team->flag_reload();
+            }
+        }
 
         //GOGOGO!
         $this->rounds = null;
@@ -1092,7 +1100,7 @@ class BBTournament extends BBModel {
         //Now let BBModel remove any unsaved teams from $this->teams
         $this->remove_new_children($this->teams);
     }
-
+    
     /**
      * Update all teams/participants etc that have had any values changed in one go
      * 
@@ -1305,7 +1313,10 @@ class BBTournament extends BBModel {
             return $this->bb->ref($this->set_error('You cannot add players to active tournaments!!'));
         }
 
-        //Derp - already part of this tournament, just return true
+        /**
+         * Derp - already part of this tournament, just return true
+         * @todo this needs to return the index of the existing team
+         */
         if(in_array($team, $this->teams())) return true;
 
         //Team already has an ID
@@ -1319,7 +1330,7 @@ class BBTournament extends BBModel {
         }
 
         //At this point we can proceed, so associate this tournament with the team
-        else $team->init($this);
+        else $team->init($this, false);
 
         //add it to the list!
         $key = sizeof($this->teams);
@@ -1371,11 +1382,7 @@ class BBTournament extends BBModel {
      */
     public function &team($id = null) {
 
-        /**
-         * Insure that the local teams array is up to date according to BinaryBeast
-         * Wouldn't want to risk adding a new player to make teams() look initilaized,
-         *  when in reality it hasn't yet
-         */
+        //If validating an input, make sure the teams array is initalized
 		if(!is_null($this->id)) {
 			if($this->teams() === false) {
 				return $this->bb->ref(null);
@@ -1662,11 +1669,16 @@ class BBTournament extends BBModel {
      * Each item in the array will be an instance of BBMatch, which you can use 
      *      to submit the results
      * 
+     * @param boolean $force_reload
+     *      False by default
+     *      Enable this to force querying for a fresh list from the API
+     *      Warning: this does NOT mean that cached results will be cleared, that must be done separately
+     * 
      * @return array
      */
-    public function &open_matches() {
+    public function &open_matches($force_reload = false) {
         //Already cached
-        if(!is_null($this->open_matches)) return $this->open_matches;
+        if(!is_null($this->open_matches) && !$force_reload) return $this->open_matches;
 
         //Inactive tournament
         if(!BBHelper::tournament_is_active($this)) {

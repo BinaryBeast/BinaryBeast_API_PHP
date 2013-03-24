@@ -159,6 +159,14 @@ class BBTournamentTest extends BBTest {
         foreach($this->object->teams() as $team) $this->assertInstanceOf('BBTeam', $team);
     }
     /**
+     * Test teams() and request ID values only
+     * @covers BBTournament::teams()
+     * @group fail
+     */
+    public function test_teams_ids() {
+        $this->assertTrue(false, 'Implement this test');
+    }
+    /**
      * @covers BBTournament::confirmed_teams
      */
     public function test_confirmed_teams() {

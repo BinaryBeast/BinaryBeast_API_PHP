@@ -105,6 +105,7 @@ class BBTeamTest extends BBTest {
     /**
      * Test retrieving a team's opponent in elimination brackets
      * @covers BBTeam::opponent
+     * @group fail
      */
     public function test_opponent_elimination() {
         $this->set_object_with_open_match();

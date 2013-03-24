@@ -36,16 +36,6 @@ class BBSimpleModel {
     protected $bb;
 
     /**
-     * Publicly accessible result code for the previous api call
-     * @var int
-     */
-    public $result = null;
-    /**
-     * Publically accessible friendly/human-readable version of the previous result code
-     * @var string
-     */
-    public $result_friendly = null;
-    /**
      * If loading failed, stored the result
      * @var array
      */
@@ -101,23 +91,8 @@ class BBSimpleModel {
         //Use BinaryBeast library to make the actual call
         $response = $this->bb->call($svc, $args, $ttl, $object_type, $object_id);
 
-        //Store the result code in the model itself, to make debuggin as easy as possible for developers
-        $this->set_result($response->result);
-
         //Finallly, return the response
         return $response;
-    }
-
-    /**
-     * Stores a result code into $this->result, and also stores a
-     * readable translation into result_friendly
-     * 
-     * @param int $result
-     * @return void
-     */
-    protected function set_result($result) {
-        $this->result = $result;
-        $this->result_friendly = BBHelper::translate_result($result);
     }
 
     /**
@@ -157,16 +132,6 @@ class BBSimpleModel {
     protected function clear_error() {
         $this->set_error(null);
     }
-
-	/**
-	 * Returns an array containing the result code, and friendly translation
-	 *	of the last API request
-	 * 
-	 * @return array
-	 */
-	public function result() {
-		return array('result' => $this->result, 'friendly' => $this->result_friendly);
-	}
 
     /**
      * Get the service that the child class supposedly defines

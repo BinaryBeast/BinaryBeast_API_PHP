@@ -3,13 +3,12 @@
 /**
  * The main library class, used to communicate with the API and as a factory to generate model objects
  * 
- * Instantiation can be done in a few different ways
- * 
- * ## Important note for developers!
- * <b>Please setup the values in {@link BBConfiguration} !
- * 
  * 
  * ### Getting started ###
+ * 
+ * 
+ * ## First - setup the configuration in {@link BBConfiguration}
+ * 
  * 
  * This class is your starting point for everything - and there are a few ways to instantiate it
  * Here are a few examples of how to instantiate this class
@@ -187,6 +186,12 @@ class BinaryBeast {
 
     //URL to send API Requests
     private static $url = 'https://api.binarybeast.com/';
+
+    /**
+     * Base path to the binarybeast library folder
+     * @var string
+     */
+    public $lib_path;
 
     /**
      * BinaryBeast API Key
@@ -578,6 +583,9 @@ class BinaryBeast {
      * @return BinaryBeast
      */
     function __construct($api_key = null) {
+        //Determine the path to the library directory
+        $this->lib_path = str_replace('\\', '/', dirname(__FILE__ )) . '/lib/';
+
         /**
          * Make sure this server supports json and cURL
          * Static because there's no point in checking for each instantiation
@@ -587,14 +595,16 @@ class BinaryBeast {
         //Execute the static "constructor", but only for the first instantiation
         if(self::$first) self::init($this);
 
-        //Store configuration
-        $this->config = new BBConfiguration();
-
-        //Cache the api key
-        if(!is_null($api_key)) $this->config->api_key = $api_key;
-
         //Use a custom BBConfiguration object
         if($api_key instanceof BBConfiguration) $this->config = $api_key;
+
+        //Store default configuration
+        else {
+            $this->config = new BBConfiguration();
+
+            //Use a custom api_key
+            if(!is_null($api_key)) $this->config->api_key = $api_key;
+        }
     }
 
     /**
@@ -1064,7 +1074,7 @@ class BinaryBeast {
     private function load_library($library, $lib_path = null) {
 
         //If not defined, default to /lib 
-        if(is_null($lib_path)) $lib_path = 'lib/';
+        if(is_null($lib_path)) $lib_path = $this->lib_path;
 
         //require(), only if the class isn't already defined
         if(!class_exists($library)) {
@@ -1137,11 +1147,10 @@ class BinaryBeast {
         $extension = null;
         if(isset($this->config->models_extensions[$model])) {
             $extension      = $this->config->models_extensions[$model];
-            $extension_lib  = $this->config->models_extensions_lib;
 
             //Load it!
             if(!is_null($extension)) {
-                if(!$this->load_library($extension, $extension_lib)) {
+                if(!$this->load_library($extension, $this->lib_path . '/custom/')) {
                     return false;
                 }
 

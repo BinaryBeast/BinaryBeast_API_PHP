@@ -596,7 +596,7 @@ abstract class BBModel extends BBSimpleModel {
         }
 
         //Failure!
-        else return $this->set_error($result);
+        else return $this->set_error('Error returned from svc ' . $svc . ', please refer to BinaryBeast::results_history for details');
     }
 
     /**
@@ -782,6 +782,8 @@ abstract class BBModel extends BBSimpleModel {
     /**
      * Attempts to return the matching child within the provided
      *  array of child BBModel instances
+     * 
+     * @todo don't initalize $ids unless its needed
      * 
      * @param BBModel|int $child
      * @param BBModel[] $children

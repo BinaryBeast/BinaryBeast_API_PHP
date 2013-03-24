@@ -1,15 +1,75 @@
 <?php
 
 /**
- * === Game Loader ===
+ * Country searching / listing simple model
  * 
- * Simple API service wrapper for loading / searching for games
  * 
- * It's important to have these methods when creating touranments, you have the option 
- *  of defining a game_code - and you can use this class to find the game_code for your game
+ * You'll need this class to find game codes For {@link BBTournament::$game_code}
+ * 
+ * 
+ * Examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * 
+ * 
+ * 
+ * ### Example: Search for a game
+ * 
+ * <b>Example - search for games that contain the word 'star'</b>
+ * <code>
+ *  $games = $bb->game->search('star');
+ *  foreach($games as $game) {
+ *      echo $game->game . ' (' . $game->game_code . ')<br />';
+ *  }
+ * </code>
+ * <b>Result:</b>
+ * <pre>
+ *  StarCraft 2 (SC2)
+ *  StarCraft 2: Heart of the Swarm (HotS)
+ *  StarCraft: BroodWar (BW)
+ *  StarCraft 2 - Europe (SC2EU)
+ *  StarCraft 2 - North America (SC2US)
+ *  StarCraft 2 - Asia (SC2SEA)
+ *  Star Wars Jedi Knight III (JDK3)
+ *  Star Wars Jedi Knight II: Jedi Outcast (JDK2)
+ * </pre>
+ * 
+ * 
+ * ### Example: List popular games
+ * 
+ * <b>Example - List the top 15 games on BinaryBeast right now</b>
+ * <code>
+ *  $games = $bb->game->list_top(15);
+ *  foreach($games as $game) {
+ *      echo $game->game . ' (' . $game->game_code . ')<br />';
+ *  }
+ * </code>
+ * <b>Result:</b>
+ * <pre>
+ *  StarCraft 2 (SC2)
+ *  League of Legends (LoL)
+ *  StarCraft 2: Heart of the Swarm (HotS)
+ *  StarCraft: BroodWar (BW)
+ *  Counter-Strike 1.6 (CS16)
+ *  Warcraft 3: DotA (DotA)
+ *  DotA 2 (DOTA2)
+ *  Call of Duty: Modern Warfare 3 (MW3)
+ *  FIFA 12 (FIFA12)
+ *  FIFA 13 (FIFA13)
+ *  Counter-Strike: Source (CSS)
+ *  Warcraft 3: Frozen Throne (War3FT)
+ *  Counter-Strike: Global Offensive (CSGO)
+ *  Call of Duty 4 (CoD4)
+ *  Call of Duty: Black Ops 2 (CoDBO2)
+ * </pre>
+ * 
+ * 
+ * 
+ * 
  * 
  * If the game want to use is not in our database, send us an email to <contact@binarybeast.com>
  * and we'll be happy to add it for your
+ * 
+ * 
+ * 
  * 
  * @package BinaryBeast
  * @subpackage SimpleModel
@@ -74,7 +134,7 @@ class BBGame extends BBSimpleModel {
  * 
  * @property-read string $game_style
  *  If available, the type of game this is<br />
- *  examples are RTS, FPS, MMORPS, etc
+ *  examples are RTS, FPS, MMORPG, etc
  * 
  * @property-read string $race_label
  *  If applicable, this game may have races / factions associated with it<br />

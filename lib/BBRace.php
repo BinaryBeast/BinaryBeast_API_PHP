@@ -1,12 +1,54 @@
 <?php
 
 /**
- * Very simple non-editable class that hosts
- *  a few methods for fetching arrays of races that you can use
- *  while reporting games / matches
+ * Race searching / listing simple model
  * 
- * If the game your tournament uses does not have all of the races you need, please
- *      feel free to let us know, by sending an email to <contact@binarybeast.com>
+ * 
+ * You'll need this class to find game codes For {@link BBMatchGame::race} and {@link BBMatchGame::o_race}
+ * 
+ * 
+ * Examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * 
+ * 
+ * 
+ * ### Example: List all races for StarCraft 2
+ * 
+ * <b>Example - search for games that contain the word 'star'</b>
+ * <code>
+ *  $races = $bb->race->game_list('SC2');
+ *  foreach($races as $race) {
+ *      echo '<img src="' . $race->race_icon . '" /> ' . $race->race . ' (' . $race->race_id . ') <br />';
+ *  }
+ * </code>
+ * <b>Result:</b>
+ * 
+ * [* http://binarybeast.com/img/races/SC2/3.png *] Protoss (3)<br />
+ * [* http://binarybeast.com/img/races/SC2/7.png *] Random (7)<br />
+ * [* http://binarybeast.com/img/races/SC2/2.png *] Terran (2)<br />
+ * [* http://binarybeast.com/img/races/SC2/1.png *] Zerg (1)<br />
+ *
+ * 
+ * ### Example: Search for the Zerg race in StarCraft 2
+ * 
+ * <code>
+ *  $races = $bb->race->game_search('SC2', 'Ze');
+ *  foreach($races as $race) {
+ *      echo '<img src="' . $race->race_icon . '" /> ' . $race->race . ' (' . $race->race_id . ') <br />';
+ *  }
+ * </code>
+ * <b>Result:</b>
+ * 
+ * [* http://binarybeast.com/img/races/SC2/1.png *] Zerg (1)
+ * 
+ * 
+ * 
+ * 
+ * 
+ * If the game want to use is not in our database, send us an email to <contact@binarybeast.com>
+ * and we'll be happy to add it for your
+ * 
+ * 
+ * 
  * 
  * 
  * @package BinaryBeast

@@ -1,17 +1,71 @@
 <?php
 
 /**
- * Very simple non-editable class that hosts
- * a few methods for returning / searching through our
- * list of maps
+ * Provides services for searching for maps available to a games (see {@link BBGame})
  * 
- * It's important to have these methods when setting up the format for tournaments, and when
- * reporting matches - becuase those services allow you to define a <code>map_id</code>, and here
- * is where you can find those ids
  * 
- * Please note that all services in thie class are executed within the context
- *      of the game_code you provide, you can't load a global list of maps, each game has its
- *      own list of maps
+ * Map ids are used by {@link BBRound::$map}, and {@link BBMatchGame::$map}
+ * 
+ * Examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * 
+ * 
+ * 
+ * ### Example: List all maps for StarCraft 2
+ * 
+ * <b>Note: </b>You'll need to know the GameCode - you can get it from {@link BBGame}
+ * 
+ * <code>
+ *  $games = $bb->map->game_list('SC2');
+ *  foreach($games as $game) {
+ *      echo $game->game . ' (' . $game->game_code . ')<br />';
+ *  }
+ * </code>
+ * <b>Result:</b>
+ * <pre>
+ *  Abyssal Caverns (125) 
+ *  Abyssal City (614) 
+ *  Agria Valley (647) 
+ *  Akilon Flats (639)
+ *  Antiga Shipyard (71) 
+ *  Arid Plateau (211) 
+ *  Atlantis Spaceship (337) 
+ *  Backwater Gulch (72) 
+ *  Blistering Sands (225) 
+ *  Cloud Kingdom (243) 
+ *  Condemned Ridge (513) 
+ *  Crossfire (68) 
+ * ...
+ * </pre>
+ * 
+ * 
+ * ### Example: Search for a map
+ * 
+ * Let's try to find the map_id of Antiga Shipyard for StarCraft 2
+ * <code>
+ *  $maps = $bb->map->game_search('SC2', 'Antiga Shipyard');
+ *  foreach($maps as $map) {
+ *      echo $map->map . ' (' . $map->map_id . ') <br />';
+ *  }
+ * </code>
+ * <b>Result:</b>
+ * <pre>
+ *  Antiga Shipyard (71) 
+ *  GSL Antiga Shipyard (207) 
+ *  IPL3 Antiga Shipyard (133) 
+ *  MLG Antiga Shipyard (54) 
+ *  TSL4 Antiga Shipyard (499) 
+ *  WCS Antiga Shipyard (485) 
+ * </pre>
+ * 
+ * 
+ * ### Missing Maps
+ * 
+ * If there are maps missing, you can submit them for approval on BinaryBeast
+ * 
+ * Maps are submitted per-game however, so for example if you wanted to add a map for QuakeLive, use
+ * {@link http://binarybeast.com/game/create_map/QL}
+ * 
+ * 
  * 
  * 
  * @package BinaryBeast

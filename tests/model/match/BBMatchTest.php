@@ -27,7 +27,7 @@ class BBMatchTest extends BBTest {
      */
     private function set_object($groups = false) {
         $this->get_tournament_with_open_matches($groups);
-        $this->object = &$this->tournament->open_matches[0];
+        $this->object = $this->tournament->open_matches[0];
     }
     /**
      * Returns a BBTeam object KNOWN not to be part of this match
@@ -484,7 +484,6 @@ class BBMatchTest extends BBTest {
 
         //Give $winner a win - 1:1, still shouldn't validate
         $game2 = $this->object->game();
-        var_dump(['winner_games' => $this->object->get_game_wins($winner)]); $this->assertFalse($this->object->validate_winner_games());
         $this->assertFalse($this->object->validate_winner_games(true));
 
         //Give the $winner the first win - 2:1, it should now validate, even in strict mode
@@ -802,16 +801,13 @@ class BBMatchTest extends BBTest {
      * Test unreport() on a match that is not allowed
      *  to be unreported - because either team has 
      *  reported other wins since
-     * @group fail
      */
     public function test_unreport_bracket_invalid() {
-        var_dump(['round' => $this->object->round->round, 'bracket' => $this->object->round->bracket]);
         $this->assertTrue( $this->object->set_winner($this->object->team()) );
         $this->assertSave($this->object->report());
 
-        //Game team() another win, but we may have to report other wins until he has an opponent
+        //Game team() another win, but we may have to report other matches until he has an opponent
         while(is_null($this->object->winner->match())) {
-            var_dump(['open' => $this->object->tournament->open_matches]);
             $this->assertInstanceOf('BBMatch', $match = $this->object->tournament->open_matches[0]);
             $this->assertTrue($match->set_winner($match->team2()));
             $this->assertSave($match->report());
@@ -820,7 +816,8 @@ class BBMatchTest extends BBTest {
         //should have an open match now - report it
         $this->assertInstanceOf('BBMatch', $match = $this->object->winner->match());
         $this->assertTrue( $match->set_winner($this->object->winner()) );
-        
+        $this->assertSave($match->report());
+
         //now that winner() has had reported beyond $this->object, we should no longer be allowed to unreport it
         $this->assertFalse($this->object->unreport());
     }
