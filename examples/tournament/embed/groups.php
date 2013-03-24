@@ -57,7 +57,7 @@ if(!$tournament->start()) {
      * @todo build the iframe embedding helper
      */
 ?>
-<h1>Tournament Groups (<?php echo $tournament->id; ?>)</h1>
+<h1>Tournament Brackets (<?php echo $tournament->id; ?>)</h1>
 <?php
     /**
      * @todo build the iframe embedding helper

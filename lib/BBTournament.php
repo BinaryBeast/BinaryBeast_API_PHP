@@ -3,8 +3,6 @@
 /**
  * Model object for a BinaryBeast Tournament
  * 
- * @todo Add a magic property for URL
- * 
  * It can be used to <b>create</b>, <b>manipulate</b>, <b>delete</b>, and <b>list</b> BinaryBeast tournaments
  * 
  * 
@@ -374,6 +372,46 @@
  * </code>
  * 
  * 
+ * ### Embedding your Tournament
+ * 
+ * There are two ways to do this
+ * 
+ * - Using {@link BBHelper::embed_brackets()} and {@link BBHelper::embed_groups()}
+ * - Using {@link BBTournament::embed()}
+ * 
+ * 
+ * <b>Example - Brackets - Using BBHelper</b>
+ * 
+ * Review the documentation in {@link BBHelper::embed_tournament()} to see the possible arguments
+ * <code>
+ *  BBHelper::embed_brackets($tournament);
+ * </code>
+ * 
+ * 
+ * <b>Example - Groups - Using BBHelper</b>
+ * 
+ * Review the documentation in {@link BBHelper::embed_tournament_groups()} to see the possible arguments
+ * <code>
+ *  BBHelper::embed_groups($tournament);
+ * </code>
+ * 
+ * <b>Example - Groups - Using BBTournament</b>
+ * 
+ * Review the documentation in {@link BBTournament::embed_groups()} to see the possible arguments
+ * <code>
+ *  $tournament->embed_groups();
+ * </code>
+ * 
+ * <b>Example - Brackets - Using BBTournament</b>
+ * 
+ * Review the documentation in {@link BBTournament::embed()} to see the possible arguments
+ * <code>
+ *  $tournament->embed();
+ * </code>
+ * 
+ * 
+ * 
+ * 
  * ### More...
  * 
  * Those are the basics, but there's a lot more to it - feel free to look through
@@ -393,6 +431,9 @@
  * @property boolean $public
  * <b>Default: true</b><br />
  * If true, this tournament can be found in the public lists + search
+ * 
+ * @property-read string $url
+ *  The URL to this tournament hosted on BinaryBeast.com
  * 
  * @property-read string $status
  * <b>Read Only</b><br />
@@ -1775,6 +1816,33 @@ class BBTournament extends BBModel {
         //Failure!
         return $this->bb->ref(null);
     }
+    
+    /**
+     * Prints outs the iframe HTML needed to embed a tournament
+     * 
+     * Convenience wrapper for {@link BBHelper::embed_tournament()}
+     * 
+     * @param boolean $groups
+     *  By default if a tournament with rounds has progressed to the brackets, the groups will not be displayed
+     *  however if you set this to true, the group rounds will be displayed instead
+     * @param int|string $width
+     *  Optionally define the width of the iframe
+     *  Can either by a string (IE '100%', or a number (100 => becomes '100px')
+     * @param int|string $height
+     *  Optionally define the height of the iframe
+     *  Can either by a string (IE '100%', or a number (100 => becomes '100px')
+     * @param string $class
+     *  A class name to apply to the iframe
+     *  Defaults to 'binarybeast'
+     * 
+     * @return boolean
+     *  prints out the html directly
+     *  returns false if there was an error (like unable to determine the tournament id)
+     */
+    public function embed($groups = false, $width = 800, $height = 600, $class = 'binarybeast') {
+        BBHelper::embed_tournament($this, $groups, $width, $height, $class);
+    }
+    
 }
 
 ?>

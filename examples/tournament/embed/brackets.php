@@ -8,6 +8,7 @@
 
 require('../../../BinaryBeast.php');
 $bb = new BinaryBeast();
+$bb->disable_ssl_verification();
 
 /*
  * First - create a tournament with brackets
@@ -37,7 +38,5 @@ if(!$tournament->start()) {
 <h1>Tournament Brackets (<?php echo $tournament->id; ?>)</h1>
 
 <?php
-    /**
-     * @todo build the iframe embedding helper
-     */
+    BBHelper::embed_tournament($tournament);
 ?>

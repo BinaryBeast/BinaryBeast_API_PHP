@@ -526,6 +526,79 @@ class BBHelper {
 		else		$brackets[] = $bracket;
 		
 	}
+    
+    /**
+     * Prints outs the iframe HTML needed to embed a tournament
+     * 
+     * @param BBTournament|string $tournament
+     *  You may provide either the BBTournament object, or just the tournament id
+     * @param boolean $groups
+     *  By default if a tournament with rounds has progressed to the brackets, the groups will not be displayed
+     *  however if you set this to true, the group rounds will be displayed instead
+     * @param int|string $width
+     *  Optionally define the width of the iframe
+     *  Can either by a string (IE '100%', or a number (100 => becomes '100px')
+     * @param int|string $height
+     *  Optionally define the height of the iframe
+     *  Can either by a string (IE '100%', or a number (100 => becomes '100px')
+     * @param string $class
+     *  A class name to apply to the iframe
+     *  Defaults to 'binarybeast'
+     * 
+     * @return boolean
+     *  prints out the html directly
+     *  returns false if there was an error (like unable to determine the tournament id)
+     */
+    public static function embed_tournament($tournament, $groups = false, $width = 800, $height = 600, $class = 'binarybeast') {
+        //If given a BBTournament, extract the ID
+        if($tournament instanceof BBTournament) {
+            $tournament = $tournament->id;
+        }
+
+        //Invalid tournament id
+        if(!$tournament || is_null($tournament)) return false;
+ 
+        //Figure out the URL based on $groups
+        $url = 'http://binarybeast.com/' . $tournament . '/';
+        if($groups) $url .= 'groups/';
+ 
+        $url .= 'full';
+ 
+        //Create an inline style based on $width and $height
+        $style = '';
+        if(!is_null($width)) $style .= 'width:' . $width . (is_numeric($width) ? 'px' : '') . ';';
+        if(!is_null($height)) $style .= 'height:' . $height . (is_numeric($height) ? 'px' : '') . ';';
+
+        if($style) $style = 'style="' . $style . '"';
+
+        //Print out the result
+        echo '<iframe src="' . $url . '" class="' . $class . '" ' . $style . '></iframe>';
+        return true;
+    }
+
+    /**
+     * Prints outs the iframe HTML needed to embed a group rounds within a tournament
+     * 
+     * @param BBTournament|string $tournament
+     *  You may provide either the BBTournament object, or just the tournament id
+     * @param int|string $width
+     *  Optionally define the width of the iframe
+     *  Can either by a string (IE '100%', or a number (100 => becomes '100px')
+     * @param int|string $height
+     *  Optionally define the height of the iframe
+     *  Can either by a string (IE '100%', or a number (100 => becomes '100px')
+     * @param string $class
+     *  A class name to apply to the iframe
+     *  Defaults to 'binarybeast'
+     * 
+     * @return boolean
+     *  prints out the html directly
+     *  returns false if there was an error (like unable to determine the tournament id)
+     */
+    public static function embed_tournament_groups($tournament, $width = 800, $height = 600, $class = 'binarybeast') {
+        return self::embed_tournament($tournament, true, $width, $height, $class);
+    }
+    
 
 }
 
