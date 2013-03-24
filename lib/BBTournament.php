@@ -1840,7 +1840,31 @@ class BBTournament extends BBModel {
      *  returns false if there was an error (like unable to determine the tournament id)
      */
     public function embed($groups = false, $width = 800, $height = 600, $class = 'binarybeast') {
-        BBHelper::embed_tournament($this, $groups, $width, $height, $class);
+        return BBHelper::embed_tournament($this, $groups, $width, $height, $class);
+    }
+    
+    /**
+     * Prints outs the iframe HTML needed to embed a tournament - forcing group rounds, even if tournament
+     *  has progress to brackets
+     * 
+     * Convenience wrapper for {@link BBHelper::embed_tournament()}
+     * 
+     * @param int|string $width
+     *  Optionally define the width of the iframe
+     *  Can either by a string (IE '100%', or a number (100 => becomes '100px')
+     * @param int|string $height
+     *  Optionally define the height of the iframe
+     *  Can either by a string (IE '100%', or a number (100 => becomes '100px')
+     * @param string $class
+     *  A class name to apply to the iframe
+     *  Defaults to 'binarybeast'
+     * 
+     * @return boolean
+     *  prints out the html directly
+     *  returns false if there was an error (like unable to determine the tournament id)
+     */
+    public function embed_groups($width = 800, $height = 600, $class = 'binarybeast') {
+        return $this->embed(true, $width, $height, $class);
     }
     
 }

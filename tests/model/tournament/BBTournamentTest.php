@@ -161,10 +161,14 @@ class BBTournamentTest extends BBTest {
     /**
      * Test teams() and request ID values only
      * @covers BBTournament::teams()
-     * @group fail
      */
     public function test_teams_ids() {
-        $this->assertTrue(false, 'Implement this test');
+        $this->get_tournament_ready();
+        $this->assertArraySize($this->object->teams(), 8);
+        $this->assertArraySize($ids = $this->object->teams(true), 8);
+        foreach($ids as $id) {
+            $this->assertTrue(is_numeric($id));
+        }
     }
     /**
      * @covers BBTournament::confirmed_teams

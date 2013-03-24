@@ -1,8 +1,6 @@
 <?php
 /**
- * Simple example demonstrating how you would embed brackets into your HTML
- * 
- * (Bonus: also has an example of creating and starting a simple tournament)
+ * Simple example demonstrating how you would embed brackets into your HTML, with some customized CSS properties
  * 
  * @package BinaryBeast
  * @subpackage Examples
@@ -37,10 +35,28 @@ if(!$tournament->start()) {
 
 ?>
 
-<h1>Tournament Brackets (<?php echo $tournament->id; ?>)</h1>
+<style>
+    html, body {
+        padding: 0;
+        margin: 0;
+        width: 100%;
+    }
+    .binarybeast.big {
+        width: 1500px;
+        height: 900px;
+        display: block;
+        margin: 20px 5px;
+    }
+</style>
 
+<h1>Default (<?php echo $tournament->id; ?>)</h1>
 <?php
-    BBHelper::embed_tournament($tournament);
+    $tournament->embed();
+?>
+
+<h1>Big</h1>
+<?php
+    $tournament->embed(false, 800, 600, 'binarybeast big');
 ?>
 
 <?php

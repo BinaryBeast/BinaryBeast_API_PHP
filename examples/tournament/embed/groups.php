@@ -8,6 +8,8 @@
  * 
  * However by adding /groups to the iFrame src, you can request that the group specifically be displayed, regardless of status
  * 
+ * Unlike groups.php, this example uses {@link BBTournament} instead of {@link BBHelper}
+ * 
  * 
  * @package BinaryBeast
  * @subpackage Examples
@@ -15,6 +17,7 @@
 
 require('../../../BinaryBeast.php');
 $bb = new BinaryBeast();
+$bb->disable_ssl_verification();
 
 /*
  * First - create a tournament with brackets
@@ -53,13 +56,9 @@ if(!$tournament->start()) {
 
 <h1>Tournament Groups (<?php echo $tournament->id; ?>)</h1>
 <?php
-    /**
-     * @todo build the iframe embedding helper
-     */
+    $tournament->embed_groups();
 ?>
 <h1>Tournament Brackets (<?php echo $tournament->id; ?>)</h1>
 <?php
-    /**
-     * @todo build the iframe embedding helper
-     */
+    $tournament->embed();
 ?>

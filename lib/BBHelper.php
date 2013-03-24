@@ -565,14 +565,11 @@ class BBHelper {
         $url .= 'full';
  
         //Create an inline style based on $width and $height
-        $style = '';
-        if(!is_null($width)) $style .= 'width:' . $width . (is_numeric($width) ? 'px' : '') . ';';
-        if(!is_null($height)) $style .= 'height:' . $height . (is_numeric($height) ? 'px' : '') . ';';
-
-        if($style) $style = 'style="' . $style . '"';
+        $width = 'width="' . $width . (is_numeric($width) ? 'px' : '') . '"';
+        $height = 'height="' . $height . (is_numeric($height) ? 'px' : '') . '"';
 
         //Print out the result
-        echo '<iframe src="' . $url . '" class="' . $class . '" ' . $style . '></iframe>';
+        echo '<iframe src="', $url, '" class="', $class, '" ', $width, ' ', $height, ' scrolling="auto" frameborder="0" allowtransparency="true"></iframe>';
         return true;
     }
 

@@ -801,6 +801,7 @@ class BBMatchTest extends BBTest {
      * Test unreport() on a match that is not allowed
      *  to be unreported - because either team has 
      *  reported other wins since
+     * @group fail
      */
     public function test_unreport_bracket_invalid() {
         $this->assertTrue( $this->object->set_winner($this->object->team()) );
