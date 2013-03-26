@@ -740,6 +740,7 @@ class BinaryBeast {
 
         //If caching is configured, indicate that in the api_agent value
         if($this->cache() != false) $args['api_agent'] .= ' (local caching enabled)';
+        else                        $args['api_agent'] .= ' (local caching DISABLED)';
 
         //API Key authentication
         if (!is_null($this->config->api_key)) {
