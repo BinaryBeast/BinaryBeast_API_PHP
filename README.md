@@ -7,7 +7,7 @@
 
 This library provides functionality for easily and quickly accessing the BinaryBeast API Services
 
-Unlike the previous versions, the 3.0.0+ version of this library is now [Object-oriented](http://en.wikipedia.org/wiki/Object_oriented](http://en.wikipedia.org/wiki/Object_oriented)
+Unlike the previous versions, the 3.0.0+ version of this library is now [Object-oriented](http://en.wikipedia.org/wiki/Object_oriented)
 
 
 # Before you get started #
@@ -45,37 +45,37 @@ You can view a full log of your recent API activity, including what arguments we
 
 ```php
 
-	require('BinaryBeast.com');
-	$bb = new BinaryBeast();
+require('BinaryBeast.com');
+$bb = new BinaryBeast();
 
-	$tournament = $bb->tournament();
-	$tournament->title = 'My new tournament!';
-	if($tournament->save()) {
-		echo '<a href="' . $tournament->url . '">Tournament Created Successfully!</a>';
-	}
-	else {
-		var_dump($bb->last_error);
-	}
+$tournament = $bb->tournament();
+$tournament->title = 'My new tournament!';
+if($tournament->save()) {
+	echo '<a href="' . $tournament->url . '">Tournament Created Successfully!</a>';
+}
+else {
+	var_dump($bb->last_error);
+}
 ```
 
 ### Example: Fetch and Report Open Matches
 
 ```php
 	
-	require('BinaryBeast.com');
-	$bb = new BinaryBeast();
+require('BinaryBeast.com');
+$bb = new BinaryBeast();
 
-	$tournament = $bb->tournament('my_tournament_id');
-	if(sizeof($tournament->open_matches()) > 0) {
-		$match = $tournament->open_matches[0];
-		$match->set_winner($match->team2());
-		if($match->report()) {
-			echo $match->winner() . ' defeated ' . $match->loser() . ' in match ' . $match->id;
-		}
-		else {
-			var_dump($bb->last_error);
-		}
+$tournament = $bb->tournament('my_tournament_id');
+if(sizeof($tournament->open_matches()) > 0) {
+	$match = $tournament->open_matches[0];
+	$match->set_winner($match->team2());
+	if($match->report()) {
+		echo $match->winner() . ' defeated ' . $match->loser() . ' in match ' . $match->id;
 	}
+	else {
+		var_dump($bb->last_error);
+	}
+}
 ```
 
 
@@ -83,10 +83,10 @@ You can view a full log of your recent API activity, including what arguments we
 
 ```php
 
-	$maps = $bb->map->game_list('SC2');
-	foreach($maps as $map) {
-	    echo $map->map . ' (' . $map->map_id . ') <br />';
-	}
+$maps = $bb->map->game_list('SC2');
+foreach($maps as $map) {
+    echo $map->map . ' (' . $map->map_id . ') <br />';
+}
 
 ```
 
@@ -95,10 +95,10 @@ You can view a full log of your recent API activity, including what arguments we
 
 ```php
 
-	$races = $bb->race->game_list('SC2');
-	foreach($races as $race) {
-    	echo '<img src="' . $race->race_icon . '" /> ' . $race->race . ' (' . $race->race_id . ') <br />';
-	}
+$races = $bb->race->game_list('SC2');
+foreach($races as $race) {
+   	echo '<img src="' . $race->race_icon . '" /> ' . $race->race . ' (' . $race->race_id . ') <br />';
+}
 
 ```
 
