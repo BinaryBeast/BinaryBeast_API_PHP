@@ -7,21 +7,20 @@
  * 
  * ### Quick tutorials ###
  * 
- * A few quick common tasks 
+ * A few quick common examples
  * 
- * The following examples assume the following:
+ * Examples assume the following:
  * 
- * <var>$bb</var> is an instance of {@link BinaryBeast}
+ * - <var>$bb</var> is an instance of {@link BinaryBeast}
+ * - <var>$tournament</var> is an instance of {@link BBTournament}
  * 
- * <var>$tournament</var> is an instance of {@link BBTournament}
  * 
- * 
- * ### Getting Open Matches ###
+ * ## Getting Open Matches
  * 
  * This was covered in the documentation for {@link BBTournament}, see the first part of the heading "Reporting Matches"
  * 
  * 
- * ### Participants ###
+ * ## Participants
  * 
  * You can refer to {@link team()} and {@link team()} (or {@link opponent()}) to get the {@link BBTeam} objects of each team in the <var>$match</var>
  * 
@@ -29,7 +28,7 @@
  * If a match has been reported, you can use {@link winner()} and {@link loser()} to get the winning / loser {@link BBTeam} objects
  * 
  * 
- * ### Reporting ###
+ * ## Reporting
  * 
  * Before you can report a match, you must explicitely define the winner
  * 
@@ -52,45 +51,20 @@
  * Simply defining a winner / loser may not always be enough though, let's look at how we can be more specific
  * 
  * 
- * ### Game Details ###
- * 
- * If your <var>$match</var> is part of a <b>best of 3</b> series for examle, you'll may want to define granular details about each match
- * 
- * This is where {@link BBMatchGame} comes in
+ * ## Game Details
  * 
  * 
- * Use {@link game()} to create new {@link BBMatchGame} instances
+ * {@link BBMatchGame} objects are used to define more granular details of match results
+ * 
+ * Please review the documentation for {@link BBMatchGame} for examples / details
  * 
  * 
- * Let's look at an example of a best of 3 series
+ * ## Strict reporting
  * 
- * We'll give <var>$winner</var> a 2:0 win over <var>$loser</var>
+ * {@link BBMatch::report()} allows defining <b>$strict</b>
  * 
- * <b>Example - $winner 2:0 $loser</b>
- * <code>
- *      $winner = $match->team();
- *      $loser  = $match->team2();
- * 
- *      $match->set_winner($winner);
- * 
- *      $game1 = $match->game($winner);
- *      $game2 = $match->game($winner);
- * </code>
- * 
- * You can also define details for the games:
- * <code>
- *  $game1->map = 'Antiga Shipyard';
- *  $game1->race = 'Zerg';
- *  $game2->race = 2;
- * </code>
- * 
- * That's all there is to it
- * 
- * Of course <var>$game</var> allows a lot of customization too - like defining the {@link BBMatchGame::race} and {@link BBMatchGame::map}
- * 
- * Check out the documentation of {@link BBMatchGame} for more details
- * 
- * 
+ * When set to true, report() will only work if <var>$match->winner()</var> has enough game wins to satisfy the best_of
+ * value set in {@link BBRound}
  * 
  * 
  * @property-read string $tourney_id
@@ -764,19 +738,15 @@ class BBMatch extends BBModel {
 		//Report all of the game details
 		if(!$this->save_games()) return $this->set_error('Error saving game details');
 
-		//Wipe all tournament cache, and tournament opponent cache / wins lb_wins losses draws bronze_draws etc
-		$this->tournament->clear_id_cache();
-        $this->team->reload();
-        $this->opponent->reload();
-
-        //Reload open_matches, force it to make a fresh query from the API
-        $this->tournament->open_matches(true);
-
-        /**
-         * Tell the touranment that this is no longer an open match
-         * But specify preserve to avoid this object becoming null
-         */
-        $this->tournament->remove_child($this);
+        //Wipe out all cached opponent / open match cache from the tournament
+		$this->tournament->clear_match_cache();
+        
+        //Flag the teams for a reload (wins / lbwins etc may have changed), and reset opponent / match values etc, to force a fresh query next time they're accessed
+        $this->team->flag_reload();
+        $this->opponent->flag_reload();
+        //
+        $this->team->reset_opponents();
+        $this->opponent->reset_opponents();
 
 		//Return the save() result
 		return $result;

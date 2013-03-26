@@ -3,11 +3,14 @@
 /**
  * The main library class, used to communicate with the API and as a factory to generate model objects
  * 
+ * ## Before you do ANYTHING else - setup the configuration values
+ * 
+ * You must setup the configuration values in {@link BBConfiguration}
+ * 
+ * 
+ * 
  * 
  * ### Getting started ###
- * 
- * 
- * ## First - setup the configuration in {@link BBConfiguration}
  * 
  * 
  * This class is your starting point for everything - and there are a few ways to instantiate it
@@ -728,21 +731,19 @@ class BinaryBeast {
         if(is_null($args)) $args = array();
         $args['api_return']     = is_null($return_type) ? 'json' : $return_type;
         $args['api_service']    = $svc;
-
-        /*
-         * Use a more readable snake_case argument/variable format
-         * BinaryBeast uses CamelCase at its own back-end, and it's too late to change that now,
-         */
+        
+        //This will soon become the default, but for now we have to specify that we want to use lowercase_under format for variables
         $args['api_use_underscores'] = true;
+        
+        //Specify the library language / version for logging / statistics
+        $args['api_agent'] = 'BinaryBeast API PHP: Version ' . self::API_VERSION;
 
-        //Authenticate ourselves
+        //API Key authentication
         if (!is_null($this->config->api_key)) {
             $args['api_key'] = $this->config->api_key;
         }
 
-        /*
-         * User alternative authentication method of email + password
-         */
+        //Alternative email + password authentication
         else if (!is_null($this->email)) {
             $args['api_email']      = $this->email;
             $args['api_password']   = $this->password;

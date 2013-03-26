@@ -245,17 +245,34 @@ class BBSimpleModel {
      */
     public function clear_list_cache() {
 		if( !is_null($svc = $this->get_cache_setting('ttl_list')) ) {
-			$this->clear_service_cache($svc);
+			$this->clear_object_service_cache($svc);
 		}
     }
     /**
-     * Clear specific services associated with this cache_type
+     * Clear specific services associated with this cache_typ
+     * 
+     * Note: The scope will be limited to the classes' CACHE_OBJECT_TYPE object_ttl
+     * 
+     * Use {@link BBSimpleModel::clear_service_cache} for removing
+     *  cached API reponses, without worrying about the object type values
+     * 
+     * 
+     * @param string|array $services
+     */
+    public function clear_object_service_cache($svc) {
+        $object_type = $this->get_cache_setting('object_type');
+        if(!is_null($object_type)) $this->bb->clear_cache($svc, $object_type);
+    }
+    /**
+     * Clear specific services results
+     * 
+     * Note: This method does NOT limit the scope of the services, 
+     * it will remove ANY response cache that used the given $svc name
      * 
      * @param string|array $services
      */
     public function clear_service_cache($svc) {
-        $object_type = $this->get_cache_setting('object_type');
-        if(!is_null($object_type)) $this->bb->clear_cache($svc, $object_type);
+        $this->bb->clear_cache($svc);
     }
     /**
      * Clears ALL cache associated with this object_type

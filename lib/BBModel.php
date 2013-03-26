@@ -107,8 +107,17 @@ abstract class BBModel extends BBSimpleModel {
 	/**
 	 * To avoid multiple queries, set a flag to track whether not
 	 *	we've already asked the API for this object's values
+     * 
+     * @var boolean
 	 */
 	protected $loaded = false;
+    /**
+     * Set by flag_reload() to let us know that next time
+     *  __get is invoked, we make a fresh (non-cached) load() first
+     * 
+     * @var boolean
+     */
+    public $reload = false;
 
     /**
      * Constructor
@@ -236,9 +245,11 @@ abstract class BBModel extends BBSimpleModel {
          *  For real objects, it's a combination of new_data + current_data
          * 
          * Since &__get is defined as returning a reference, we return the result through BinaryBeast::ref()
+         * 
+         * The one exception is we need to make sure we haven't been flagged for a reload first
          */
-        if(isset($this->data[$name])) {
-            return $this->bb->ref($this->data[$name]);
+        if(isset($this->data[$name]) && !$this->reload) {
+            return $this->data[$name];
         }
 
         /**
@@ -248,7 +259,7 @@ abstract class BBModel extends BBSimpleModel {
          * It exists, do we need to call the load() method to get the current values?
          */
         if(!is_null($this->id)) {
-            if(sizeof($this->current_data) === 0) {
+            if(sizeof($this->current_data) === 0 || $this->reload) {
                 $this->load();
                 return $this->__get($name);
             }
@@ -419,6 +430,7 @@ abstract class BBModel extends BBSimpleModel {
 
 		//Flag object as loaded, so load() will not ask the API again
 		$this->loaded = true;
+        $this->reload = false;
     }
 
     /**
@@ -448,7 +460,10 @@ abstract class BBModel extends BBSimpleModel {
                 $this->set_error('Data has already been set for this ' . get_called_class() . ' object, you cannot load() using a different id');
                 return $this->bb->ref(false);
             }
+            //Make sure that if any values have been updated for any reason, that they don't stick around to muddy up the values from the API response
             $this->reset();
+
+            //Just in case $id was defined
             $this->set_id($id);
         }
 
@@ -460,7 +475,9 @@ abstract class BBModel extends BBSimpleModel {
         }
 
         //Already loaded
-        if($this->loaded) return $this;
+        if($this->loaded) {
+            return $this;
+        }
 
         //Determine which sevice to use, return false if the child failed to define one
         $svc = $this->get_service('LOAD');
@@ -470,12 +487,14 @@ abstract class BBModel extends BBSimpleModel {
             );
         }
 
-		//Cache settings
-        $ttl            = null;
-        $object_type    = null;
-        if(!$skip_cache) {
+		//Cache settings - skip if the reload() flag has been set if specifically asked to skip
+        if(!$skip_cache && !$this->reload) {
             $ttl			= $this->get_cache_setting('ttl_load');
             $object_type	= $this->get_cache_setting('object_type');
+        }
+        else {
+            $ttl            = null;
+            $object_type    = null;
         }
 
         //GOGOGO!
@@ -494,7 +513,8 @@ abstract class BBModel extends BBSimpleModel {
          * However we'll leave it up to set_error to translate the code for us
          */
         else {
-            return $this->bb->ref($this->set_error($result));
+            $this->set_error('Error returned from the API when executing "' . $svc . '", please refer to $bb->last_result for details');
+            return $this->bb->ref(false);
         }
     }
 
@@ -504,18 +524,27 @@ abstract class BBModel extends BBSimpleModel {
      * @return self - false if there was an error loading
      */
     public function &reload() {
-        //Easy as resetting the loaded flag, so that load() won't skip if already loaded
+        //Reset the simple "loaded" flag
         $this->loaded = false;
 
+        //The reload flag triggers a fresh non-cached API call in load()
+        $this->reload = true;
+
         //Call load, and skip cache
-        return $this->load(null, array(), true);
+        return $this->load(null, array());
     }
     /**
      * Trigger a reload next time any data is accessed, to allow
      *  refreshing on demand without having to make a billion API requests for arrays of child objects
+     * 
+     * Note: when load() is triggered by a reload flag, it will be a fresh API request,
+     *  local cache will not be considered
+     * 
+     * @return void
      */
     public function flag_reload() {
         $this->loaded = false;
+        $this->reload = true;
     }
 
     /**

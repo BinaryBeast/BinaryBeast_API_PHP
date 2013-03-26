@@ -1,16 +1,24 @@
 <?php
 
 /**
+ * Map listing / search simple model
+ * 
  * Provides services for searching for maps available to a games (see {@link BBGame})
  * 
  * 
- * Map ids are used by {@link BBRound::$map}, and {@link BBMatchGame::$map}
+ * The map_id values returned can be used to specify {@link BBRound} format, and match details in {@link BBMatchGame}
  * 
- * Examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * -    {@link http://binarybeast.com/content/api/docs/php/class-BBRound.html#m$map}
+ * -    {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$map}
  * 
  * 
  * 
- * ### Example: List all maps for StarCraft 2
+ * <br /><br /><br />
+ * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * <br />
+ * 
+ * 
+ * ### Example: List all StarCraft 2 maps
  * 
  * <b>Note: </b>You'll need to know the GameCode - you can get it from {@link BBGame}
  * 

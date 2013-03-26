@@ -4,10 +4,15 @@
  * Race searching / listing simple model
  * 
  * 
- * You'll need this class to find game codes For {@link BBMatchGame::race} and {@link BBMatchGame::o_race}
+ * These values can be used in {@link BBMatchGame}:
+ * 
+ * -   {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$race}
+ * -   {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$o_race}
  * 
  * 
- * Examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * <br /><br />
+ * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * <br />
  * 
  * 
  * 

@@ -184,14 +184,14 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         self::fail('save() result type (' . gettype($value) . ') invalid ' . $value);
     }
     public static function assertID($value) {
-        //Treat it as a tournament id
-        if(is_string($value)) {
-            return self::assertTourneyID($value);
+        //Treat it as a normal integer id
+        if(is_numeric($value)) {
+            return self::assertTrue($value > 0);
         }
 
-        //Treat it as a normal integer id
-        else if(is_numeric($value)) {
-            return self::assertTrue($value > 0);
+        //Treat it as a tournament id
+        else if(is_string($value)) {
+            return self::assertTourneyID($value);
         }
 
         self::fail('id value type (' . gettype($value) . ') invalid');

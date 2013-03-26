@@ -1,19 +1,26 @@
 <?php
 
 /**
- * Country searching / listing simple model
+ * Game searching / listing simple model
+ * 
+ * Allows you to list / search through the list of games that BinaryBeast currently supports
+ * 
+ * For a missing game, request it to be added by emailing us: <contact@binarybeast.com>
  * 
  * 
- * You'll need this class to find game codes For {@link BBTournament::$game_code}
+ * --------
+ * The <var>$game_code</var> values you'll get from this class can be used to associate {@link BBTournament} objects with a specific game
+ * 
+ * -   {@link http://binarybeast.com/content/api/docs/php/class-BBTournament.html#m$game_code}
  * 
  * 
- * Examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * <br /><br /><br />
+ * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * <br />
  * 
  * 
  * 
- * ### Example: Search for a game
- * 
- * <b>Example - search for games that contain the word 'star'</b>
+ * ### Example: Search for a game that contain 'star'
  * <code>
  *  $games = $bb->game->search('star');
  *  foreach($games as $game) {
@@ -34,8 +41,6 @@
  * 
  * 
  * ### Example: List popular games
- * 
- * <b>Example - List the top 15 games on BinaryBeast right now</b>
  * <code>
  *  $games = $bb->game->list_top(15);
  *  foreach($games as $game) {
@@ -61,12 +66,6 @@
  *  Call of Duty: Black Ops 2 (CoDBO2)
  * </pre>
  * 
- * 
- * 
- * 
- * 
- * If the game want to use is not in our database, send us an email to <contact@binarybeast.com>
- * and we'll be happy to add it for your
  * 
  * 
  * 

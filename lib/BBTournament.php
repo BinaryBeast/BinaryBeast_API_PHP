@@ -583,7 +583,7 @@ class BBTournament extends BBModel {
     const SERVICE_LIST_OPEN_MATCHES         = 'Tourney.TourneyLoad.OpenMatches';
     /* Child listing / manipulation**/
     const SERVICE_LOAD_MATCH                = 'Tourney.TourneyLoad.Match';
-    const SERVICE_LOAD_TEAM_PAIR_MATCH      = 'Tourney.TourneyMatch.Match';
+    const SERVICE_LOAD_TEAM_PAIR_MATCH      = 'Tourney.TourneyMatch.LoadTeamPair';
     const SERVICE_LOAD_TEAMS                = 'Tourney.TourneyLoad.Teams';
     const SERVICE_LOAD_ROUNDS               = 'Tourney.TourneyLoad.Rounds';
     const SERVICE_UPDATE_ROUNDS             = 'Tourney.TourneyRound.BatchUpdate';
@@ -899,6 +899,37 @@ class BBTournament extends BBModel {
         $this->teams = null;
         $this->teams();
         $this->open_matches = null;
+    }
+    
+    /**
+     * Delete any cached API results for team opponents, and open match listing 
+     * 
+     * Also resets the local open_matches() array, so next time it's accessed, it will
+     *  be set by a fresh API call
+     * 
+     * @return boolean
+     */
+    public function clear_match_cache() {
+        //derp
+        if(is_null($this->id)) return false;
+
+        //If reporting multiple matches, we want to hold off on this until all matches have been reported
+        if($this->iterating) return false;
+
+        //Delete the cache for open matches for this tournament ID, and teams (since wins / lbwins etc have changed)
+        $this->clear_id_cache(array(self::SERVICE_LIST_OPEN_MATCHES, self::SERVICE_LOAD_TEAMS));
+        
+        //Delete ALL team-opponent/match/elimination cache, unfortunately there's no simple way to limit it to this tournament
+        $this->clear_service_cache(array(
+            BBTeam::SERVICE_LIST_OPPONENTS,
+            BBTeam::SERVICE_GET_LAST_MATCH,
+            BBTeam::SERVICE_GET_OPPONENT,
+        ));
+
+        //Clear the open_matches array, to force a fresh query next time it's accessed
+        $this->open_matches = null;
+
+        return true;
     }
 
     /**
@@ -1236,19 +1267,37 @@ class BBTournament extends BBModel {
 	public function save_matches($report = true) {
 		$matches = &$this->get_changed_children('BBMatch');
 
-		/**
-		 * Nothing special, just save() each one
-		 * Difference is we're not "iterating", because if anything goes wrong, we'll
-		 *	leave it flagged 
-		 */
+        //Set the iteration flag to avoid the open_matches list being reset before we're done reporting all the matches
+        $this->iterating = true;
+
+        //Remember if any matches were actually reported, so that we can reset open_matches after we finish looping through each match
+        $reported = false;
+
+        //Simply call save() on each match
 		foreach($matches as &$match) {
+            //So we can set $reported
+            $new = $match->is_new();
+
             if(!$report) {
                 if(is_null($match->id)) {
                     continue;
                 }
             }
             $match->save();
+
+            //If reporting the match, set $reported flag
+            if(!$report) {
+                if($new) {
+                    $reported = !$match->is_new();
+                }
+            }
         }
+
+        //No longer iterating
+        $this->iterating = false;
+
+        //If we reported any matches, execute clear_match_cache now
+        if($report) $this->clear_match_cache();
 
 		return true;
 	}

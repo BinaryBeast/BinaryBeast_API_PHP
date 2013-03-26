@@ -4,14 +4,17 @@
  * Country searching / listing simple model
  * 
  * 
- * You'll need this class to find country_codes For {@link BBTeam::country_code}
+ * The country_code values you'll get from this class can be used to associate {@link BBTeam} objects with specific countries
+ * 
+ * -   {@link http://binarybeast.com/content/api/docs/php/class-BBTeam.html#m$country_code}
  * 
  * 
- * ### Example use
- * 
+ * <br /><br />
  * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
+ * <br />
  * 
- * <b>Example - list all countries containing the word 'united'</b>
+ * 
+ * ### Example: Search for countries that contain 'united'
  * <code>
  *  $countries = $bb->country->search('united');
  *  foreach($countries as $country) {

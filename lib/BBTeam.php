@@ -94,18 +94,16 @@
  *  <li>Banned: {@link BinaryBeast::TEAM_STATUS_BANNED}</li>
  * </ul>
  * 
- * @property-read int $wins
- * <b>Read Only</b><br />
+ * @property int $wins
+ * <b>Read Only During Group Rounds</b><br />
  * The number of wins this team has in the winners' bracket<br />
  * For brackets, it also represents which round he has progressed to in the bracket
  * 
- * @property-read int $lb_wins
- * <b>Read Only</b><br />
+ * @property int $lb_wins
  * The number of wins this team has in the losers' bracket<br />
  * For brackets, it also represents which round he has progressed to in the bracket
  * 
- * @property-read int $bronze_wins
- * <b>Read Only</b><br />
+ * @property int $bronze_wins
  * Number of wins this team has in the bronze / 3rd place bracket
  * 
  * @property-read int $losses
@@ -249,7 +247,7 @@ class BBTeam extends BBModel {
     );
 
     //Values that developers aren't allowed to change
-    protected $read_only = array('players', 'wins', 'lb_wins', 'losses', 'draws', 'bronze_wins', 'position');
+    protected $read_only = array('players', 'losses', 'draws', 'position');
 
     /**
      * Array of players within this team (only for tours with team_mode > 1, aka only for team games)
@@ -291,9 +289,15 @@ class BBTeam extends BBModel {
      */
     public function __set($name, $value) {
         if($name == 'status') {
-            if($value == -1) return $this->ban();
-            if($value == 0) return $this->unconfirm();
-            if($value == 1) return $this->confirm();
+            if($value == -1)    return $this->ban();
+            if($value == 0)     return $this->unconfirm();
+            if($value == 1)     return $this->confirm();
+        }
+        //Don't allow changing wins during active-groups, only during brackets
+        if($name == 'wins') {
+            if(BBHelper::tournament_in_group_rounds($this)) {
+                return;
+            }
         }
         parent::__set($name, $value);
     }
@@ -307,8 +311,30 @@ class BBTeam extends BBModel {
 			return $this->set_error('Tournament must be saved before adding teams');
 		}
 
+        //Remember whether or not we need to clear cache after the save is successful
+        $reset_opponents = false;
+        foreach(array_keys($this->new_data) as $key) {
+            $key = strtolower($key);
+            if($key == 'wins' || $key == 'lb_wins' || $key == 'bronze_wins') {
+                $reset_opponents = true;
+                break;
+            }
+        }
+
 		//Let BBModel handle the rest
-		return parent::save($return_result, array('tourney_id' => $this->tournament->id));
+		if(! ($save_result = parent::save($return_result, array('tourney_id' => $this->tournament->id))) ) {
+            return false;
+        }
+
+        //If bracket position was adjusted manually, reset opponents / cache etc 
+        if($reset_opponents) {
+            $this->tournament->clear_id_cache();
+            $this->reset_opponents();
+            $this->tournament->open_matches(true);
+        }
+
+        //Success!
+        return $save_result;
 	}
 
 	/**
@@ -361,11 +387,11 @@ class BBTeam extends BBModel {
      *      null indicates that this team currently has no opponent, if the tournament is active it means he's waiting for another match to finish
      *      false indicates that this team has been eliminated, you can use elimianted_by to see by whome
      */
-    public function &opponent() {
+    public function &opponent($fail = false) {
 		//Orphaned team
 		if($this->orphan_error()) return $this->bb->ref(null);
 
-        //Already figured it out
+        //Value already set
         if(!is_null($this->opponent) || $this->opponent === false) return $this->opponent;
 
         //Tournament is not active, can't possibly have an opponent - derp
@@ -379,9 +405,12 @@ class BBTeam extends BBModel {
 		$result = $this->call(self::SERVICE_GET_OPPONENT, array(
 			'tourney_team_id' => $this->id
 			), self::CACHE_TTL_OPPONENTS, self::CACHE_OBJECT_TYPE, $this->id);
+        if($fail) {
+            return $result;
+        }
 
         //Default to false, unless we determine otherwise
-        $this->eliminated_by = false;
+        $this->eliminated_by = &$this->bb->ref(false);
 
 		//Found him!
 		if($result->result == 200) {
@@ -445,6 +474,8 @@ class BBTeam extends BBModel {
 	/**
 	 * If a match is reported, this method can be called to clear any
 	 *		cached opponent results this team may have saved
+     * 
+     * @return void
 	 */
 	public function reset_opponents() {
         //If the current match was reported, save it as the last_match

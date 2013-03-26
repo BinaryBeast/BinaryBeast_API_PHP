@@ -311,4 +311,23 @@ class BBTeamTest extends BBTest {
         $this->assertNotEquals($match, $this->object->match());
         $this->assertEquals($match, $this->object->last_match());
     }
+
+    /**
+     * Testing to see if you can perform a ++ operator
+     *  against magically returned properties from BBModel::__get
+     */
+    public function test_increment_wins() {
+        $this->set_object_with_open_match();
+
+        $this->assertInstanceOf('BBMatch', $this->object->match());
+
+        $wins = $this->object->wins;
+        $this->object->wins++;
+        $this->assertEquals($wins + 1, $this->object->wins);
+
+        $this->assertSave($this->object->save());
+        
+        //Changing the wins should have triggered a reset of opponent / match properties
+        $this->assertNull($this->object->match());
+    }
 }

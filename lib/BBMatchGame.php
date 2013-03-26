@@ -4,6 +4,99 @@
  * Model object representing a single game within a BBMatch
  * 
  * 
+ * ### Quick Tutorials ###
+ * 
+ * Examples assume the following:
+ * 
+ * - <var>$bb</var> is an instance of {@link BinaryBeast}
+ * - <var>$tournament</var> is an instance of {@link BBTournament}
+ * - <var>$match</var> is an instance of {@link BBMatch}, and yas not been reported yet
+ * 
+ * 
+ * ## Creating new games
+ * 
+ * To create a new instance, using {@link BBMatch::game()}
+ * 
+ * 
+ * ## Example: Report a 2:1 match
+ * 
+ * In this example, <var>$match->winner</var> wins games 1 and 3
+ * 
+ * <var>$match->loser</var> wins game 2
+ * <code>
+ *  $game1 = $match->game($match->winner());
+ *  $game2 = $match->game($match->loser());
+ *  $game3 = $match->game($match->winner());
+ * </code>
+ * 
+ * ## Example: define the winner after creating the game
+ * <b>Note that <var>$game2</var>'s winner is already set to <var>$match->winner()</var>, as a game's default winner is the winner of the match
+ * <code>
+ *  $game1 = $match->game($match->winner());
+ *  $game2 = $match->game();
+ *  $game3 = $match->game();
+ *  
+ *  $game2->set_winner($match->loser());
+ * </code>
+ * 
+ * ## Score
+ * 
+ * You may define the score of each team per game
+ * 
+ * <b>WARNING!</b>  score is the score of the match winner, and o_score is the score of the match loser
+ * 
+ * <br /><br />
+ *
+ * Below is an example of a 2:1 match, with scores
+ * 
+ * <b>Scores</b> (<var>$match->winner</var> : <var>$match->loser</var>):
+ * - <var>$game1</var>: 11 : 3<br />
+ * - <var>$game2</var>: 19 : 37
+ * - <var>$game3</var>: 115533 : 11
+ * 
+ * <b>The code:</b>
+ * <code>
+ *  //Game 1
+ *  $game1 = $match->game($match->winner());
+ *  $game1->score   = 11;
+ *  $game1->o_score = 3;
+ * 
+ *  //Game 2
+ *  $game1 = $match->game($match->loser());
+ *  $game1->score   = 19;
+ *  $game1->o_score = 37;
+ * 
+ *  //Game 3
+ *  $game1 = $match->game($match->winner());
+ *  $game1->score   = 115533;
+ *  $game1->o_score = 11;
+ * </code>
+ * 
+ * 
+ * 
+ * ## Example: Define maps and player races
+ * <code>
+ *  $game1 = $match->game($match->winner());
+ *  $game2 = $match->game($match->loser());
+ *  $game3 = $match->game($match->winner());
+ *  //
+ *  $game1->map = 'Antiga Shipyard';
+ *  $game2->map = 70; //map_id of the Xel'Naga Caverns
+ *  $game3->map = 'Metropolis';
+ *  //
+ *  $game1->race    = 'Zerg';
+ *  $game2->race    = 2; //the race_id for Terran
+ *  $game2->o_race  = 3; //the race_id for Protoss
+ * </code>
+ *
+ * 
+ * ## More...
+ * 
+ * It's pretty simple
+ * 
+ * Your next step should be to review the list of properties and methods available in a game object
+ * 
+ * 
  * @property int $tourney_team_id
  *      The unique int tourney_team_id of this game's winner
  * 
