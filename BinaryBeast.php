@@ -739,8 +739,7 @@ class BinaryBeast {
         $args['api_agent'] = 'BinaryBeast API PHP: Version ' . self::API_VERSION;
 
         //If caching is configured, indicate that in the api_agent value
-        if($this->cache() != false) $args['api_agent'] .= ' (local caching enabled)';
-        else                        $args['api_agent'] .= ' (local caching DISABLED)';
+        if($this->cache() != false) $args['api_agent'] .= ' (local caching)';
 
         //API Key authentication
         if (!is_null($this->config->api_key)) {
