@@ -163,7 +163,7 @@
  * @subpackage Model
  * 
  * @version 3.0.0
- * @date 2013-03-17
+ * @date 2013-03-26
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -295,7 +295,7 @@ class BBTeam extends BBModel {
         }
         //Don't allow changing wins during active-groups, only during brackets
         if($name == 'wins') {
-            if(BBHelper::tournament_in_group_rounds($this)) {
+            if(BBHelper::tournament_in_group_rounds($this->tournament())) {
                 return;
             }
         }
