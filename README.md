@@ -1,4 +1,8 @@
 # BinaryBeast API PHP Library - v3.0.0
+#### Version 3.0.0 (2013-03-26)
+
+----------
+
 
 
 This library provides functionality for easily and quickly accessing the BinaryBeast API Services
