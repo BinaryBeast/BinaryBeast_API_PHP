@@ -180,7 +180,7 @@
  * 
  * 
  * @version 3.0.0
- * @date 2013-03-17
+ * @date 2013-03-26
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -738,6 +738,9 @@ class BinaryBeast {
         //Specify the library language / version for logging / statistics
         $args['api_agent'] = 'BinaryBeast API PHP: Version ' . self::API_VERSION;
 
+        //If caching is configured, indicate that in the api_agent value
+        if($this->cache() != false) $args['api_agent'] .= ' (local caching enabled)';
+
         //API Key authentication
         if (!is_null($this->config->api_key)) {
             $args['api_key'] = $this->config->api_key;
@@ -1049,7 +1052,7 @@ class BinaryBeast {
      *  returns null if BBCache could not connect to the database, or had
      *  any authentication ererors
      * 
-     * @return BBCache
+     * @return BBCache|false
      */
     public function &cache() {
         //Already instantiated
