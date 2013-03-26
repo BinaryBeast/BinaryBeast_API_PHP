@@ -92,7 +92,7 @@ if(sizeof($tournament->open_matches()) > 0) {
 require('BinaryBeast.php');
 $bb = new BinaryBeast();
 
-BBHelper::embed_tournament('my_tournament_id');
+BBHelper::embed_tournament_groups('my_tournament_id');
 
 ```
 
