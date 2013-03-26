@@ -4,6 +4,8 @@
  * Test the extended BBTeam class: LocalTeam
  *  and it depends on the LocalTournament override
  * 
+ * @todo Test extending the BBTeam model
+ * 
  * @group local_team
  * @group model
  * @group custom_model
@@ -53,10 +55,6 @@ class LocalTeamTest extends BBTest {
         parent::tearDownAfterClass();
         self::$bb_static = new BinaryBeast();
         self::$bb_static->disable_ssl_verification();
-    }
-
-    public function testNothing() {
-        $this->assertTrue(false, 'implement this test case');
     }
 
 }

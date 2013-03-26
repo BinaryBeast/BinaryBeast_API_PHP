@@ -3,6 +3,8 @@
 /**
  * Test the extended BBTournament class: LocalTournament
  * 
+ * @todo Test extending the BBTournament model
+ * 
  * @group local_tournament
  * @group model
  * @group custom_model
@@ -51,10 +53,6 @@ class LocalTournamentTest extends BBTest {
         self::$bb_static->disable_ssl_verification();
     }
     
-    public function testNothing() {
-        $this->assertTrue(false, 'implement this test case');
-    }
-
     
 }
 
