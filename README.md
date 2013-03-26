@@ -27,6 +27,11 @@ The values in [BBConfiguration.php](lib/BBConfiguration.php) allow you to define
 **Note:** This will not affect users currently supplying an api\_key to the [BinaryBeast](BinaryBeast.php), constructor still accepts an api_key value
 
 
+### Backwards Compatability
+
+Thanks to [BBLegacy.php](lib/BBLegacy.php), your code will NOT break if you upgrade to the latest library version
+
+
 ### Response Caching
 
 In order to cut down on the number of API calls your application needs to make, this library provides integrated response caching through the [BBCache](lib/BBCache.php) class
@@ -76,6 +81,33 @@ if(sizeof($tournament->open_matches()) > 0) {
 		var_dump($bb->last_error);
 	}
 }
+```
+
+
+### Example: Embed Group Rounds
+##### Using [BBHelper](lib/BBHelper.php)
+
+```php
+
+require('BinaryBeast.php');
+$bb = new BinaryBeast();
+
+BBHelper::embed_tournament('my_tournament_id');
+
+```
+
+### Example: Embed Brackets
+##### Using [BBTournament](lib/BBTournament.php)
+
+
+```php
+
+require('BinaryBeast.php');
+$bb = new BinaryBeast();
+
+$tournament = $bb->tournament('my_tournament_id');
+$tournament->embed();
+
 ```
 
 
