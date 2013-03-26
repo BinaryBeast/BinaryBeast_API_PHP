@@ -822,3 +822,5 @@ class BBMatchTest extends BBTest {
         $this->assertFalse($this->object->unreport());
     }
 }
+
+?>

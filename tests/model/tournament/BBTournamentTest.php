@@ -615,3 +615,5 @@ class BBTournamentTest extends BBTest {
         $this->assertNull($this->object->open_match($team1, $invalid_team));
     }
 }
+
+?>

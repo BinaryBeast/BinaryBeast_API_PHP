@@ -168,3 +168,5 @@ class BinaryBeastTest extends BBTest {
         $this->assertEquals('Custom Error', $this->object->error_history[$key]->error_message);
     }
 }
+
+?>

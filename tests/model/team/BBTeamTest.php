@@ -331,3 +331,5 @@ class BBTeamTest extends BBTest {
         $this->assertNull($this->object->match());
     }
 }
+
+?>

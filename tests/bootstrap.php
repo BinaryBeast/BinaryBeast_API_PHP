@@ -24,7 +24,7 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
 
     /** @var BBTournament */
     protected $tournament;
-    
+
     /** var BBTournament[] */
     private static $tournaments = array();
 
@@ -35,7 +35,7 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
 
         parent::__construct($name, $data, $dataName);
     }
-    
+
     function __destruct() {
         foreach(self::$tournaments as $tournament) {
             if($tournament instanceof BBTournament) {
@@ -43,7 +43,7 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
             }
         }
     }
-    
+
     protected function dump_history() {
         var_dump(array('errors' => $this->bb->error_history, 'results' => $this->bb->result_history));
     }
@@ -360,4 +360,4 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
     }
 }
 
-?> 
+?>

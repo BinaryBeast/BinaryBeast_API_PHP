@@ -57,3 +57,5 @@ class LocalTournamentTest extends BBTest {
 
     
 }
+
+?>

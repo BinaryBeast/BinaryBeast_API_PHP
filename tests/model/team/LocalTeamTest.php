@@ -60,3 +60,5 @@ class LocalTeamTest extends BBTest {
     }
 
 }
+
+?>

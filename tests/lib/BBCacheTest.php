@@ -112,3 +112,5 @@ class BBCacheTest extends BBTest {
     }
 
 }
+
+?>
