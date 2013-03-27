@@ -179,8 +179,8 @@
  * @package BinaryBeast
  * 
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-27
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -289,7 +289,7 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.0.0';
+    const API_VERSION = '3.0.1';
     /**
      * Each bracket is idenetifed by a number,
      * 0 indicates group roundes
@@ -893,8 +893,6 @@ class BinaryBeast {
         curl_setopt($curl, CURLOPT_POST, true);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_POSTFIELDS, $args);
-        //
-        curl_setopt($curl, CURLOPT_USERAGENT, 'BinaryBeast API PHP: Version ' . self::API_VERSION);
 
         //Execute, and return a parsed result
         $result = curl_exec($curl);
