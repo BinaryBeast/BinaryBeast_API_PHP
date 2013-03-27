@@ -1,5 +1,5 @@
 # BinaryBeast API PHP Library - v3.0.1
-#### Version 3.0.0 (2013-03-27)
+#### Version 3.0.1 (2013-03-27)
 
 ----------
 
