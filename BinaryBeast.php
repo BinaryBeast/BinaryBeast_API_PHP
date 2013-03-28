@@ -179,7 +179,7 @@
  * @package BinaryBeast
  * 
  * 
- * @version 3.0.1
+ * @version 3.0.2
  * @date 2013-03-27
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php

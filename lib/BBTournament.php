@@ -116,35 +116,87 @@
  * </code>
  * 
  * 
- * ### Reporting Matches
+ * ### Loading / Listing Unplayed Matches
  * 
- * First step in reporting matches, is to use {@link BBTournament::open_matches()}
- * to get a list of matches that need to be reported
+ * We can use the {@link open_matches()) method, and the magic {@link $open_matches} property to find matches that need to be reported
  * 
- * {@link BBTournament::open_matches()} returns an array of {@link BBMatch} instances
- * 
- * Once you have a match, first call {@link BBMatch::set_winner()} to determine the winner, and then
- * you can call {@link BBTournament::save()}, {@link BBTournament::save_matches()}, or {@link BBMatch::report()}
- * to save it
- * 
- * Note: You can also use the "magic" property <var>$tournament->open_matches</var> to refer to the array directly
- * 
- * <b>Example using {@link BBTournament::save_matches()}</b>
+ * <b>Example: </b> Using {@link open_matches()}
  * <code>
- *  $match = $tournament->open_matches[0];
- *  $winner = $match->team2();
- *  $match->set_winner($winner);
- *  if(!$tournament->save_matches()) {
- *      var_dump($bb->last_error);
+ *  $matches = $tournament->open_matches();
+ *  foreach($matches as $match) {
+ *      echo $match->team->display_name . ' vs ' . $match->team2->display_name . ' in round ' . $match->round->round . '<br />';
  *  }
  * </code>
- * <b>Example using {@link BBMatch::report()}</b>
+ * 
+ * 
+ * <br /><br />
+ * You can use the magic {@link $open_matches} property to directly fetch one of the matches 
+ * 
+ * <b>Example: </b> Using the magic {@link $open_matches} property
  * <code>
  *  $match = $tournament->open_matches[0];
- *  $winner = $match->team2();
- *  $match->set_winner($winner);
+*      echo $match->team->display_name . ' vs ' . $match->team2->display_name . ' in round ' . ($match->round->round + 1) . '<br />';
+ * </code>
+ * 
+ * 
+ * ### Reporting Matches
+ * 
+ * 
+ * The previous example showed us how to get unplayed {@link BBMatch} objects
+ * 
+ * So assuming <var>$tournament</var> is an active tournament with brackets... first step: 
+ * <code>
+ *  $match = $tournament->open_matches[0];
+ * </code>
+ * 
+ * 
+ * Please refer to the documentation of {@link BBMatch} for more options, but here's a quick example:
+ * 
+ * Key points in the example:
+ * - {@link BBMatch::team()} to grab the first team
+ * - {@link BBMatch::set_winner()} to define the first team as the winner
+ * - {@link BBMatch::report()} to save / report the match 
+ * 
+ * <b>Example: </b>Report a simple 1:0 match:
+ * <code>
+ *  $match->set_winner($match->team());
  *  if(!$match->report()) {
  *      var_dump($bb->last_error);
+ *  }
+ *  echo $match->winner->display_name . ' defeated ' . $match->loser->display_name . ' in match ' . $match->id;
+ * </code>
+ * 
+ * 
+ * ### Reporting Multiple Matches
+ * 
+ * The previous example demonstrated the use of {@link BBMatch::report()}, now let's look how to report multiple matches simultaneously
+ * 
+ * <br />
+ * Firstly, go through all the open matches and define a winner so we have multiple matches to report
+ * 
+ * <code>
+ *  foreach($tournament->open_matches as $match) {
+ *      $match->set_winner($match->team());
+ *  }
+ * </code>
+ * 
+ * 
+ * <br /><br />
+ * Now we can either use {@link BBTournament::save_matches()}, or {@link BBTournament::save()}
+ * 
+ * <b>Using {@link BBTournament::save_matches()}:</b>
+ * <code>
+ *  if(!$tournament->save_matches()) {
+ *      var_dump($bb->error_history);
+ *  }
+ * </code>
+ * 
+ * 
+ * <br />
+ * <b>Using {@link BBTournament::save()}:</b>
+ * <code>
+ *  if(!$tournament->save()) {
+ *      var_dump($bb->error_history);
  *  }
  * </code>
  * 
@@ -560,8 +612,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-27
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html

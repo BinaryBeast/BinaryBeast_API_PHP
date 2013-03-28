@@ -4,28 +4,155 @@
  * Model object representing a match between two teams
  * 
  * 
- * 
- * ### Quick tutorials ###
- * 
- * A few quick common examples
- * 
- * Examples assume the following:
+ * Let's go through a few examples... each example assumes the following:
  * 
  * - <var>$bb</var> is an instance of {@link BinaryBeast}
  * - <var>$tournament</var> is an instance of {@link BBTournament}
  * 
  * 
- * ## Getting Open Matches
+ * ### Reporting Matches ###
  * 
- * This was covered in the documentation for {@link BBTournament}, see the first part of the heading "Reporting Matches"
- * 
- * 
- * ## Participants
- * 
- * You can refer to {@link team()} and {@link team()} (or {@link opponent()}) to get the {@link BBTeam} objects of each team in the <var>$match</var>
+ * The most important functionality this object offers, is reporting results
  * 
  * 
- * If a match has been reported, you can use {@link winner()} and {@link loser()} to get the winning / loser {@link BBTeam} objects
+ * ## Getting Matches to Report
+ * 
+ * Before you can report results, first you need to get find {@link BBMatch} objects
+ * 
+ * The {@link BBTournament} documentation covers this more in length under "Loading / Listing Unplayed Matches",
+ * 
+ * View it here: 
+ * 
+ * Or look at the following 2 quick examples
+ * 
+ * <br />
+ * <b>Using {@link BBTournament::open_matches()}</b>
+ * <code>
+ *  foreach($tournament->open_matches() as $match) {
+ *      echo $match->team->display_name . ' vs ' . $match->team2->display_name . ' in round ' . ($match->round->round + 1) . '<br />';
+ *  }
+ * </code>
+ * 
+ * <br />
+ * <b>Using the magic {@link BBTournament::$open_matches} property</b>
+ * <code>
+ *  $match = $tournament->open_matches[0];
+ * </code>
+ * 
+ * 
+ * 
+ * ## Defining the Winner
+ * 
+ * The first step to reporting a match result, is to define the winner
+ * 
+ * There are 4 ways to do so:
+ * 
+ * - Call {@link BBMatch::set_winner()}
+ * - Call {@link BBMatch::set_loser()}
+ * - Set the {@link BBMatch::$winner} property to the winning {@link BBTeam}
+ * - Set the {@link BBMatch::$loser} property to the losing {@link BBTeam}
+ * 
+ * <br />
+ * <b>Side note: </b> {@link set_winner()} and {@link set_loser()} are recommended over the magic properties, 
+ * Simply because PHP's {@link __set()} methods have a slight execution overhead, and are slightly slower
+ * 
+ * 
+ * <b>Example - Using {@link BBMatch::set_winner()}</b>
+ * <code>
+ *  $winner = $match->team2();
+ *  if(!$match->set_winner($winner)) {
+ *      var_dump($bb->last_error);
+ *  }
+ * </code>
+ * 
+ * <br />
+ * <b>Example - Using {@link BBMatch::set_loser()}</b>
+ * <code>
+ *  $winner = $match->team2();
+ *  $loser  = $match->team();
+ *  if(!$match->set_loser($loser)) {
+ *      var_dump($bb->last_error);
+ *  }
+ * </code>
+ * 
+ * <br />
+ * <b>Example - Using the {@link BBMatch::$winner} property</b>
+ * <code>
+ *  $winner = $match->team2();
+ *  $loser  = $match->team();
+ *  $match->winner = $winner;
+ *  if($match->winner() != $winner) {
+ *      var_dump($bb->last_error);
+ *  }
+ * </code>
+ * 
+ * 
+ * <br />
+ * <b>Example - Using the {@link BBMatch::$loser} property</b>
+ * <code>
+ *  $winner = $match->team2();
+ *  $loser  = $match->team();
+ *  $match->loser = $winner;
+ *  if($match->loser() != $winner) {
+ *      var_dump($bb->last_error);
+ *  }
+ * </code>
+ * 
+ * 
+ * ## Match Draws
+ * 
+ * For <b>group rounds only,</b>, you can specify a match as a Draw - indicating that neither participant won the match<br />
+ * This will result in increment the {@link BBTeam::$draws} values for each team
+ * 
+ * You can define a match in any of the following ways:
+ * 
+ * There are 4 ways to define the match as a draw:
+ * 
+ * - Call {@link BBMatch::set_winner()} and pass <b>null</b> or <b>false</b> for the <var>$winner</var> argument
+ * - Call {@link BBMatch::set_draw()}
+ * - Set the {@link BBMatch::$winner} property to <b>null</b> or <b>false</b> 
+ * - Set the {@link BBMatch::$loser} property to <b>null</b> or <b>false</b> 
+ * 
+ * 
+ * <b>Example - Using {@link BBMatch::set_winner()}</b>
+ * <code>
+ *  if(!$match->set_winner(null)) {
+ *      var_dump($bb->last_error);
+ *  }
+ *  if(!$match->is_draw()) {
+ *      var_dump('Failure! - Expected is_draw to return true!');
+ *  }
+ * </code>
+ * 
+ * <br />
+ * <b>Example - Using {@link BBMatch::set_loser()}</b>
+ * <code>
+ *  if(!$match->set_loser(null)) {
+ *      var_dump($bb->last_error);
+ *  }
+ *  if(!$match->is_draw()) {
+ *      var_dump('Failure! - Expected is_draw to return true!');
+ *  }
+ * </code>
+ * 
+ * <br />
+ * <b>Example - Using the {@link BBMatch::$winner} property</b>
+ * <code>
+ *  $match->winner = null;
+ *  if(!$match->is_draw()) {
+ *      var_dump('Failure! - Expected is_draw to return true!');
+ *  }
+ * </code>
+ * 
+ * 
+ * <br />
+ * <b>Example - Using the {@link BBMatch::$loser} property</b>
+ * <code>
+ *  $match->loser = null;
+ *  if(!$match->is_draw()) {
+ *      var_dump('Failure! - Expected is_draw to return true!');
+ *  }
+ * </code>
  * 
  * 
  * ## Reporting
@@ -39,9 +166,14 @@
  *  //First let's store the team we want to give the win to, into $winner
  *  $winner = $match->team();
  * 
- *  //Give him the win!
+ *  //Define the winner
  *  if(!$match->set_winner($winner)) {
  *      var_dump($bb->last_error);
+ *  }
+ * 
+ *  //Submit the report
+ *  if(!$match->report()) {
+ *      var-dump($bb->last_error);
  *  }
  * </code>
  * 
@@ -51,20 +183,95 @@
  * Simply defining a winner / loser may not always be enough though, let's look at how we can be more specific
  * 
  * 
- * ## Game Details
+ * ### Game Details ###
+ * 
+ * For more granular control / details about the match, you can create {@link BBMatchGame} objects to define each game within the series
  * 
  * 
- * {@link BBMatchGame} objects are used to define more granular details of match results
+ * There is more details documentation on game objects in the {@link BBMatchGame} documentation...
  * 
- * Please review the documentation for {@link BBMatchGame} for examples / details
+ * But here are a few quick examples:
+ * 
+ * <b>Example - report a 2:1 series</b>
+ * <var>$team1</var> takes games number 1 and 3, resulting in a <b>2:1</b> victory against </var>$team2</var><br />
+ * <var>$
+ * <code>
+ *  $match->set_winner($team1);
+ *  $game1 = $match->game($team1);
+ *  $game2 = $match->game($team2);
+ *  $game3 = $match->game($team1);
+ * </code>
+ * 
+ * **Note** that since <var>$match->round->best_of</var> is set to 3, we would not be allowed to create any new games
+ * 
+ * Therefore extending the previous code block, the following line would return NULL
+ * <code>
+ *  //After setting $game1, $game2, and $game3...
+ *  $game4 = $match->game();
+ * </code>
+ * 
+ * Results in <var>$game4</var> = <b>null</b>
  * 
  * 
- * ## Strict reporting
+ * ### Strict reporting ###
  * 
- * {@link BBMatch::report()} allows defining <b>$strict</b>
+ * {@link report()} is normally forgiving when it comes to how you setup the game details,<br />
+ * however that's not the case if you enable <var>$strict_mode</var> when you call {@link report()}
  * 
- * When set to true, report() will only work if <var>$match->winner()</var> has enough game wins to satisfy the best_of
- * value set in {@link BBRound}
+ * 
+ * <br /><br />
+ * If enabled, the the report will fail unless <var>$match->winner()</var> wins exactly enough {@link BBMatchGame} games<br />
+ * to satisfy <var>$match->round->best_of</var> and <var>$match->round->wins_needed</var>
+ * 
+ * 
+ * <b>Example: Strict report with invalid game wins for the winner</b>
+ * 
+ * <var>$team</var> Gets 3 wins, but he needs two according to <var>$round->best_of</var>
+ * <code>
+ *  //Just insure that the round's best_of is 3
+ *  $match->round->best_of = 3;
+ *  $match->round->save();
+ * 
+ *  //Prove that it's best_of 3, which requires 2 wins
+ *  echo $match->team->display_name . ' vs ' . $match->team2->display_name .
+ *      ' is a best_of ' . $match->round->best_of . ' series, requiring ' .
+ *      $match->round->wins_needed . ' wins';
+ * 
+ *  //Give $team 3 wins, which is invalid
+ *  $winner = $match->team();
+ *  $match->set_winner($winner);
+ *  $game1 = $match->game($winner);
+ *  $game2 = $match->game($winner);
+ *  $game3 = $match->game($winner);
+ * 
+ *  //report should NOT work if specifying strict mode
+ *  if(!$match->report(true)) {
+ *      var_dump($bb->last_error);
+ *  }
+ * </code>
+ * 
+ * 
+ * ### Managing/Loading the Participants ###
+ * 
+ * There are several methods for loading / managing the participants in the match
+ * 
+ * <br /><br />
+ * {@link team()}, {@link team2()}, and {@link opponent()} can be used to examine the participants of the team<br />
+ * <b>Note</b> That {@link team2()} and {@link opponent()} return the same value, {@link team2()} is simply an alias for {@link opponent()}
+ * 
+ * <br /><br />
+ * {@link winner()} and {@link loser()} return the winner/losing {@link BBTeam}<br />
+ * <b>Note!</b> Only works after calling {@link set_winner}
+ * 
+ * <br /><br />
+ * {@link toggle_team()} is a convenient method that returns the provided <var>$team</var>'s opposing {@link BBTeam} within the match
+ * 
+ * <br />
+ * <b>Example:</b>
+ * <code>
+ *  $team = $match->team2();
+ *  $team2 = $match->toggle_team();
+ * </code>
  * 
  * 
  * @property-read string $tourney_id
@@ -117,11 +324,25 @@
  * <b>Alias for {@link BBMatch::opponent()}</b><br />
  * BBTeam object for the second player in this match
  * 
- * @property BBTeam $winner
+ * @property-read BBTeam $winner
  * <b>Alias for {@link BBMatch::winner()}</b><br />
  * BBTeam object for the winner of the match<br />
  * <b>Returns NULL if set_winner hasn't been called</b><br />
  * <b>Returns FALSE if match was a draw</b>
+ * 
+ * @property-write BBTeam $winner
+ * <b>Alias for {@link BBMatch::set_winner()}</b><br />
+ * Alternate way of defining the winner, by setting it as a property<br /><br />
+ * 
+ * @property-read BBTeam $loser
+ * <b>Alias for {@link BBMatch::loser()}</b><br />
+ * BBTeam object for the loser of the match<br />
+ * <b>Returns NULL if set_winner hasn't been called</b><br />
+ * <b>Returns FALSE if match was a draw</b>
+ * 
+ * @property-write BBTeam $loser
+ * <b>Alias for {@link BBMatch::set_loser()}</b><br />
+ * Alternate way of defining the loser, by setting it as a property<br /><br />
  * 
  * @property BBTournament $tournament
  *  <b>Alias for {@link BBMatch::tournament()}</b>
@@ -133,8 +354,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-27
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -579,24 +800,37 @@ class BBMatch extends BBModel {
     }
 
     /**
-     * If this is an unplayed match, this method can be used
-     *      to define which team won the match
+     * Specify which team won the match
      * 
-     * Will return false if you try to define a team that's not in this match
      * 
-     * You can provide either the BBTeam directly, or its id
+     * <br /><br />
+     * You can provide either the {@link BBTeam} object, or the {@link BBTeam::id} integer
      * 
-     * You can't use this method to change match results,
-     *      you'll have to unreport it first using BBMatch::unreport()
+     * <br /><br />
+     * <b>Note:</b> You can't change winners of matches that have already been reported, to do that please refer to {@link unreport()}
 	 * 
-	 * If you'd like to skip making individual game results, you can define the score of
-	 *		the winner and loser here - it will 
-	 * 
-	 * Warning: winner_score and loser_score will be OVERWRITTEN if you define any games!!!
      * 
-     * @param BBTeam|int $winner      tourney_team_id of the winner (null or false to indicat a draw)
+     * <br /><br />
+     * You CAN define the score of each team, but for more granular results, please use {@link BBMatch::game()}
+	 * 
+     * 
+     * <br /><br />
+     * <b>Warning: </b> If you define values for <var>$winner_score</var> or <var>$loser_score</var> they will be overwritten / unused if {@link BBMatch::game()} is called
+     * 
+     * @param BBTeam|int|false|null $winner
+     *  The winning team<br />
+     *  Can be either the {@link BBTeam} object, or the {@link BBTeam::id} integer
+     *  <br /><br />
+     *  Provide <b>NULL</b> or <b>FALSE</b> to declare this match as a <b>Draw</b>
+     * 
 	 * @param int $winner_score
+     *  Quick way of defining the winneer's score<br />
+     *  Overwritten if {@link BBMatch::game()} is called
+     * 
 	 * @param int $loser_score
+     *  Quick way of defining the loser's score<br />
+     *  Overwritten if {@link BBMatch::game()} is called
+     * 
      * @return boolean
      */
     public function set_winner($winner, $winner_score = null, $loser_score = null) {

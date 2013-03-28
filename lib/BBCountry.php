@@ -4,10 +4,7 @@
  * Country searching / listing simple model
  * 
  * 
- * The country_code values you'll get from this class can be used to associate {@link BBTeam} objects with specific countries
- * 
- * -   {@link http://binarybeast.com/content/api/docs/php/class-BBTeam.html#m$country_code}
- * 
+ * Use the country_code results from this class to set the value of {@link http://binarybeast.com/content/api/docs/php/class-BBTeam.html#m$country_code BBTeam::$country_code} to specify countries for tournament participants
  * 
  * <br /><br />
  * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
@@ -36,8 +33,8 @@
  * @package BinaryBeast
  * @subpackage SimpleModel
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-27
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
