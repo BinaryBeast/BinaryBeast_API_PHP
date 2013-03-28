@@ -1,5 +1,5 @@
-# BinaryBeast API PHP Library - v3.0.0
-#### Version 3.0.0 (2013-03-26)
+# BinaryBeast API PHP Library - v3.0.1
+#### Version 3.0.1 (2013-03-27)
 
 ----------
 
@@ -25,6 +25,11 @@ You can find your api_key from your user settings at binarybeast.com <http://bin
 The values in [BBConfiguration.php](lib/BBConfiguration.php) allow you to define your **api_key**, setup **local response caching**, and even **extend model classes**
 
 **Note:** This will not affect users currently supplying an api\_key to the [BinaryBeast](BinaryBeast.php), constructor still accepts an api_key value
+
+
+### Backwards Compatability
+
+Thanks to [BBLegacy.php](lib/BBLegacy.php), your code will NOT break if you upgrade to the latest library version
 
 
 ### Response Caching
@@ -76,6 +81,33 @@ if(sizeof($tournament->open_matches()) > 0) {
 		var_dump($bb->last_error);
 	}
 }
+```
+
+
+### Example: Embed Group Rounds
+##### Using [BBHelper](lib/BBHelper.php)
+
+```php
+
+require('BinaryBeast.php');
+$bb = new BinaryBeast();
+
+BBHelper::embed_tournament_groups('my_tournament_id');
+
+```
+
+### Example: Embed Brackets
+##### Using [BBTournament](lib/BBTournament.php)
+
+
+```php
+
+require('BinaryBeast.php');
+$bb = new BinaryBeast();
+
+$tournament = $bb->tournament('my_tournament_id');
+$tournament->embed();
+
 ```
 
 

@@ -10,8 +10,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-27
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -310,38 +310,24 @@ abstract class BBModel extends BBSimpleModel {
     }
 
     /**
-     * Handle attempts to directly echo / print this model
+     * Magic method for handling attempts to directly echo / print a model instance
      * 
-     * What we do is just return the result of var_dump of $data,
-     * and add the id (if available)
+     * Simply return a string version of print_r on our $data array
      * 
-     * We can do so by creating an output buffer, performing a var_dump, and
-     * then ending the buffer and returning the values queued within it
+     * @ignore
      * 
      * @return string       Value to print / echo
      */
     public function __toString() {
-        /**
-         * Compile the values to dump
-         */
-        $out = $this->data;
-        if(!is_null($this->id)) {
-            $out[$this->id_property] = $this->id;
-        }
-
-        /**
-         * Get the string result of var_dump by using an output buffer
-         */
-        ob_start();
-            var_dump($out);
-        return ob_end_flush();
+        return print_r($this->data, true);
     }
 
     /**
      * Reset this object back to its original state, as if nothing
      * had changed since its instantiation
 	 * 
-	 * Warning: this method resets all changed children too!!!!
+     * <br />
+	 * <b>Warning:</b> this method resets all changed children too!!!!
      * 
      * @return void
      */
@@ -366,8 +352,7 @@ abstract class BBModel extends BBSimpleModel {
     }
 
     /**
-     * Update internal value arrays to merge any 
-     *  new values in with the current_values and the live data "view" array
+     * Update internal value arrays to merge any new values in with the current_values and the live data "view" array
      * 
      * So we can tell each round to import the changes without 
      * calling the update server for every single one of them
@@ -387,23 +372,24 @@ abstract class BBModel extends BBSimpleModel {
     }
 
     /**
-     * When values for this object (tournament, team, game, etc), we use this method
-     * to assign them to local data
+     * Initialize object values by importing the data from an API response etc
      * 
+     * 
+     * Child classes may specify a value for <var>$data_extraction_key</var>, to
+     * attempt to automatically extract the that key's data from the input directly
      * This method is overridden by children classes in order to extract the specific
-     * properties containing data, but they then pass it back here
-     * to actually cache it locally
      * 
-     * Note that $this->data is cast as an array, for consistence access
      * 
+     * <b>Note</b> that {@link BBModel::data} is cast as an array, for consistency
+     * 
+     * <br /><br />
      * If you provide a value for $extract, it will attempt to use that value as a key to $extract from within $data first
-     * Meaning if $data = ['result' => 500, 'tourney_info' => {'title' => blah'}},
-     *  a $key value of 'tourney_info' means {'title' => blah'} will be extracted into $this->data
-     *  otherwise the $this->data would end be the entire $data input
      * 
-     * Lastly, it resets new_data
      * 
-     * @param object    $data
+     * After successfully importing, it will call {@link BBModel::new_data} to flag the object as unchanged
+     * 
+     * @param object|array  $data
+     *  Most commonly, the value directly returned by the API
      * @return void
      */
     public function import_values($data) {
@@ -436,6 +422,9 @@ abstract class BBModel extends BBSimpleModel {
     /**
      * Call the child-defined load service
      * 
+     * 
+     * <b>Chaining</b>
+     * 
      * This method returns the current instance, allowing us to 
      * chain like this: 
      * @example $tournament = $bb->tournament->load('id_here');
@@ -446,7 +435,20 @@ abstract class BBModel extends BBSimpleModel {
      * @param array     $child_args     Allow child classes to define additional paramaters to send to the API (for example the primary key of an object may consist of multiple values)
      * @param boolean   $skip_cache     Disabled by default - set true to NOT try loading from local cache
      * 
-     * @return self Returns itself unless there was an error, in which case it returns false
+     * @return BBModel|self|false
+     * 
+     *  <b>FALSE return</b> indicates something went wrong when loading from the API - look at {@link BinaryBeast::last_error} for details
+     * 
+     * 
+     *  <br /><br />
+     *  If successful, the it return itself to allow you to chain
+     * 
+     *  <b>Example:</b>
+     *  
+     *  Create a new {@link BBTournament}, and automatically load it in a single line
+     *  <code>
+     *      $tournament = $bb->tournament->load('x12345');
+     *  </code>
      */
     public function &load($id = null, $child_args = array(), $skip_cache = false) {
         
@@ -534,10 +536,15 @@ abstract class BBModel extends BBSimpleModel {
         return $this->load(null, array());
     }
     /**
-     * Trigger a reload next time any data is accessed, to allow
-     *  refreshing on demand without having to make a billion API requests for arrays of child objects
+     * Trigger a reload next time any data is accessed
      * 
-     * Note: when load() is triggered by a reload flag, it will be a fresh API request,
+     * <br /><br />
+     * This allows requesting a fresh API request for data in an on-demand style
+     * 
+     * 
+     * 
+     * <br /><br />
+     * <b>Note:</b>  when {@link load()} is triggered by a reload flag, it will be a fresh API request,
      *  local cache will not be considered
      * 
      * @return void

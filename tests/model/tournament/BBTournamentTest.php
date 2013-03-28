@@ -268,20 +268,6 @@ class BBTournamentTest extends BBTest {
         $this->assertTrue(sizeof($this->object->teams()) == 0);
     }
     /**
-     * Tests removing a child with $preserve disabled, and checking to make sure
-     *  that any references are set to null
-     * @covers BBTournament::remove_child
-     * @group bbmodel
-     */
-    public function test_remove_child_unpreserved() {
-        $this->get_tournament_inactive();
-        $team = &$this->object->team();
-        $this->assertTrue(in_array($team, $this->object->teams()));
-        $this->assertTrue($this->object->remove_child($team, null, false));
-        //
-        $this->assertNull($team);
-    }
-    /**
      * Test deleting teams to make sure they are removed from the tournament correctly afterwards
      */
     public function test_remove_teams() {
