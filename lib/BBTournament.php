@@ -8,10 +8,13 @@
  * 
  * ### Quick Examples and Tutorials ###
  * 
+ * - {@link binarybeast.com/content/api/docs/php/class-BBTournament.html#create Create a New Tournament}
+ * - @todo finish this legend
+ * 
  * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
  * 
  * 
- * ## Create a New Tournament
+ * ## Create a New Tournament .[#create]
  * 
  * Let's run through a quick example of how to create a new tournament using the {@link BinaryBeast::touranment()} factory method
  * 
@@ -29,7 +32,7 @@
  * </code>
  * 
  * 
- * ### Configure Round Format
+ * ## Configure Round Format
  * 
  * By round format, I mean the best_of value for each round in a bracket
  * 
@@ -59,7 +62,7 @@
  * </code>
  * 
  * 
- * ### Add Teams to the Tournament
+ * ## Add Teams to the Tournament
  * 
  * There are two ways to do it, but the optimal method is to use {@link BinaryBeast::team()}
  * 
@@ -116,7 +119,7 @@
  * </code>
  * 
  * 
- * ### Loading / Listing Unplayed Matches
+ * ## Loading / Listing Unplayed Matches
  * 
  * We can use the {@link open_matches()) method, and the magic {@link $open_matches} property to find matches that need to be reported
  * 
@@ -139,7 +142,7 @@
  * </code>
  * 
  * 
- * ### Reporting Matches
+ * ## Reporting Matches
  * 
  * 
  * The previous example showed us how to get unplayed {@link BBMatch} objects
@@ -167,7 +170,7 @@
  * </code>
  * 
  * 
- * ### Reporting Multiple Matches
+ * ## Reporting Multiple Matches
  * 
  * The previous example demonstrated the use of {@link BBMatch::report()}, now let's look how to report multiple matches simultaneously
  * 
@@ -201,7 +204,7 @@
  * </code>
  * 
  * 
- * ### Starting Group Rounds
+ * ## Starting Group Rounds
  * 
  * <b>Note: </b>Unfortunately for the moment, this library is limited to "random" group seeding
  * 
@@ -234,7 +237,7 @@
  * Easy enough!
  * 
  * 
- * ### Starting Brackets - Random
+ * ## Starting Brackets - Random
  * 
  * Starting brackets with random positions is very simple
  * 
@@ -249,7 +252,7 @@
  *  }
  * </code>
  * 
- * ### Starting Brackets - Manual
+ * ## Starting Brackets - Manual
  * 
  * You also have the option of starting brackets, and manually defining all of the starting positions
  * 
@@ -303,7 +306,7 @@
  * etc etc...
  * 
  * 
- * ### Starting Brackets - Seeded
+ * ## Starting Brackets - Seeded
  * 
  * 'sports' and 'balanced' seeding work very similary, it's not within the scope
  * of this documentation to explain the difference
@@ -325,7 +328,7 @@
  *  }
  * </code>
  * 
- * ### Resetting brackets or Groups
+ * ## Resetting brackets or Groups
  * 
  * If you need to reset the brackets or groups, it's very simple:
  * <code>
@@ -335,7 +338,7 @@
  * </code>
  * 
  * 
- * ### Deleting the tournament
+ * ## Deleting the tournament
  * 
  * Be <b>VERY</b> careful with this! there's no going back!!
  * 
@@ -347,7 +350,7 @@
  *  }
  * </code>
  * 
- * ### Getting Teams 
+ * ## Getting Teams 
  * 
  * Getting a list of teams within a tournament is simple, and there are a few ways to do it
  * 
@@ -384,7 +387,7 @@
  *  echo sizeof($banned_teams) . ' teams have been banned from the tournament';
  * </code>
  * 
- * ### Listing
+ * ## Listing
  * 
  * <b>Example: Load list of tournaments created by your account:</b>
  * 
@@ -424,7 +427,7 @@
  * </code>
  * 
  * 
- * ### Embedding your Tournament
+ * ## Embedding your Tournament
  * 
  * There are two ways to do this
  * 
@@ -462,9 +465,67 @@
  * </code>
  * 
  * 
+ * ## Callbacks
+ * 
+ * Thanks to the {@link BBCallback} library class, you can register URLs for BinaryBeast to call whenever a certain event is triggered
+ * 
+ * Here is a list of callbacks currently available for a tournament:
+ * - {@link on_change()}: Very generic, triggered by just about everything
+ * - {@link on_complete()}: The final match is reported
+ * - {@link on_delete()}: Tournament has been deleted
+ * - {@link on_delete()}: Tournament has been deleted
+ * - {@link on_match_reported()}: A new match result has been reported
+ * - {@link on_match_unreported()}: A match result has been unreported / deleted
+ * - {@link on_settings()}: A setting has changed (like the title, max_teams etc)
+ * - {@link on_start_brackets()}: Brackets have been generated
+ * - {@link on_start_groups()}: Group rounds have begun
+ * - {@link on_team_added()}: A new team has been added
+ * - {@link on_team_removed()}: A new team has been removed / deleted
+ * - {@link on_team_status()}: A new team's status has changed (Confirmed / Banned etc)
+ * 
+ * <br />
  * 
  * 
- * ### More...
+ * ## Example: Register a Callback
+ * 
+ * Let's register a simple callback with {@link on_change()}:
+ * <code>
+ *	$id = $tournament->on_change('http://yoursite.com/tournament/handle_callback.php');
+ *	echo 'Callback registered succesfully! Callback ID: ' . $id;
+ * </code>
+ * 
+ * 
+ * ## Example: Handling a Callback
+ * 
+ * Check out the documentation in {@link http://binarybeast.com/content/api/docs/php/class-BBCallback.html#handling BBCallback} for instructions on handling callbacks
+ * 
+ * 
+ * ## Example: Listing Registered Callbacks
+ * 
+ * Use {@link BBModel::list_callbacks()} to determine what callbacks have been registered with your tournament
+ * 
+ * <br /><br />
+ * {@link BBCallbackObject} documents the format you can expect this method to return
+ * 
+ * <br /><br />
+ * <code>
+ *	foreach($tournament->list_callbacks() as $callback) {
+ *		echo $callback->id . ': (' . $callback->url . ') Triggered by: ' . $callback->event_description . '<br />';
+ *	}
+ * </code>
+ * 
+ * 
+ * 
+ * 
+ * 
+ * ## Example: Delete (Unregister) a Callback
+ * 
+ * Again, refer to the documentation in {@link http://binarybeast.com/content/api/docs/php/class-BBCallback.html#deleting BBCallback} for this
+ * 
+ * 
+ * 
+ * 
+ * ## More...
  * 
  * Those are the basics, but there's a lot more to it - feel free to look through
  * the documtnation to see what else is available
@@ -935,7 +996,7 @@ class BBTournament extends BBModel {
      * 
      * @return void
      */
-    private function on_major_update() {
+    private function handle_major_update() {
         //Clear ALL cache for this specific tournament
         $this->clear_id_cache();
 
@@ -1643,7 +1704,7 @@ class BBTournament extends BBModel {
         $this->set_current_data('status', $result->status);
 
         //Reload all data that would likely change from a major update like this (open matches, teams)
-        $this->on_major_update();
+        $this->handle_major_update();
 
         //Success!
         return true;
@@ -1799,7 +1860,7 @@ class BBTournament extends BBModel {
         $this->set_current_data('status', $result->status);
 
         //Reload all data that would likely change from a major update like this (open matches, teams)
-        $this->on_major_update();
+        $this->handle_major_update();
 
         //Success!
         return true;

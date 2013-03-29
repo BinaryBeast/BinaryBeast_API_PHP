@@ -3,6 +3,8 @@
 /**
  * Model object representing a match between two teams
  * 
+ * @todo add callbacks
+ * 
  * 
  * Let's go through a few examples... each example assumes the following:
  * 
@@ -354,8 +356,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.1
- * @date 2013-03-27
+ * @version 3.0.2
+ * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html

@@ -13,7 +13,7 @@
  * <br />This will be demonstrated below
  * 
  * 
- * ### Processing a Callback
+ * ### Handling Callbacks .[#handling] ###
  * 
  * When BinaryBeast executes a callback, it send information about the event in either <var>$_POST</var> or <var>$_GET</var>,<br />
  * Depending on what you set <var>$action</var> to in {@link register()}
@@ -25,19 +25,51 @@
  * However ALL callback will send at least the information documented in {@link BBCallbackObject}
  * 
  * 
- * ## Automated Processing
+ * ## Example: Handling a Callback .[#example-handling]
  * 
- * You can use {@link handle_callback()} to attempt to autmoatically process data sent from a callback execution
+ * Let's quickly demonstrate how to property handle a callback that you've registered
  * 
- * <br />
- * For example if you register a 
+ * Assume we have an on_change callback registered for a tournament, <br />
+ * The URL is <b>http://yoursite.com/tournament/handle_callback.php</b>
+ * 
+ * <br /><br />
+ * We'll use {@link BBCallback::handle_callback()} to help process the data from BinaryBeast a bit before we do anything with it
+ * 
+ * <br /><br />
+ * <b>handle_callback.php</b>
+ * <code>
+ *	$data = $bb->callback->handle_callback();
+ *	//handle_callback() found and created a tournament for us, clear all local api cache for this tournament
+ *	if(!is_null($data->tournament)) {
+ *		//Could do our own custom SQL changes here etc
+ *		//...
+ * 
+ *		//Clear all API Response cache for this tournament
+ *		$data->tournament->clear_id_cache();
+ *	}
+ * </code>
+ * 
+ * 
+ * ## Deleting Callback Registrations .[#deleting]
+ * 
+ * Deleting a callback is known as unregistering, and we use {@link unregister()} to do it
+ * 
+ * <br /><br />
+ * Assume that <var>$id</var> is a callback id that we want to delete
+ * 
+ * <br /><br />
+ * <b>Delete the Callback:</b>
+ * <code>
+ *	$bb->callback->unregister($id);
+ * </code>
+ * 
  * 
  *	
  * @package BinaryBeast
  * @subpackage Library
  * 
  * @version 3.0.0
- * @date 2013-03-28
+ * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -242,6 +274,10 @@ class BBCallback {
 	 * Very generic event, triggered anytime ANYTHING changes within a tournament
 	 * 
 	 * <b>Recurrent: </b>Yes
+	 * 
+	 * <br /><br />
+	 * <b>Values Expected:</b>
+	 * - <b>string</b> description
 	 * 
 	 * @var int
 	 */
@@ -475,6 +511,12 @@ class BBCallback {
 		if(isset($request['tourney_info'])) {
 			$data->tournament = $this->bb->tournament($request);
 		}
+		else if(strpos($request['trigger_id'], 'x') === 0) {
+			$data->tournament = $this->bb->tournament($request['trigger_id']);
+		}
+		else if(isset($request['tourney_id'])) {
+			$data->tournament = $this->bb->tournament($request['tourney_id']);
+		}
 
 		//Try to extract a match
 		if(isset($request['match_info'])) {
@@ -482,12 +524,18 @@ class BBCallback {
 				$data->match = $this->bb->match($request);
 			}
 		}
+		else if(isset($request['tourney_match_id'])) {
+			$data->match = $this->bb->match($request['tourney_match_id']);
+		}
 
 		//Try to extract a team
 		if(isset($request['team_info'])) {
 			$data->team = $this->bb->team($request);
 		}
-
+		else if(isset($request['tourney_team_id'])) {
+			$data->team = $this->bb->team($request['tourney_team_id']);
+		}
+		
 		//Success!
 		return $data;
 	}

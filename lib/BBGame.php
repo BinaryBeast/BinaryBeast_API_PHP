@@ -9,12 +9,10 @@
  * 
  * 
  * --------
- * The <var>$game_code</var> values you'll get from this class can be used to associate {@link BBTournament} objects with a specific game
- * 
- * -   {@link http://binarybeast.com/content/api/docs/php/class-BBTournament.html#m$game_code}
+ * The primary use of this class is to set {@link http://binarybeast.com/content/api/docs/php/class-BBTournament.html#m$game_code BBTournament::$game_code} values, to associate a specific game with your tournament
  * 
  * 
- * <br /><br /><br />
+ * <br /><br />
  * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
  * <br />
  * 
@@ -73,8 +71,8 @@
  * @package BinaryBeast
  * @subpackage SimpleModel
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-28
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html

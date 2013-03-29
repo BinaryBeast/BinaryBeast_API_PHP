@@ -3,17 +3,14 @@
 /**
  * Map listing / search simple model
  * 
- * Provides services for searching for maps available to a games (see {@link BBGame})
+ * Provides services for searching for maps available to a game (see {@link BBGame})
  * 
  * 
- * The map_id values returned can be used to specify {@link BBRound} format, and match details in {@link BBMatchGame}
+ * <br /><br />
+ * The map_id values returned can be used to set {@link http://binarybeast.com/content/api/docs/php/class-BBRound.html#m$map BBRound::$map}, <br />
+ * and to define which map each {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$map BBMatchGame::$map} was was played on within a {@link BBMatch}
  * 
- * -    {@link http://binarybeast.com/content/api/docs/php/class-BBRound.html#m$map}
- * -    {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$map}
- * 
- * 
- * 
- * <br /><br /><br />
+ * --------
  * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
  * <br />
  * 
@@ -80,8 +77,8 @@
  * @subpackage SimpleModel
  * 
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-28
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html

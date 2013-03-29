@@ -4,10 +4,11 @@
  * Race searching / listing simple model
  * 
  * 
- * These values can be used in {@link BBMatchGame}:
+ * <br />
+ * You'll need the <var>$race_id</var> values from this class, if you want to specify a race for each participant when reporting match results
  * 
- * -   {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$race}
- * -   {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$o_race}
+ * - {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$race BBMatchGame::$race}
+ * - {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$race BBMatchGame::$o_race}
  * 
  * 
  * <br /><br />
@@ -59,8 +60,8 @@
  * @package BinaryBeast
  * @subpackage SimpleModel
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-28
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html

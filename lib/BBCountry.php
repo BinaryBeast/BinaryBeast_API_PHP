@@ -4,14 +4,15 @@
  * Country searching / listing simple model
  * 
  * 
- * Use the country_code results from this class to set the value of {@link http://binarybeast.com/content/api/docs/php/class-BBTeam.html#m$country_code BBTeam::$country_code} to specify countries for tournament participants
+ * The primary use of this class is to set {@link http://binarybeast.com/content/api/docs/php/class-BBTeam.html#m$country_code BBTeam::$country_code} values, to define countires for tournament participants
+ * 
  * 
  * <br /><br />
  * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
  * <br />
  * 
  * 
- * ### Example: Search for countries that contain 'united'
+ * ### Example: Search for countries that contain 'united' ###
  * <code>
  *  $countries = $bb->country->search('united');
  *  foreach($countries as $country) {
@@ -34,7 +35,7 @@
  * @subpackage SimpleModel
  * 
  * @version 3.0.1
- * @date 2013-03-27
+ * @date 2013-03-28
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html

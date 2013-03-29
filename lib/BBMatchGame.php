@@ -10,7 +10,11 @@
  * 
  * - <var>$bb</var> is an instance of {@link BinaryBeast}
  * - <var>$tournament</var> is an instance of {@link BBTournament}
- * - <var>$match</var> is an instance of {@link BBMatch}, and yas not been reported yet
+ * - <var>$match</var> is an instance of {@link BBMatch}, and has <b>not</b> been reported yet
+ * 
+ * 
+ * 
+ * 
  * 
  * 
  * ## Creating new games
@@ -18,7 +22,7 @@
  * To create a new instance, using {@link BBMatch::game()}
  * 
  * 
- * ## Example: Report a 2:1 match
+ * ## Example: Report a 2:1 match .[#example-report]
  * 
  * In this example, <var>$match->winner</var> wins games 1 and 3
  * 
@@ -39,11 +43,19 @@
  *  $game2->set_winner($match->loser());
  * </code>
  * 
- * ## Score
+ * 
+ * 
+ * 
+ * 
+ * 
+ * ## Specifying Scores  .[#example-scores]
  * 
  * You may define the score of each team per game
  * 
- * <b>WARNING!</b>  score is the score of the match winner, and o_score is the score of the match loser
+ * <b>WARNING!</b>
+ * 
+ * - <var>$score</var> is the score of the <b>match winner</b>
+ * - <var>$o_score</var> is the score of the <b>match loser</b>
  * 
  * <br /><br />
  *
@@ -54,7 +66,7 @@
  * - <var>$game2</var>: 19 : 37
  * - <var>$game3</var>: 115533 : 11
  * 
- * <b>The code:</b>
+ * <br />
  * <code>
  *  //Game 1
  *  $game1 = $match->game($match->winner());
@@ -74,7 +86,44 @@
  * 
  * 
  * 
- * ## Example: Define maps and player races
+ * 
+ * 
+ * 
+ * ## Example: Specifying Player Races  .[#example-races]
+ * 
+ * If the game for this tournament supports it, you can specify which race each participant used in the game
+ * 
+ * You can use {@link BBRace::game_search()} to see thee races available for your <var>$tournament->game_code</var>
+ * 
+ * <b>Example: </b> Define as StarCraft 2's Zerg race, using a race_id integer
+ * <code>
+ *	$game->race = 1;
+ * </code>
+ * <b>Example: </b> Define as StarCraft 2's Protoss race, using a race name string
+ * <code>
+ *	$game->race = 'Protoss';
+ * </code>
+ * 
+ * <br /><br />
+ * <b>Note:</b> If you type it correctly, the API will actually figure out a race_id of 3 for 'Protoss'
+ * 
+ * <br /><br />
+ * <b>Note:</b> For more details, read through the documentation for {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$race BBMatchGame::$race} and {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$o_race BBMatchGame::$o_race}
+ * 
+ * 
+ * 
+ * 
+ * 
+ * 
+ * ## Example: Specifying Maps  .[#example-maps]
+ * 
+ * Demonstration of how to specify which map each game was played on
+ * <b>Example: Specify maps for each game</b>
+ * 
+ * - Specify <var>$game1</var> played on <b>Antiga Shipyard</b> using the map name string
+ * - Specify <var>$game2</var> played on <b>Xel'Naga</b> using the map_id integer
+ * - Specify <var>$game3</var> played on <b>Metropolis</b> using the map name string
+ * 
  * <code>
  *  $game1 = $match->game($match->winner());
  *  $game2 = $match->game($match->loser());
@@ -83,11 +132,10 @@
  *  $game1->map = 'Antiga Shipyard';
  *  $game2->map = 70; //map_id of the Xel'Naga Caverns
  *  $game3->map = 'Metropolis';
- *  //
- *  $game1->race    = 'Zerg';
- *  $game2->race    = 2; //the race_id for Terran
- *  $game2->o_race  = 3; //the race_id for Protoss
  * </code>
+ * 
+ * <br /><br />
+ * <b>Note:</b> For more details, read through the documentation for {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#m$map BBMatchGame::$race}
  *
  * 
  * ## More...
@@ -106,16 +154,24 @@
  * <b>WARNING:</b><br />
  * This can be a little bit confusing at first, so be careful<br />
  * Game scores are tracked based on who won the overall match,<br />
- * therefore this value represents the score of the team who won the entire match<br />
+ * therefore this value represents the score of the team who <b>won the entire match</b><br /><br />
+ * 
+ * {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#example-scores Check out the example}
  * 
  * @property int $o_score
- * Score of the match's loser<br />
- * Please take note of the warning explained in {@link BBMatchGame::$score}
+ * Score of the match's loser<br /><br />
+ * <b>WARNING:</b><br />
+ * This can be a little bit confusing at first, so be careful<br />
+ * Game scores are tracked based on who won the overall match,<br />
+ * therefore this value represents the score of the team who <b>lost the entire match</b><br /><br />
+ * 
+ * {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#example-scores Check out the example}
  * 
  * @property string|int $map
  * The map name this game was played on<br />
  * You can define this as the map_id integer, or any map name string<br />
- * Use {@link BBMap::game_search()} for possible values
+ * Use {@link BBMap::game_search()} for possible values<br /><br />
+ * {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#example-maps Check out the example}
  * 
  * @property-read int $map_id 
  *  <b>Read Only</b><br />
@@ -124,11 +180,15 @@
  * 
  * @property string|int $race
  * The match winner's race - can be the race_id integer, or a custom race name string<br />
- * Use {@link BBRace::game_list()} for race_ids values
+ * Use {@link BBRace::game_list()} for race_ids values<br /><br />
+ * 
+ * {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#example-races Check out the example}
  * 
  * @property string|int $o_race
  * The match loser's race - can be the race_id integer, or a custom race name string<br />
- * Use {@link BBRace::game_list()} for race_ids values
+ * Use {@link BBRace::game_list()} for race_ids values<br /><br />
+ * 
+ * {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#example-races Check out the example}
  * 
  * @property string $notes
  *  General description / notes on the match
@@ -157,8 +217,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-28
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -175,7 +235,7 @@ class BBMatchGame extends BBModel {
     const CACHE_OBJECT_TYPE		= BBCache::TYPE_TOURNAMENT;
     const CACHE_TTL_LIST        = 10;
     const CACHE_TTL_LOAD        = 10;
-
+	
     /**
      * Reference to the match this game is in
      * @var BBMatch

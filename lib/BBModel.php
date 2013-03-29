@@ -1024,6 +1024,19 @@ abstract class BBModel extends BBSimpleModel {
     protected function calculate_changed() {
         $this->changed = sizeof($this->new_data) > 0 || $this->changed_children_count > 0;
     }
+	
+	/**
+	 * List all callbacks registered with this object's ID
+	 * 
+	 * You may optionally limit the results by defining a $url and/or $event_id
+	 * 
+	 * @return BBCallbackObject[]|null
+	 *	<b>Null</b> is returned if this object does not have an ID
+	 */
+	public function list_callbacks($url = null, $event_id = null) {
+		if(is_null($this->id)) return null;
+		return $this->bb->callback->load_list($event_id, $this->id, $url);
+	}
 }
 
 ?>
