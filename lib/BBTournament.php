@@ -612,8 +612,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.1
- * @date 2013-03-27
+ * @version 3.0.2
+ * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -1967,7 +1967,222 @@ class BBTournament extends BBModel {
     public function embed_groups($width = 800, $height = 600, $class = 'binarybeast') {
         return $this->embed(true, $width, $height, $class);
     }
-    
+	
+	/**
+	 * Used by event-specific methods (like on_change and on_complete), to register callbacks
+	 *	while handling errors in a DRY manner
+	 */
+	private function register_callback($event_id, $url, $action = 'post', $recurrent = true, $args = null) {
+		//Can't register callbacks if the tournament doesn't exist yet
+		if(is_null($this->id)) {
+			return $this->set_error('Cannot register callbacks for the tournament before it exists on BinaryBeast - call save() first');
+		}
+
+		//Register through the BBCallback class
+		return $this->bb->callback->register($event_id, $this->id, $url, $action, $recurrent, $args);
+	}
+
+	/**
+	 * Register a callback / hook, triggered anytime this tournament changes
+	 * 
+	 * Review the {@link BBCallback} documentation for examples of how to handle a callback
+	 * 
+	 * @param string $url
+	 *	URL called by BinaryBeast when the event is triggered
+	 * 
+	 * @param type $action
+	 *	How to call your <var>$url</var><br />
+	 *	Must be <b>post</b> or <b>get</b>
+	 * 
+	 * @param boolean $recurrent
+	 * True by default - if false, the callback is deleted after the first time it is triggered	
+	 * 
+	 * @param array $args
+	 *	Optionaly array of custom arguments you'd like BinaryBeast to send when it calls your <var>$url</var>
+	 * 
+	 * @return int|boolean
+	 *	Returns the callback id, false if there was an error registering the callback
+	 */
+	public function on_change($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_CHANGED, $url, $action, $recurrent, $args);
+	}
+
+
+	/**
+	 * Register a callback / hook, triggered when group rounds begin
+	 * 
+	 * For documentation, please review {@link on_change()}, as this method is used in an identical manner
+	 * 
+	 * @param string $url
+	 * @param type $action
+	 * @param boolean $recurrent
+	 * @param array $args
+	 * @return int|boolean
+	 */
+	public function on_start_groups($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_START_GROUPS, $url, $action, $recurrent, $args);
+	}
+
+
+	/**
+	 * Register a callback / hook, triggered when group rounds begin
+	 * 
+	 * For documentation, please review {@link on_change()}, as this method is used in an identical manner
+	 * 
+	 * @param string $url
+	 * @param type $action
+	 * @param boolean $recurrent
+	 * @param array $args
+	 * @return int|boolean
+	 */
+	public function on_start_brackets($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_START_BRACKETS, $url, $action, $recurrent, $args);
+	}
+
+
+	/**
+	 * Register a callback / hook, triggered when the tournament finishes (aka, the final match is reported)
+	 * 
+	 * Please review the callback documentation here in {@link BBCallback::EVENT_TOURNAMENT_COMPLETE}
+	 * 
+	 * 
+	 * For documentation, please review {@link on_change()}, as this method is used in an identical manner
+	 * 
+	 * @param string $url
+	 * @param type $action
+	 * @param boolean $recurrent
+	 * @param array $args
+	 * @return int|boolean
+	 */
+	public function on_complete($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_COMPLETE, $url, $action, $recurrent, $args);
+	}
+
+	/**
+	 * Register a callback / hook, triggered when a team is added to the tournamnet
+	 * 
+	 * Please review the callback documentation here in {@link BBCallback::EVENT_TOURNAMENT_TEAM_ADDED}
+	 * 
+	 * 
+	 * For documentation, please review {@link on_change()}, as this method is used in an identical manner
+	 * 
+	 * @param string $url
+	 * @param type $action
+	 * @param boolean $recurrent
+	 * @param array $args
+	 * @return int|boolean
+	 */
+	public function on_team_added($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_TEAM_ADDED, $url, $action, $recurrent, $args);
+	}
+
+	/**
+	 * Register a callback / hook, triggered when a team is removed to the tournamnet
+	 * 
+	 * Please review the callback documentation here in {@link BBCallback::EVENT_TOURNAMENT_TEAM_REMOVED}
+	 * 
+	 * 
+	 * For documentation, please review {@link on_change()}, as this method is used in an identical manner
+	 * 
+	 * @param string $url
+	 * @param type $action
+	 * @param boolean $recurrent
+	 * @param array $args
+	 * @return int|boolean
+	 */
+	public function on_team_removed($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_TEAM_REMOVED, $url, $action, $recurrent, $args);
+	}
+
+	/**
+	 * Register a callback / hook, triggered when a match result is reported
+	 * 
+	 * Please review the callback documentation here in {@link BBCallback::EVENT_TOURNAMENT_MATCH_REPORTED}
+	 * 
+	 * 
+	 * For documentation, please review {@link on_change()}, as this method is used in an identical manner
+	 * 
+	 * @param string $url
+	 * @param type $action
+	 * @param boolean $recurrent
+	 * @param array $args
+	 * @return int|boolean
+	 */
+	public function on_match_reported($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_MATCH_REPORTED, $url, $action, $recurrent, $args);
+	}
+
+	/**
+	 * Register a callback / hook, triggered when a match result is unreported / deleted
+	 * 
+	 * Please review the callback documentation here in {@link BBCallback::EVENT_TOURNAMENT_MATCH_UNREPORTED}
+	 * 
+	 * 
+	 * For documentation, please review {@link on_change()}, as this method is used in an identical manner
+	 * 
+	 * @param string $url
+	 * @param type $action
+	 * @param boolean $recurrent
+	 * @param array $args
+	 * @return int|boolean
+	 */
+	public function on_match_unreported($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_MATCH_UNREPORTED, $url, $action, $recurrent, $args);
+	}
+
+	/**
+	 * Register a callback / hook, triggered when the tournament is deleted
+	 * 
+	 * Please review the callback documentation here in {@link BBCallback::EVENT_TOURNAMENT_DELETED}
+	 * 
+	 * 
+	 * For documentation, please review {@link on_change()}, as this method is used in an identical manner
+	 * 
+	 * @param string $url
+	 * @param type $action
+	 * @param boolean $recurrent
+	 * @param array $args
+	 * @return int|boolean
+	 */
+	public function on_delete($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_DELETED, $url, $action, $recurrent, $args);
+	}
+
+	/**
+	 * Register a callback / hook, triggered when the any team in the tournament has a status change (ie unconfirmed->confirmed etc)
+	 * 
+	 * Please review the callback documentation here in {@link BBCallback::EVENT_TOURNAMENT_TEAM_STATUS_CHANGED}
+	 * 
+	 * 
+	 * For documentation, please review {@link on_change()}, as this method is used in an identical manner
+	 * 
+	 * @param string $url
+	 * @param type $action
+	 * @param boolean $recurrent
+	 * @param array $args
+	 * @return int|boolean
+	 */
+	public function on_team_status($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_TEAM_STATUS_CHANGED, $url, $action, $recurrent, $args);
+	}
+
+	/**
+	 * Register a callback / hook, triggered when any of the settings change (title, max_teams, etc)
+	 * 
+	 * Please review the callback documentation here in {@link BBCallback::EVENT_TOURNAMENT_SETTINGS_CHANGED}
+	 * 
+	 * 
+	 * For documentation, please review {@link on_change()}, as this method is used in an identical manner
+	 * 
+	 * @param string $url
+	 * @param type $action
+	 * @param boolean $recurrent
+	 * @param array $args
+	 * @return int|boolean
+	 */
+	public function on_settings($url, $action = 'post', $recurrent = true, $args = null) {
+		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_SETTINGS_CHANGED, $url, $action, $recurrent, $args);
+	}
 }
 
 ?>

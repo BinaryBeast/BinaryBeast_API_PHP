@@ -14,14 +14,14 @@
  * <pre>
  *      If you want to take advantage of the integrate API response caching in this class,
  *      you must have PDO_MySLQ installed, and you must define the connection details
- *      in {@link lib/BBConfiguration.php}!
+ *      in {@link BBConfiguration}!
  * </pre>
  * 
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -59,7 +59,7 @@ class BBCache {
      */
     private $pdo_options = array('mysql' => array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'), 'pgsql' => array());
 
-    /**
+    /*
      * Each record can have an object associated with it, and we identify the object type
      *  by an integer - here are some constants for their values
      */
@@ -69,6 +69,7 @@ class BBCache {
     const TYPE_GAME                 = 3;
     const TYPE_RACE                 = 4;
     const TYPE_MAP                  = 5;
+    const TYPE_CALLBACK				= 6;
 
     /**
      * Constructor

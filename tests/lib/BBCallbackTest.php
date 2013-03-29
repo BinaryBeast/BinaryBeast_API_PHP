@@ -1,116 +1,106 @@
 <?php
 
 /**
- * Test local mysql caching 
- * @group cache
+ * Test callbakc functionality
+ * 
+ * @group callback
  * @group library
  * @group all
  */
-class BBCacheTest extends BBTest {
+class BBCallbackTest extends BBTest {
     
-    /** @var BinaryBeast */
+    /** @var BBCallback */
     protected $object;
 
     protected function setUp() {
-        $this->object = &$this->bb;
+        $this->object = $this->bb->callback();
+
+		//Test tournament created specifically for testing callbacks
+		$this->tournament = $this->bb->tournament('xSC21303290');
     }
 
-    public function test_list_tournaments() {
-        $result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
-        $this->assertServiceListSuccessful($result, 'list');
-        //
-        $result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
-        $this->assertServiceListSuccessful($result, 'list');
-        $this->assertServiceLoadedFromCache($result);
-    }
-    public function test_clear_svc() {
-        $result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
-        $this->assertServiceListSuccessful($result, 'list');
-        //
-        $this->assertTrue($this->bb->clear_cache('Tourney.TourneyList.Creator'));
-        //
-        $result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
-        $this->assertServiceNotLoadedFromCache($result);
-    }
-    public function test_clear_type() {
-        //Cache a tour list - with tournament cache type
-        $list_result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
-        $this->assertServiceListSuccessful($list_result, 'list');
-        //Cache a team - with tournament cache type
-        $team_result = $this->bb->call('Tourney.TourneyLoad.Team', array('tourney_team_id' => 789751), 2, BBCache::TYPE_TOURNAMENT);
-        $this->assertServiceSuccessful($team_result);
-        //Cache a team - with team cache type
-        $team_result2 = $this->bb->call('Tourney.TourneyLoad.Team', array('tourney_team_id' => 789746), 2, BBCache::TYPE_TEAM);
-        $this->assertServiceSuccessful($team_result2);
-        //Cache game list - with game cache type
-        $game_result = $this->bb->call('Game.GameSearch.Search', array('game' => 'quake'), 2, BBCache::TYPE_GAME);
-        $this->assertServiceListSuccessful($game_result, 'games');
+	/**
+	 * Test registering a new callback - the generic tournament_change
+	 * 
+	 * @covers BBCallback::register
+	 */
+	public function test_register() {
+		$this->assertID($id = $this->object->register(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id, 'http://binarybeast.com/callback/test/' . uniqid()));
+	}
 
-        //clear all tournament cache
-        $this->assertTrue($this->bb->clear_cache(null, BBCache::TYPE_TOURNAMENT));
+	/**
+	 * Attempts to register a duplicate callback should return the original ID
+	 * 
+	 * @covers BBCallback::register
+	 */
+	public function test_register_duplicate() {
+		$url = 'http://binarybeast.com/callback/test/' . uniqid();
+		$this->assertID($id = $this->object->register(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id, $url));
+		$this->assertID($id2 = $this->object->register(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id, $url));
+		$this->assertEquals($id, $id2);
+	}
 
-        //Reload tour list - shouldn't be cached
-        $list_result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
-        $this->assertServiceListSuccessful($list_result, 'list');
-        $this->assertServiceNotLoadedFromCache($list_result);
-        //Reload 1st team - shouldn't be cached
-        $team_result = $this->bb->call('Tourney.TourneyLoad.Team', array('tourney_team_id' => 789751), 2, BBCache::TYPE_TOURNAMENT);
-        $this->assertServiceSuccessful($team_result);
-        $this->assertServiceNotLoadedFromCache($team_result);
-        //Reload 2nd team - should be cached
-        $team_result2 = $this->bb->call('Tourney.TourneyLoad.Team', array('tourney_team_id' => 789746), 2, BBCache::TYPE_TEAM);
-        $this->assertServiceSuccessful($team_result2);
-        $this->assertServiceLoadedFromCache($team_result2);
-        //Reload games - should be cached
-        $game_result = $this->bb->call('Game.GameSearch.Search', array('game' => 'quake'), 2, BBCache::TYPE_GAME);
-        $this->assertServiceListSuccessful($game_result, 'games');
-        $this->assertServiceLoadedFromCache($game_result);
-    }
-    public function test_clear_id() {
-        //Cache a tournament, specify cache id
-        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xQL1302101'), 2, BBCache::TYPE_TOURNAMENT, 'xQL1302101');
-        $this->assertServiceSuccessful($result);
-        //cache a second tournament
-        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xSC213021613'), 2, BBCache::TYPE_TOURNAMENT, 'xSC213021613');
-        $this->assertServiceSuccessful($result);
+	/**
+	 * Test deleting a callback
+	 * @covers BBCallback::unregister
+	 */
+	public function test_unregister() {
+		$this->assertID($id = $this->object->register(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id, 'http://binarybeast.com/callback/test/' . uniqid()));
+		$this->assertTrue($this->object->unregister($id));
+	}
 
-        //Clear cache for second tour
-        $this->assertTrue($this->object->clear_cache(null, null, 'xSC213021613'));
+	/**
+	 * Load a list of registered callbacks
+	 * @covers BBCallback::load_list
+	 */
+	public function test_list() {
+		$this->assertID($this->object->register(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id, 'http://binarybeast.com/callback/test/' . uniqid()));
+		$this->assertID($this->object->register(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id, 'http://binarybeast.com/callback/test/' . uniqid()));
+		$this->assertID($this->object->register(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id, 'http://binarybeast.com/callback/test/' . uniqid()));
 
-        //Reload first - should be 
-        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xQL1302101'), 2, BBCache::TYPE_TOURNAMENT, 'xQL1302101');
-        $this->assertServiceLoadedFromCache($result);
-        //Reload second - shoudl not be cached
-        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xSC213021613'), 2, BBCache::TYPE_TOURNAMENT, 'xSC213021613');
-        $this->assertServiceNotLoadedFromCache($result);
-    }
-    /**
-     * @group clear_expired_cache
-     */
-    public function test_clear_expired() {
-        //Delete all tournament cache to avoid conflicts with previous tests
-        $this->assertTrue($this->bb->clear_cache(null, BBCache::TYPE_TOURNAMENT));
+		$this->assertListFormat($this->object->load_list(), array('id', 'event_id', 'url'));
+	}
+	
+	/**
+	 * BinaryBeast.com/callback/test allows us to test the tester heh
+	 * @covers BBCallback::test
+	 */
+	public function test_test() {
+		$response = $this->object->test(BBCallback::EVENT_TOURNAMENT_MATCH_REPORTED, 'xMyTourney!', 'http://binarybeast.com/callback/test/' . uniqid());
+		$this->assertTrue(is_string($response));
+		$this->assertNotNull($decoded = json_decode($response));
+		$this->assertEquals($decoded->trigger_id, 'xMyTourney!');
+	}
 
-        //Cache a tournament, specify negative ttl to auto-expire
-        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xQL1302101'), -1, BBCache::TYPE_TOURNAMENT, 'xQL1302101');
-        $this->assertServiceSuccessful($result);
+	/**
+	 * Test tournament's on_change callback wrapper
+	 * @covers BBTournament::on_change
+	 */
+	public function test_tournament_on_change() {
+		//First, create a real tournament
+		$this->tournament = $this->bb->tournament();
+		$this->tournament->title = 'Testing on_change callback';
+		$this->assertSave($this->tournament->save());
 
-        //Cache a second tour, with normal cache ttl
-        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xSC213021613'), 2, BBCache::TYPE_TOURNAMENT, 'xSC213021613');
-        $this->assertServiceSuccessful($result);
+		//Register the callback hosted by bb.com
+		$this->assertSave($this->tournament->on_change('http://binarybeast.com/callback/test'));
+	}
 
-        //clear expired cache
-        $this->assertTrue($this->object->clear_expired_cache());
+	/**
+	 * Test tournament's on_change callback wrapper
+	 * @covers BBTournament::on_start_groups
+	 */
+	public function test_tournament_on_start_groups() {
+		$this->assertSave($this->tournament->on_start_groups('http://binarybeast.com/callback/test'));
+	}
 
-        //Reload tour 1 - shouldn't be cached
-        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xQL1302101'), -1, BBCache::TYPE_TOURNAMENT, 'xQL1302101');
-        $this->assertServiceNotLoadedFromCache($result);
-
-        //Reload tour 2 - should be cached
-        $result = $this->object->call('Tourney.TourneyLoad.Info', array('tourney_id' => 'xSC213021613'), 2, BBCache::TYPE_TOURNAMENT, 'xSC213021613');
-        $this->assertServiceLoadedFromCache($result);
-    }
-
+	/**
+	 * Test tournament's on_change callback wrapper
+	 * @covers BBTournament::on_start_brackets
+	 */
+	public function test_tournament_on_start_brackets() {
+		$this->assertSave($this->tournament->on_start_brackets('http://binarybeast.com/callback/test'));
+	}
 }
 
 ?>

@@ -170,6 +170,10 @@
  * <b>Alias for {@link BinaryBeast::legacy()}</b><br />
  * Returns the BBLegacy class, that is used to execute the old wrapper methods that were provided in earlier versions of this library
  * 
+ * @property BBCallback $callback
+ * <b>Alias for {@link BinaryBeast::callback()}</b><br />
+ * Returns the BBCallback class, used for managing event-triggered callbacks (also known as hooks)
+ * 
  * @property BBCache $cache
  * <b>Alias for {@link BinaryBeast::cache()}</b><br />
  * The {@link BBCache} class, which is used to save and retrieve API responses from a local database, to cut down on API calls<br />
@@ -179,8 +183,8 @@
  * @package BinaryBeast
  * 
  * 
- * @version 3.0.2
- * @date 2013-03-27
+ * @version 3.0.3
+ * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -248,10 +252,16 @@ class BinaryBeast {
     public $result_history  = array();
 
     /**
-     * Store an instance of BBLegacy, since it's loaded on-demand
+	 * Cached instance of BBLegacy
      * @var BBLegacy
      */
     private $legacy = null;
+
+    /**
+	 * Cached instance of BBCallback
+     * @var BBCallback
+     */
+    private $callback = null;
 
     /**
      * Store an instance of BBCache
@@ -928,7 +938,7 @@ class BinaryBeast {
      */
     public function &__get($name) {
         //Define a list of acceptable methods that are allowed to be called as property
-        if(in_array($name, array('tournament', 'team', 'round', 'match', 'match_game', 'map', 'country', 'game', 'race', 'legacy', 'cache'))) {
+        if(in_array($name, array('tournament', 'team', 'round', 'match', 'match_game', 'map', 'country', 'game', 'race', 'legacy', 'cache', 'callback'))) {
             return $this->{$name}();
         }
 
@@ -1043,6 +1053,22 @@ class BinaryBeast {
         //Return a reference to a newly instantated BBLegacy class
         $this->legacy = new BBLegacy($this);
         return $this->legacy;
+    }
+    /**
+     * Returns a cached instance of BBCallback
+     * 
+     * @return BBCallback
+     */
+    public function &callback() {
+        //Already instantiated
+        if(!is_null($this->callback)) return $this->callback;
+
+        //Make sure that BBLegacy.php is included
+        $this->load_library('BBCallback');
+
+        //Return a reference to a newly instantated BBLegacy class
+        $this->callback = new BBCallback($this);
+        return $this->callback;
     }
 
     /**
