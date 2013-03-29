@@ -10,8 +10,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.1
- * @date 2013-03-27
+ * @version 3.0.2
+ * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -173,7 +173,7 @@ abstract class BBModel extends BBSimpleModel {
         $this->new_data[$key]   = $value;
 
         //Flag changes in this object, and the parent if appropriate
-        $this->on_change();
+        $this->flag_changed();
     }
     /**
      * Update a current value without flagging changes, just direclty change it
@@ -348,7 +348,7 @@ abstract class BBModel extends BBSimpleModel {
         $this->changed = false;
 
         //Unflag child-changes in parent
-        $this->on_change();
+        $this->flag_changed();
     }
 
     /**
@@ -368,7 +368,7 @@ abstract class BBModel extends BBSimpleModel {
         $this->import_values($this->get_sync_values());
 
 		//Reset $changed flags
-		$this->on_change();
+		$this->flag_changed();
     }
 
     /**
@@ -781,7 +781,7 @@ abstract class BBModel extends BBSimpleModel {
         $this->changed = true;
 
         //Propogate up, flag all parents of parents of parents etc etc
-        $this->on_change(false);
+        $this->flag_changed(false);
     }
     /**
      * Removes any references to a child class (team/round for tournaments.. etc), so we know that
@@ -812,7 +812,7 @@ abstract class BBModel extends BBSimpleModel {
 		 * If determined that we no longer have unsaved changes..
 		 * Propogate up, flag all parents of parents of parents etc etc
 		 */
-        if(!$this->changed) $this->on_change(false);
+        if(!$this->changed) $this->flag_changed(false);
     }
 
     /**
@@ -992,7 +992,7 @@ abstract class BBModel extends BBSimpleModel {
      * @param bool $changed    true by default, set to false to skip notifying the parent class of changes
      * @return void
      */
-    protected function on_change($flag_parent = true) {
+    protected function flag_changed($flag_parent = true) {
         if($this->orphan_error()) return false;
 
         //Determine the $changed flag
