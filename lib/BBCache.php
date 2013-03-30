@@ -20,7 +20,7 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.1
+ * @version 3.0.2
  * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -75,6 +75,8 @@ class BBCache {
      * Constructor
      * Stores local references to the API library, and the database connection
      * 
+     * @ignore
+     * 
      * @param BinaryBeast   $bb
      */
     function __construct(BinaryBeast &$bb, BBConfiguration &$config) {
@@ -94,6 +96,7 @@ class BBCache {
      *  all required values have been defined, becauase we'll
      *  simply fail silently if not configured
      * 
+     * @ignore
      * @return boolean
      */
     private function check_values() {
@@ -114,6 +117,9 @@ class BBCache {
      *  otherwise if we're successful, we return true
      * 
      * So evaluate the result using === true
+     * 
+     * @ignore
+     * @return boolean
      */
     private function connect() {
         //Determine the DSN prefix and port
@@ -161,13 +167,15 @@ class BBCache {
 
     /**
      * Check to see if our $table exists in the database
+     * @ignore
      * @return boolean
      */
     private function check_table() {
         return $this->db->query("SELECT COUNT(*) FROM {$this->config->cache_db_table}") !== false;
     }
     /**
-     * Attempt to create the table 
+     * Attempt to create the table
+     * @ignore
      * @return boolean
      */
     private function create_table() {
@@ -291,6 +299,8 @@ class BBCache {
     /**
      * Used by call() to update an existing record
      * 
+     * @ignore
+     * 
      * @param int $id
      * @param int $ttl
      * @param string $result
@@ -306,6 +316,8 @@ class BBCache {
     }
     /**
      * Used by call() to create a new cache record
+     * 
+     * @ignore
      * 
      * @param string $svc
      * @param int $object_type
@@ -327,6 +339,7 @@ class BBCache {
      * Allows us to save large API result sets directly into the database,
      *  without having to worry too much about taking up too much space
      * 
+     * @ignore
      * @param array     object to compress
      */
     private function compress($result) {
@@ -335,6 +348,7 @@ class BBCache {
     }
     /**
      * Decompress a value fetched from the database
+     * @ignore
      */
     private function decompress($text) {
 		//json
@@ -346,6 +360,8 @@ class BBCache {
      *  service name, object type, object id, and any combination of
      * 
      * Note that the 'WHERE' keyword IS returned
+     * 
+     * @ignore
      * 
      * @param string $svc
      * @param int $object_type
@@ -368,6 +384,9 @@ class BBCache {
         return $where;
     }
 
+    /**
+     * @ignore
+     */
 	function __sleep() {
 		return array('type', 'server', 'database', 'table');
 	}

@@ -17,8 +17,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -34,6 +34,7 @@ class BBLegacy {
     /**
      * Constructor, save a reference to the new library,
      * which handles the actual API iteractions
+     * @ignore
      */
     function __construct(&$bb) {
         $this->bb = $bb;
@@ -163,6 +164,8 @@ class BBLegacy {
      * previously we had defined each option as a parameter - so in case they're still 
      * using the old method, we'll make sure it still works
      * 
+     * @ignore
+     * 
      * @param string $title
      * @param string $description
      * @param int $public
@@ -246,6 +249,8 @@ class BBLegacy {
      * Created to allow existing applications to download this new class without breaking their application
      * 
      * The new method of calling complicated services is to pass in an associative array of arguments
+     * 
+     * @ignore
      * 
      * @param type $tourney_id
      * @param type $title

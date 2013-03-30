@@ -110,6 +110,8 @@ class BBRound extends BBModel {
      * 
      * @see BBModel::__set()
      * 
+     * @ignore
+     * 
      * @return void
      */
     public function __set($name, $value) {

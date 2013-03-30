@@ -10,7 +10,7 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.2
+ * @version 3.0.3
  * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -124,6 +124,8 @@ abstract class BBModel extends BBSimpleModel {
      * Stores a reference to the main BinaryBeast library class, 
      * and imports any data or id provided
      * 
+     * @ignore
+     * 
      * @param BinaryBeast $bb       Reference to the main API class
      * @param object      $data     Optionally auto-load this object with values from $data
      */
@@ -159,6 +161,8 @@ abstract class BBModel extends BBSimpleModel {
      *  1) Add it to new_data
      *  2) Update or add it to the public $data array
      * 
+     * @ignore
+     * 
      * @param string $key
      * @param mixed $value
      */
@@ -178,6 +182,8 @@ abstract class BBModel extends BBSimpleModel {
     /**
      * Update a current value without flagging changes, just direclty change it
      * 
+     * @ignore
+     * 
      * @param string $key       Value name
      * @param string $value     New value
      * @return void
@@ -195,6 +201,7 @@ abstract class BBModel extends BBSimpleModel {
 	 * 
 	 * It also will call set_error, so you don't have to handle the error if orphaned
 	 * 
+     * @ignore
 	 * @return boolean
 	 */
 	protected function orphan_error() {
@@ -721,6 +728,7 @@ abstract class BBModel extends BBSimpleModel {
     /**
      * Attempt to extract the id value from $this->data, and assign it to $ths->{$id_property}
      * 
+     * @ignore
      * @return boolean - true if found 
      */
     protected function extract_id() {
@@ -821,6 +829,8 @@ abstract class BBModel extends BBSimpleModel {
      * 
      * @todo don't initalize $ids unless its needed
      * 
+     * @ignore
+     * 
      * @param BBModel|int $child
      * @param BBModel[] $children
      * @return BBModel|null
@@ -870,6 +880,8 @@ abstract class BBModel extends BBSimpleModel {
      * Empties the lists of children being tracked as having changes
      * 
      * If no $class is provided, ALL children will be removed
+     * 
+     * @ignore
      * 
      * @param string $class
      */
@@ -926,6 +938,8 @@ abstract class BBModel extends BBSimpleModel {
      * For example for touranments, you call tournament->remove_child($team),
      *  and it will call BBModel, providing the $teams array
      * 
+     * @ignore
+     * 
      * @param BBModel   $child
      * @param array     $children
      * @param bool      $preserve       false by default - set this to true to skip the step where
@@ -972,7 +986,10 @@ abstract class BBModel extends BBSimpleModel {
      * Used internally to remove any children being tracked internally, that do not exist on the API - 
      *      aka they don't have an id - so we're deleting all unsaved children
      * 
+     * @ignore
+     * 
      * @param BBModel[] $children
+     * @return void
      */
     protected function remove_new_children(&$children) {
         if(is_array($children)) {
@@ -989,6 +1006,7 @@ abstract class BBModel extends BBSimpleModel {
      * Called when something changes, so that we can decide
      *  notify parent classes of unsaved changes when appropriate
      * 
+     * @ignore
      * @param bool $changed    true by default, set to false to skip notifying the parent class of changes
      * @return void
      */
@@ -1020,6 +1038,8 @@ abstract class BBModel extends BBSimpleModel {
      * Sets the public $changed flag based on 
      *  if we have any new data in $new_data, and if we have
      *  any unsaved children
+     * 
+     * @ignore
      */
     protected function calculate_changed() {
         $this->changed = sizeof($this->new_data) > 0 || $this->changed_children_count > 0;

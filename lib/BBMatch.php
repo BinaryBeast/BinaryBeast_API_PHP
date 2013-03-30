@@ -356,7 +356,7 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.2
+ * @version 3.0.3
  * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -501,6 +501,7 @@ class BBMatch extends BBModel {
      * Overload BBModel::__get so that when score and o_score are accessed, we can
      *  return the number of game_wins instead of the not-likely-to-be-used score and o_score values
      * 
+     * @ignore
      * @param string $name
      * @return mixed
      */
@@ -517,6 +518,7 @@ class BBMatch extends BBModel {
 
     /**
      * Overload BBModel's __set so we can handle setting team ids, and draw manually
+     * @ignore
      * @param string $name
      * @param mixed $value
      */
@@ -693,6 +695,7 @@ class BBMatch extends BBModel {
      *  use internal team_id values to get a BBTeam class
      *  for teams in this match from our BBTournament
      * 
+     * @ignore
      * @param string $property      Which value to use for the team_id (tourney_team_id, o_tourney_team_id)
      * @return BBTournament
      */

@@ -26,7 +26,7 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.1
+ * @version 3.0.2
  * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -81,6 +81,7 @@ class BBHelper {
      * There are many "translation" methods in this class
      * To keep the code dry, they all utilize this for the actual grunt work
      * 
+     * @ignore
      * @param mixed $value
      * @param array $translation
      * @param mixed     
@@ -541,6 +542,7 @@ class BBHelper {
 	/**
 	 * Used by get_available_brackets to add a bracket to the 
 	 *	$brackets array, based on labels / arrays 
+     * @ignore
 	 * @return void - works on $brackets by reference
 	 */
 	private static function get_bracket(&$brackets, $bracket, $label, $labels, $arrays) {

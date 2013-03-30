@@ -21,8 +21,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -67,6 +67,8 @@ class BBSimpleModel {
      *  and generates a UID to guarantee all new objects will be unique (important while flagging child changes, 
      *      because PHP can confuse new objects if they haven't had any unique settings set)
      * 
+     * @ignore
+     * 
      * @param BinaryBeast $bb       Reference to the main API class
      */
     function __construct(BinaryBeast &$bb) {
@@ -78,7 +80,9 @@ class BBSimpleModel {
 
     /**
      * Calls the BinaryBeast API using the given service name and arguments, 
-     * and grabs the result code so we can locally stash it 
+     * and grabs the result code so we can locally stash it
+     * 
+     * @ignore
      * 
      * @param string $svc    		Service to call (ie Tourney.TourneyCreate.Create)
      * @param array $args     		Arguments to send
@@ -106,6 +110,8 @@ class BBSimpleModel {
      * Lastly, we return false - this allows model methods simultaneously set an error, and return false
      * at the same time - allowing me to be lazy and type that all into a single line :)
      * 
+     * @ignore
+     * 
      * @param array|string $error
      * @return false
      */
@@ -127,6 +133,7 @@ class BBSimpleModel {
 
     /**
      * Remove any existing errors
+     * @ignore
      * @return void
      */
     protected function clear_error() {
@@ -136,8 +143,9 @@ class BBSimpleModel {
     /**
      * Get the service that the child class supposedly defines
      * 
-     * @param string $svc
+     * @ignore
      * 
+     * @param string $svc
      * @return string
      */
     protected function get_service($svc) {
@@ -146,6 +154,9 @@ class BBSimpleModel {
     /**
      * Looks for a class constant for cache settings, and falls back on
      *  BBSimpleModel values
+     * 
+     * @ignore
+     * 
      * @param string $setting  (for CACHE_OBJECT_TYPE, use "object_type")
      * @return string
      */
@@ -172,6 +183,8 @@ class BBSimpleModel {
      *      $tournament->delete();
      *  }
      * 
+     * @ignore
+     * 
      * @param array $list
      * @param string $class
      *      By default this method will use cast each object into whatever the current class is
@@ -197,13 +210,18 @@ class BBSimpleModel {
     /**
      * Used by SimpleModel classes for simple list service requests, like searching games / countries
      * 
+     * @ignore
+     * 
      * @param string    $svc                Service name (like Game.GameSearch.Search)
      * @param array     $args               Array of arguments to submit
      * @param string    $list_name          Name of the array we should expect to be returned containing the list (example games, or tournies)
      * @param string    $wrap_class
      *          Disabled by default.  Use this value if you want items in the resulting array to be cast
      *          into a certain class (for example, casting a list of tournaments into BBTournament)
-     * @return array  - false if it failed
+     * @return object[]|BBModel[]|boolean
+     * - Array of simple objects by default
+     * - Array of BBModel instances, if you defined a value for <var>$wrap_class</var>
+     * - False if the call failed
      */
     protected function get_list($svc, $args, $list_name, $wrap_class = null) {
 		

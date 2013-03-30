@@ -310,6 +310,8 @@ class BBMatchGame extends BBModel {
      * 
      * @see BBModel::__set()
      * 
+     * @ignore
+     * 
      * @return void
      */
     public function __set($name, $value) {
@@ -323,6 +325,8 @@ class BBMatchGame extends BBModel {
     
     /**
      * Returns a reference to the match this game is in
+     * 
+     * @ignore
      * 
      * @return BBMatch
      */
