@@ -600,6 +600,57 @@ class BBTournamentTest extends BBTest {
 
         $this->assertNull($this->object->open_match($team1, $invalid_team));
     }
+
+    /**
+     * @covers BBTournament::brackets
+     * @group new
+     */
+    public function test_brackets() {
+        $this->get_tournament_with_open_matches();
+
+        //GOGOGO!
+        $this->assertTrue(is_object($brackets = $this->object->brackets()));
+
+        //Should have a 'winners' array
+        $this->assertObjectHasAttribute('winners', $brackets);
+
+        //Based on the 8-man bracket size, we know there should be 5 rounds, if you include the psuedo "display" round
+        $this->assertArraySize($brackets->winners, 5);
+
+        //Every match in first round should have a team and oppponent
+        foreach($brackets->winners as $match) {
+            $this->assertInstanceOf('BBTeam', $match->team);
+            $this->assertInstanceOf('BBTeam', $match->opponent);
+        }
+
+        /**
+         * @todo finish building this test, then build test_groups + report_from_brackets|groups
+         */
+    }
+
+    /**
+     * @covers BBTournament::brackets
+     * @group new
+     */
+    public function test_groups() {
+        $this->assertTrue(false, 'Implement this test');
+    }
+
+    /**
+     * Test reporting wins, by fetching open_match objects from a bracket draw
+     * @group new
+     */
+    public function test_report_from_brackets() {
+        $this->assertTrue(false, 'Implement this test');
+    }
+
+    /**
+     * Test reporting wins, by fetching open_match objects from a group-rounds draw
+     * @group new
+     */
+    public function test_report_from_groups() {
+        $this->assertTrue(false, 'Implement this test');
+    }
 }
 
 ?>

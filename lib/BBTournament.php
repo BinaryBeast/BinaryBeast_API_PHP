@@ -669,11 +669,16 @@
  * <b>Alias for {@link BBTournament::open_matches()}</b><br />
  * An array of matches in this tournament that still need to be reported
  * 
+ * @property-read BBBracketsObject $brackets
+ * <b>Alias for {@link brackets()}</b><br />
+ * The data object containing elimination bracket matches and results
+ * 
+ * 
  * 
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.2
+ * @version 3.0.3
  * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -701,6 +706,9 @@ class BBTournament extends BBModel {
     const SERVICE_LOAD_ROUNDS               = 'Tourney.TourneyLoad.Rounds';
     const SERVICE_UPDATE_ROUNDS             = 'Tourney.TourneyRound.BatchUpdate';
     const SERVICE_UPDATE_TEAMS              = 'Tourney.TourneyTeam.BatchUpdate';
+    /* Loading Brackets / Rounds */
+    const SERVICE_LOAD_GROUPS               = 'Tourney.TourneyDraw.Groups';
+    const SERVICE_LOAD_BRACKETS             = 'Tourney.TourneyDraw.Brackets';
 
     /*
      * Caching settings
@@ -736,12 +744,11 @@ class BBTournament extends BBModel {
      * @var int
      */
     const CACHE_TTL_LIST_OPEN_MATCHES	= 20;
-
-
-    /*
-     * Callbacks
-     * @todo Implement these callbacks
+    /**
+     * Cache the Groups/Brackets drawing services
+     * @var int
      */
+    const CACHE_TTL_DRAW                = 30;
 
 
     /**
@@ -814,6 +821,19 @@ class BBTournament extends BBModel {
      * @var BBMatch[]
      */
     private $open_matches;
+
+    /**
+     * Result of calling the TourneyDraw.Brackets service
+     * @var BBBracketsObject
+     */
+    private $brackets;
+
+    /**
+     * Result of calling the TourneyDraw.Groups service
+     * @todo implement this
+     * @var BBBracketsObject
+     */
+    private $groups;
 
     /**
      * The name BinaryBeast API uses for this object's unique ID - used by {@link BBModel::load()} when determining the local <var>$id</var>
@@ -1010,7 +1030,9 @@ class BBTournament extends BBModel {
         //GOGOGO!
         $this->rounds = null;
         $this->teams = null;
-        $this->teams();
+        $this->brackets = null;
+        $this->groups = null;
+        //$this->teams();
         $this->open_matches = null;
     }
     
@@ -1969,9 +1991,9 @@ class BBTournament extends BBModel {
         }
 
         //Try to find the match with these two teams
-        foreach($this->open_matches() as $match) {
+        foreach($this->open_matches() as $key => $match) {
             if($match->team_in_match($team1) && $match->team_in_match($team2) ) {
-                return $match;
+                $this->open_matches[$key];
             }
         }
 
@@ -2244,6 +2266,208 @@ class BBTournament extends BBModel {
 	public function on_settings($url, $action = 'post', $recurrent = true, $args = null) {
 		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_SETTINGS_CHANGED, $url, $action, $recurrent, $args);
 	}
+    
+    /**
+     * Fetch the data object that determines the elimination bracket participiants and results
+     * 
+     * @todo implement the $bracket filter
+     * 
+     * @param int|null $bracket
+     *  Optionally define a specific bracket to return<br />
+     * 
+     * @return BBBracketsObject|BBBracketRoundObject[]|boolean
+     * - {@link BBBrackets} returned by default
+     * - {@link BBBracketObject} array returned if you define a <var>$bracket</var> integer<br /><br
+     * - <b>False</b> returned if tournament has no brackets / error communicating with the API
+     */
+    public function &brackets($bracket = null) {
+        //Already set
+        if(!is_null($this->brackets)) return $this->brackets;
+
+        //Failure
+        if(!BBHelper::tournament_has_brackets($this)) {
+            return $this->bb->ref(
+                $this->set_error('This tournament does not have any brackets to load!')
+            );
+        }
+
+        //GOGOGO!
+        $result = $this->call(self::SERVICE_LOAD_BRACKETS, array('tourney_id' => $this->id),
+                self::CACHE_TTL_DRAW, self::CACHE_OBJECT_TYPE, $this->id);
+
+        //Failure!
+        if($result->result != BinaryBeast::RESULT_SUCCESS) {
+            $this->set_error('Error returned from the API when calling the bracket drawing service, please refer to $bb->result_history for details');
+            return $this->bb->ref(false);
+        }
+
+        /*
+         * Success!
+         * 
+         * Now pass each returned match through process_draw_match,
+         * which will attempt to convert the values into Model objects
+         */
+        $this->brackets = new stdClass();
+        foreach($result->brackets as $bracket => $rounds) {
+            $bracket_label = BBHelper::get_bracket_label($bracket, true);
+            $this->brackets->$bracket_label = array();
+            foreach($rounds as $round => $matches) {
+                $this->brackets->$bracket_label[$round] = array();
+                foreach($matches as $match) {
+                    $this->brackets->$bracket_label[$round][] = $this->process_draw_match($match);
+                }
+            }
+        }
+
+        //Success! now return the result
+        return $this->brackets;
+    }
+
+    /**
+     * Fetch the data object that determines the elimination bracket participiants and results
+     * 
+     * @todo implement this method
+     * 
+     * @return - define groups data struct here
+     */
+    public function &groups() {
+        //Already set
+        if(!is_null($this->brackets)) return $this->brackets;
+
+        //Failure
+        if(!BBHelper::tournament_has_groups($this)) {
+            return $this->bb->ref(
+                $this->set_error('This tournament does not have any groups to load!')
+            );
+        }
+
+        //GOGOGO!
+        $result = $this->call(self::SERVICE_LOAD_GROUPS, array('tourney_id' => $this->id),
+                self::CACHE_TTL_DRAW, self::CACHE_OBJECT_TYPE, $this->id);
+
+        //Failure!
+        if($result->result != BinaryBeast::RESULT_SUCCESS) {
+            $this->set_error('Error returned from the API when calling the bracket drawing service, please refer to $bb->result_history for details');
+            return $this->bb->ref(false);
+        }
+
+        /*
+         * Success!
+         * 
+         * Now pass each returned match through process_draw_match,
+         * which will attempt to convert the values into Model objects,
+         * save the result in brackets, keyed by the group label
+         */
+        $this->groups = new stdClass();
+        foreach($result->fixtures as $group => $rounds) {
+            $this->groups->$group = array();
+            foreach($rounds as $round => $matches) {
+                $this->groups->$group[$round] = array();
+                foreach($matches as $match) {
+                    $this->groups->$group[$round][] = $this->process_draw_match($match);
+                }
+            }
+        }
+
+        //Success! now return the result
+        return $this->groups;
+    }
+    
+    
+    /**
+     * Takes match objects from the API "draw" services, and instantiates models wherever possible
+     * 
+     * Replaces by reference
+     * 
+     * @param object $match_object
+     * @return void
+     */
+    private function process_draw_match(&$match_object){
+        /*
+         * Convert participants into {@link BBTeam} models
+         * 
+         * We'll use {@link team()} for this.. beacuse if team() can't find an existing model for us..
+         * then something's gone terribly wrong
+         */
+        if(!is_null($match_object->team)) {
+            $match_object->team = $this->team($match_object->team->tourney_team_id);
+        }
+        if(!is_null($match_object->opponent)) {
+            $match_object->opponent = $this->team($match_object->opponent->tourney_team_id);
+        }
+
+        /*
+         * Convert existing match result as {@link BBMatch} model object
+         */
+        if(!is_null($match_object->match)) {
+            $match = $this->bb->match($match_object->match);
+            $match->init($this);
+            $match_object->match = $match;
+        }
+
+        //Create a new unplayed / open match object, so this match can easily be reported directly
+        else {
+            if(!is_null($match_object->team) && !is_null($match_object->opponent)) {
+                //open_match can handle the conversion for us, which guarantees that we only create a new BBMatch object if the match is truly open / unplayed
+                $match_object->match = &$this->open_match($match_object->team, $match_object->opponent);
+            }
+        }
+    }
+}
+
+
+/**
+ * The data structure for elimination brackets
+ * 
+ * This class is never used, it soley exists for documentation
+ * 
+ * Documentation is for the return values of {@link BBTournament::brackets()}
+ * 
+ * @todo figure out how to document this.. $winners is just an indexed array, and each element is an array of BBBracketMatchObject
+ * 
+ * 
+ * @package BinaryBeast
+ * @subpackage Model_ObjectStructure
+ */
+abstract class BBBracketsObject {
+    /**
+     * An array of {@link BBBracketObject},
+     * 
+     * Each object in the array represents a single round in the Winners' Brackets
+     * 
+     * @var BBBracketRoundObject[]
+     */
+    public $winners = array(
+      0 => array(
+        //Match  
+      )  
+    );
+}
+
+/**
+ * The data structure representing a single round within an elimination bracket
+ * 
+ * This class is never used, it soley exists for documentation
+ * 
+ * Documentation is for the return values of {@link BBTournament::brackets()}
+ * 
+ * @property-read BBTeam|null $team
+ * The first team in the match, currently facing {@link $opponent}<br /><br/>
+ * If <b>null</b>, it means that this position hasn't been filled by a team yet
+ * 
+ * @property-read BBTeam|null $opponent
+ * The second team in the match, currently facing {@link $team}<br /><br/>
+ * If <b>null</b>, it means that this position hasn't been filled by a team yet
+ * 
+ * @property-read BBMatch|null $match
+ * The BBMatch object that represents the result of this match<br /><br />
+ * If <b>null</b>, it means that this either {@link $team} or {@link $opponent} are null<br /><br />
+ * If this match has not yet been played, a BBMatch object is set representing the unplayed match, so that you can easily report it
+ * 
+ * @package BinaryBeast
+ * @subpackage Model_ObjectStructure
+ */
+class BBBracketMatchObject extends ArrayObject {
 }
 
 ?>
