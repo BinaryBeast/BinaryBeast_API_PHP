@@ -26,8 +26,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.0
- * @date 2013-03-26
+ * @version 3.0.1
+ * @date 2013-03-29
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -310,6 +310,19 @@ class BBHelper {
     }
 
     /**
+     * Evaluates the given tournament to see if it has group rounds in it
+     * 
+     * Unlike in_group_rounds, this will also return true if the tournament has group rounds in a previous phase
+     * 
+     * @param BBTournament $tournament
+     * @return boolean
+     */
+    public static function tournament_has_group_rounds(BBTournament &$tournament) {
+        if($tournament->status == 'Active-Groups' || $tournament->status == 'Active-Brackets') return true;
+        return $tournament->status == 'Complete' && $tournament->type_id == BinaryBeast::TOURNEY_TYPE_CUP;
+    }
+
+    /**
      * Evaluates the given tournament to see if it has active brackets
      * 
      * The biggest reason for moving this to BBHelper is that in the future, BinaryBeast may
@@ -323,6 +336,17 @@ class BBHelper {
      */
     public static function tournament_in_brackets(BBTournament &$tournament) {
         return $tournament->status == 'Active' || $tournament->status == 'Active-Brackets';
+    }
+    /**
+     * Evaluates the given tournament to see if it has brackets
+     * 
+     * Much like tournament_in_brackets, except this method also allows the tournament to be Complete
+     * 
+     * @param BBTournament $tournament
+     * @return boolean
+     */
+    public static function tournament_has_brackets(BBTournament &$tournament) {
+        return $tournament->status == 'Active' || $tournament->status == 'Active-Brackets' || $tournament->status == 'Complete';
     }
 
     /**
