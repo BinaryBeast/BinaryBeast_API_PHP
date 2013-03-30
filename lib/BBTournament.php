@@ -678,8 +678,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.3
- * @date 2013-03-29
+ * @version 3.0.4
+ * @date 2013-03-30
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -2309,12 +2309,11 @@ class BBTournament extends BBModel {
          */
         $this->brackets = new stdClass();
         foreach($result->brackets as $bracket => $rounds) {
-            $bracket_label = BBHelper::get_bracket_label($bracket, true);
-            $this->brackets->$bracket_label = array();
+			$this->brackets->{$bracket} = array();
             foreach($rounds as $round => $matches) {
-                $this->brackets->$bracket_label[$round] = array();
+                $this->brackets->{$bracket}[$round] = array();
                 foreach($matches as $match) {
-                    $this->brackets->$bracket_label[$round][] = $this->process_draw_match($match);
+					$this->brackets->{$bracket}[$round][] = $this->process_draw_match($match);
                 }
             }
         }
@@ -2360,11 +2359,12 @@ class BBTournament extends BBModel {
          */
         $this->groups = new stdClass();
         foreach($result->fixtures as $group => $rounds) {
-            $this->groups->$group = array();
+			$group = strtolower($group);
+			$this->groups->{$group} = array();
             foreach($rounds as $round => $matches) {
-                $this->groups->$group[$round] = array();
+				$this->groups->{$group}[$round] = array();
                 foreach($matches as $match) {
-                    $this->groups->$group[$round][] = $this->process_draw_match($match);
+                    $this->groups->{$group}[$round][] = $this->process_draw_match($match);
                 }
             }
         }
@@ -2380,9 +2380,9 @@ class BBTournament extends BBModel {
      * Replaces by reference
      * 
      * @param object $match_object
-     * @return void
+     * @return object
      */
-    private function process_draw_match(&$match_object){
+    private function process_draw_match($match_object) {
         /*
          * Convert participants into {@link BBTeam} models
          * 
@@ -2396,9 +2396,7 @@ class BBTournament extends BBModel {
             $match_object->opponent = $this->team($match_object->opponent->tourney_team_id);
         }
 
-        /*
-         * Convert existing match result as {@link BBMatch} model object
-         */
+		//Cast as a BBMatch model object
         if(!is_null($match_object->match)) {
             $match = $this->bb->match($match_object->match);
             $match->init($this);
@@ -2412,6 +2410,8 @@ class BBTournament extends BBModel {
                 $match_object->match = &$this->open_match($match_object->team, $match_object->opponent);
             }
         }
+
+		return $match_object;
     }
 }
 

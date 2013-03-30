@@ -613,11 +613,19 @@ class BBTournamentTest extends BBTest {
 
         //Should have a 'winners' array
         $this->assertObjectHasAttribute('winners', $brackets);
+		
+        //Based on the 8-man bracket size, we know there should be 4 rounds, if you include the psuedo "display" round
+        $this->assertArraySize($brackets->winners, 4);
 
-        //Based on the 8-man bracket size, we know there should be 5 rounds, if you include the psuedo "display" round
-        $this->assertArraySize($brackets->winners, 5);
+		//Every match in first round should have a team and oppponent
+		foreach($brackets->winners[0] as $matches) {
+			foreach($matches as $match) {
+				$this->assertInstanceOf('BBTeam', $match->team);
+				$this->assertInstanceOf('BBTeam', $match->opponent);
+				var_dump(['team' => $match->team, 'opponent' => $match->opponent]);
+			}
+		}
 
-        //Every match in first round should have a team and oppponent
         foreach($brackets->winners as $match) {
             $this->assertInstanceOf('BBTeam', $match->team);
             $this->assertInstanceOf('BBTeam', $match->opponent);
