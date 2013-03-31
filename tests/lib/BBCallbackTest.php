@@ -75,6 +75,7 @@ class BBCallbackTest extends BBTest {
 	/**
 	 * Test tournament's on_change callback wrapper
 	 * @covers BBTournament::on_change
+     * @group new
 	 */
 	public function test_tournament_on_change() {
 		//First, create a real tournament
@@ -83,7 +84,17 @@ class BBCallbackTest extends BBTest {
 		$this->assertSave($this->tournament->save());
 
 		//Register the callback hosted by bb.com
-		$this->assertSave($this->tournament->on_change('http://binarybeast.com/callback/test'));
+		$this->assertSave($id = $this->tournament->on_change('http://binarybeast.com/callback/test'));
+
+        /*
+         * Request a test, which returns the response of the URL we registered, which happens to be
+         *  a page hosted on binarybeast.com that simply returns a json string of the callback data
+         */
+        $this->assertTrue(is_string($response = $this->object->test($id)));
+        $this->assertNotNull($decoded = json_decode($response));
+
+        //BinaryBeast's public callback test handler should response should include a trigger id, which should match our tournament's id
+        $this->assertEquals($decoded->trigger_id, $this->tournament->id);
 	}
 
 	/**

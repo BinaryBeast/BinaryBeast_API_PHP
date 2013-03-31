@@ -68,8 +68,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.0
- * @date 2013-03-29
+ * @version 3.0.1
+ * @date 2013-03-30
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -420,10 +420,9 @@ class BBCallback {
 	
 	/**
 	 * Test your callback handler, by requesting a fake callback from BinaryBeast
-	 * 
-	 * 
-	 * <br />
-	 * The paramaters are identical to {@link register()}, refer to the documentation for argument details
+     * 
+     * You can either define a callback, as if you were calling {@link register()}, <br />
+     * Or you can provide a callback id integer to use the values of a callback that you've already registered
 	 * 
 	 * @param int $event_id
 	 * @param int|string $trigger_id
@@ -439,8 +438,9 @@ class BBCallback {
 	 *	If BinaryBeast was successfully able to send data to your $url.. either your url's response will be returned,
 	 *	or a true boolean, in case your URL yielded an empty response
 	 */
-	public function test($event_id, $trigger_id, $url, $action = 'post', $recurrent = false, $args = null) {
+	public function test($callback_id = null, $event_id = null, $trigger_id = null, $url = null, $action = 'post', $recurrent = false, $args = null) {
 		$result = $this->bb->call(self::SERVICE_TEST, array(
+            'callback_id'       => $callback_id,
 			'event_id'			=> $event_id, 
 			'trigger_id'		=> $trigger_id,
 			'url'				=> $url,
