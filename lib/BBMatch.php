@@ -356,8 +356,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.3
- * @date 2013-03-29
+ * @version 3.0.4
+ * @date 2013-04-01
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -642,7 +642,8 @@ class BBMatch extends BBModel {
         if(!is_null($this->team)) return $this->team;
 
         //Use the internal get_team method for this, using the team property
-        return $this->team = &$this->get_team('team');
+        $this->team = &$this->get_team('team');
+        return $this->team;
     }
     /**
      * Returns the BBTeam object for the second player in this match
@@ -657,7 +658,8 @@ class BBMatch extends BBModel {
         if(!is_null($this->opponent)) return $this->opponent;
 
         //Use the internal get_team method for this, using the team property
-        return $this->opponent = &$this->get_team('opponent');
+        $this->opponent = &$this->get_team('opponent');
+        return $this->opponent;
     }
     /**
      * alias for BBMatch::opponent()
@@ -1165,10 +1167,15 @@ class BBMatch extends BBModel {
         //Remove ids from each game
         foreach($this->games as &$game) $game->set_id(null);
 
-		//Wipe all tournament cache, and tournament opponent cache / wins lb_wins losses draws bronze_draws etc
-		$this->tournament->clear_id_cache();
-        $this->team->reload();
-        $this->opponent->reload();
+        //Wipe out all cached opponent / open match cache from the tournament
+		$this->tournament->clear_match_cache();
+        
+        //Flag the teams for a reload (wins / lbwins etc may have changed), and reset opponent / match values etc, to force a fresh query next time they're accessed
+        $this->team->flag_reload();
+        $this->opponent->flag_reload();
+        //
+        $this->team->reset_opponents();
+        $this->opponent->reset_opponents();
 
         return true;
     }
