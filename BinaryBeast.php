@@ -3,6 +3,8 @@
 /**
  * The main library class, used to communicate with the API and as a factory to generate model objects
  * 
+ * @todo add development mode option, which would trigger fatal errors (like API - cURL errors) to be printed directly to the screen)
+ * 
  * ## Before you do ANYTHING else - setup the configuration values
  * 
  * You must setup the configuration values in {@link BBConfiguration}
@@ -906,6 +908,9 @@ class BinaryBeast {
 
         //Execute, and return a parsed result
         $result = curl_exec($curl);
+
+        //Enable for debugging
+        //curl_setopt($curl, CURLOPT_VERBOSE, true);
 
         //SSL Verification failed
         if (!$result) {
