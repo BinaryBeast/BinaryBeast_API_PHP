@@ -678,8 +678,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.4
- * @date 2013-03-30
+ * @version 3.0.5
+ * @date 2013-04-01
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -1051,8 +1051,13 @@ class BBTournament extends BBModel {
         //If reporting multiple matches, we want to hold off on this until all matches have been reported
         if($this->iterating) return false;
 
-        //Delete the cache for open matches for this tournament ID, and teams (since wins / lbwins etc have changed)
-        $this->clear_id_cache(array(self::SERVICE_LIST_OPEN_MATCHES, self::SERVICE_LOAD_TEAMS));
+        //Delete the cache for open matches and drawing for this tournament ID, and teams (since wins / lbwins etc have changed)
+        $this->clear_id_cache(array(
+            self::SERVICE_LIST_OPEN_MATCHES,
+            self::SERVICE_LOAD_TEAMS,
+            self::SERVICE_LOAD_BRACKETS,
+            self::SERVICE_LOAD_GROUPS
+        ));
         
         //Delete ALL team-opponent/match/elimination cache, unfortunately there's no simple way to limit it to this tournament
         $this->clear_service_cache(array(
@@ -1063,6 +1068,10 @@ class BBTournament extends BBModel {
 
         //Clear the open_matches array, to force a fresh query next time it's accessed
         $this->open_matches = null;
+
+        //Delete drawing results, forcing a fresh query next time they're accessed
+        $this->groups = null;
+        $this->brackets = null;
 
         return true;
     }
@@ -1497,7 +1506,7 @@ class BBTournament extends BBModel {
         }
         if($child instanceof BBMatch) {
             //Like team(), we use match() to standardize, in case the input has changed from our cached version
-            if(!is_null($match = &$this->match($child))) {
+            if(!is_null($match = &$this->open_match($child))) {
                 return $this->remove_child_from_list($child, $this->open_matches(), $preserve);
             }
             return false;
@@ -1936,7 +1945,15 @@ class BBTournament extends BBModel {
      * 
 	 * 
 	 * @param int|BBTeam|BBMatch        $team1
+     * <b>Possible values:</b>
+     * - The <b>integer</b> ID the either team in the match
+     * - The {@link BBTeam} object of either team in the match
+     * - A {@link BBMatch} object - to verify that it exists and to fetch the latest and greated instance, stored in our open matches array
+     *  
 	 * @param int|BBTeam                $team2
+     * <b>Possible values:</b>
+     * - The <b>integer</b> ID the either team in the match (can't be the same as <var>$team1</var>)
+     * - The {@link BBTeam} object of either team in the match (can't be the same as <var>$team1</var>)
 	 * 
 	 * @return BBMatch|null
 	 */
@@ -1989,11 +2006,13 @@ class BBTournament extends BBModel {
         if($team1 instanceof BBMatch) {
             return $this->get_child($team1, $this->open_matches());
         }
-
+        
         //Try to find the match with these two teams
-        foreach($this->open_matches() as $key => $match) {
-            if($match->team_in_match($team1) && $match->team_in_match($team2) ) {
-                $this->open_matches[$key];
+        if(!is_null($team1) && !is_null($team2)) {
+            foreach($this->open_matches() as $key => $match) {
+                if($match->team_in_match($team1) && $match->team_in_match($team2) ) {
+                    return $this->open_matches[$key];
+                }
             }
         }
 
@@ -2309,11 +2328,13 @@ class BBTournament extends BBModel {
          */
         $this->brackets = new stdClass();
         foreach($result->brackets as $bracket => $rounds) {
+            //the API's response is keyed by bracket integer, let's translate for convenience of developers
+            $bracket = BBHelper::get_bracket_label($bracket, true);
 			$this->brackets->{$bracket} = array();
             foreach($rounds as $round => $matches) {
                 $this->brackets->{$bracket}[$round] = array();
                 foreach($matches as $match) {
-					$this->brackets->{$bracket}[$round][] = $this->process_draw_match($match);
+					$this->brackets->{$bracket}[$round][] = $this->process_drawn_match($match);
                 }
             }
         }
@@ -2325,7 +2346,7 @@ class BBTournament extends BBModel {
     /**
      * Fetch the data object that determines the elimination bracket participiants and results
      * 
-     * @todo implement this method
+     * @todo document return format
      * 
      * @return - define groups data struct here
      */
@@ -2334,10 +2355,9 @@ class BBTournament extends BBModel {
         if(!is_null($this->brackets)) return $this->brackets;
 
         //Failure
-        if(!BBHelper::tournament_has_groups($this)) {
-            return $this->bb->ref(
-                $this->set_error('This tournament does not have any groups to load!')
-            );
+        if(!BBHelper::tournament_has_group_rounds($this)) {
+            $this->set_error('This tournament does not have any groups to load!');
+            return $this->bb->ref(false);
         }
 
         //GOGOGO!
@@ -2364,7 +2384,7 @@ class BBTournament extends BBModel {
             foreach($rounds as $round => $matches) {
 				$this->groups->{$group}[$round] = array();
                 foreach($matches as $match) {
-                    $this->groups->{$group}[$round][] = $this->process_draw_match($match);
+                    $this->groups->{$group}[$round][] = $this->process_drawn_match($match);
                 }
             }
         }
@@ -2382,7 +2402,7 @@ class BBTournament extends BBModel {
      * @param object $match_object
      * @return object
      */
-    private function process_draw_match($match_object) {
+    private function process_drawn_match($match_object) {
         /*
          * Convert participants into {@link BBTeam} models
          * 
@@ -2407,12 +2427,29 @@ class BBTournament extends BBModel {
         else {
             if(!is_null($match_object->team) && !is_null($match_object->opponent)) {
                 //open_match can handle the conversion for us, which guarantees that we only create a new BBMatch object if the match is truly open / unplayed
-                $match_object->match = &$this->open_match($match_object->team, $match_object->opponent);
+                $match_object->match = $this->open_match($match_object->team, $match_object->opponent);
             }
         }
 
 		return $match_object;
     }
+}
+
+/**
+ * Temporary - trying to figure out how to document the values returned when drawing brackets / groups
+ * $property test2 $winners
+ */
+abstract class test1 {
+}
+/** @var test2[] */
+$test2;
+/**
+ * @property BBTeam $team 
+ * @property BBTeam $opponent 
+ * @property BBMatch $match
+ */
+abstract class test3 {
+    
 }
 
 
