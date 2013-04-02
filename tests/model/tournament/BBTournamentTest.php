@@ -602,8 +602,7 @@ class BBTournamentTest extends BBTest {
     }
 
     /**
-     * @covers BBTournament::brackets
-     * @group new
+     * @covers BBTournament::groups
      */
     public function test_brackets() {
         $this->get_tournament_with_open_matches();
@@ -613,51 +612,98 @@ class BBTournamentTest extends BBTest {
 
         //Should have a 'winners' array
         $this->assertObjectHasAttribute('winners', $brackets);
-		
-        //Based on the 8-man bracket size, we know there should be 4 rounds, if you include the psuedo "display" round
+
+        //Based on the 8-man bracket size, we know there should be 4 rounds (including the psuedo "display" round)
         $this->assertArraySize($brackets->winners, 4);
 
 		//Every match in first round should have a team and oppponent
-		foreach($brackets->winners[0] as $matches) {
-			foreach($matches as $match) {
-				$this->assertInstanceOf('BBTeam', $match->team);
-				$this->assertInstanceOf('BBTeam', $match->opponent);
-				var_dump(['team' => $match->team, 'opponent' => $match->opponent]);
-			}
-		}
-
-        foreach($brackets->winners as $match) {
+		foreach($brackets->winners[0] as $match) {
             $this->assertInstanceOf('BBTeam', $match->team);
             $this->assertInstanceOf('BBTeam', $match->opponent);
-        }
-
-        /**
-         * @todo finish building this test, then build test_groups + report_from_brackets|groups
-         */
+            $this->assertInstanceOf('BBMatch', $match->match);
+		}
     }
 
     /**
-     * @covers BBTournament::brackets
-     * @group new
+     * @covers BBTournament::groups()
      */
     public function test_groups() {
-        $this->assertTrue(false, 'Implement this test');
+        $this->get_tournament_with_open_matches(true);
+
+        $this->assertTrue(is_object($groups = $this->tournament->groups()));
+        
+        /*
+         * Default test settings 2 groups, 8 teams total (4 teams per group)
+         * 
+         * Therefore we should have an array for group a and group b, 3 rounds each
+         */
+        $this->assertArraySize($groups->a, 3);
+        $this->assertArraySize($groups->b, 3);
+
+        //Every single match returned should have a team, opponent, and match
+        foreach($groups as $rounds) {
+            foreach($rounds as $matches) {
+                foreach($matches as $match) {
+                    $this->assertInstanceOf('BBTeam', $match->team);
+                    $this->assertInstanceOf('BBTeam', $match->opponent);
+                    $this->assertInstanceOf('BBMatch', $match->match);
+                }
+            }
+        }
     }
 
     /**
      * Test reporting wins, by fetching open_match objects from a bracket draw
-     * @group new
      */
     public function test_report_from_brackets() {
-        $this->assertTrue(false, 'Implement this test');
+        $this->get_tournament_with_open_matches();
+
+        $this->assertTrue(is_object($brackets = $this->object->brackets()));
+
+        //By default, we won't have any freewins - so just grab the first match in the WB
+        $this->assertInstanceOf('BBMatch', $match = $brackets->winners[0][0]->match);
+
+        //Grab winner / loser objects, verify they're matching up with value sin the bracket draw
+        $this->assertInstanceOf('BBTeam', $winner = $match->team());
+        $this->assertInstanceOf('BBTeam', $loser = $match->team2());
+        $this->assertEquals($brackets->winners[0][0]->team, $winner);
+        $this->assertEquals($brackets->winners[0][0]->opponent, $loser);
+
+        //Report the match
+        $this->assertTrue($match->set_winner($winner));
+
+        //GOGOGO!
+        $this->assertSave($match->report());
+
+        //The original match object should have updated itself
+        $this->assertEquals($match->id, $brackets->winners[0][0]->match->id);
     }
 
     /**
      * Test reporting wins, by fetching open_match objects from a group-rounds draw
-     * @group new
      */
     public function test_report_from_groups() {
-        $this->assertTrue(false, 'Implement this test');
+        $this->get_tournament_with_open_matches(true);
+
+        $this->assertTrue(is_object($groups = $this->object->groups()));
+
+        //Grab the first match in group A
+        $this->assertInstanceOf('BBMatch', $match = $groups->a[0][0]->match);
+
+        //Grab winner / loser objects, verify they're matching up with values in the draw
+        $this->assertInstanceOf('BBTeam', $winner = $match->team());
+        $this->assertInstanceOf('BBTeam', $loser = $match->team2());
+        $this->assertEquals($groups->a[0][0]->team, $winner);
+        $this->assertEquals($groups->a[0][0]->opponent, $loser);
+
+        //Report the match
+        $this->assertTrue($match->set_winner($winner));
+
+        //GOGOGO!
+        $this->assertSave($match->report());
+
+        //The original match object should have updated itself
+        $this->assertEquals($match->id, $groups->a[0][0]->match->id);
     }
 }
 

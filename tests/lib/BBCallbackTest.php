@@ -60,22 +60,64 @@ class BBCallbackTest extends BBTest {
 
 		$this->assertListFormat($this->object->load_list(), array('id', 'event_id', 'url'));
 	}
+
+	/**
+	 * Load a list of registered callbacks - filtered by event_id for this tournament
+	 * @covers BBCallback::load_list
+	 */
+	public function test_list_event() {
+        //Get a fresh touranment, so we know it starts with 0 callbacks
+        $this->get_tournament_inactive();
+
+		$this->assertID($id = $this->object->register(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id, 'http://binarybeast.com/callback/test/' . uniqid()));
+		$this->assertID($this->object->register(BBCallback::EVENT_TOURNAMENT_START_BRACKETS, $this->tournament->id, 'http://binarybeast.com/callback/test/' . uniqid()));
+		$this->assertID($this->object->register(BBCallback::EVENT_TOURNAMENT_START_GROUPS, $this->tournament->id, 'http://binarybeast.com/callback/test/' . uniqid()));
+
+		$this->assertListFormat($list = $this->object->load_list(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id), array('id', 'event_id', 'url'));
+        $this->assertArraySize($list, 1);
+        $this->assertEquals($id, $list[0]->id);
+	}
 	
 	/**
 	 * BinaryBeast.com/callback/test allows us to test the tester heh
 	 * @covers BBCallback::test
 	 */
 	public function test_test() {
-		$response = $this->object->test(BBCallback::EVENT_TOURNAMENT_MATCH_REPORTED, 'xMyTourney!', 'http://binarybeast.com/callback/test/' . uniqid());
+		$response = $this->object->test(null, BBCallback::EVENT_TOURNAMENT_MATCH_REPORTED, 'xMyTourney!',
+                'http://binarybeast.com/callback/test/',
+                null, false, array('CustomARGUMENT' => true));
 		$this->assertTrue(is_string($response));
 		$this->assertNotNull($decoded = json_decode($response));
 		$this->assertEquals($decoded->trigger_id, 'xMyTourney!');
+		$this->assertEquals($decoded->CustomARGUMENT, 1);
 	}
 
 	/**
+	 * BinaryBeast.com/callback/test allows us to test the tester heh
+	 * @covers BBCallback::test
+	 */
+	public function test_custom_args() {
+		$response = $this->object->test(null, BBCallback::EVENT_TOURNAMENT_MATCH_REPORTED, 'xMyTourney!',
+                'http://binarybeast.com/callback/test/',
+                null, false, (object)array(
+                    'custom_arg_0'  =>  0,
+                    'custom_arg_1'  =>  1,
+                    'custom_arg_3'  =>  3,
+                    'TESTING'       =>  15,
+                )
+        );
+		$this->assertTrue(is_string($response));
+		$this->assertNotNull($decoded = json_decode($response));
+		$this->assertEquals($decoded->trigger_id, 'xMyTourney!');
+		$this->assertEquals($decoded->custom_arg_0, 0);
+		$this->assertEquals($decoded->custom_arg_1, 1);
+		$this->assertEquals($decoded->custom_arg_3, 3);
+		$this->assertEquals($decoded->TESTING,      15);
+	}
+    
+	/**
 	 * Test tournament's on_change callback wrapper
 	 * @covers BBTournament::on_change
-     * @group new
 	 */
 	public function test_tournament_on_change() {
 		//First, create a real tournament
@@ -91,26 +133,11 @@ class BBCallbackTest extends BBTest {
          *  a page hosted on binarybeast.com that simply returns a json string of the callback data
          */
         $this->assertTrue(is_string($response = $this->object->test($id)));
-        $this->assertNotNull($decoded = json_decode($response));
+        $this->assertObjectFormat($decoded = json_decode($response), array('callback_id', 'trigger_id', 'event_description'));
 
         //BinaryBeast's public callback test handler should response should include a trigger id, which should match our tournament's id
         $this->assertEquals($decoded->trigger_id, $this->tournament->id);
-	}
-
-	/**
-	 * Test tournament's on_change callback wrapper
-	 * @covers BBTournament::on_start_groups
-	 */
-	public function test_tournament_on_start_groups() {
-		$this->assertSave($this->tournament->on_start_groups('http://binarybeast.com/callback/test'));
-	}
-
-	/**
-	 * Test tournament's on_change callback wrapper
-	 * @covers BBTournament::on_start_brackets
-	 */
-	public function test_tournament_on_start_brackets() {
-		$this->assertSave($this->tournament->on_start_brackets('http://binarybeast.com/callback/test'));
+        $this->assertEquals($decoded->callback_id, $id);
 	}
 }
 

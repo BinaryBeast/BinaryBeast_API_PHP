@@ -116,6 +116,7 @@ class BBTeamTest extends BBTest {
      * Test retrieving a team's opponent in elimination brackets, after the team
      *  has been eliminated
      * @covers BBTeam::opponent
+     * @group fail
      */
     public function test_opponent_elimination_eliminated() {
         $this->set_object_with_open_match();
@@ -132,6 +133,7 @@ class BBTeamTest extends BBTest {
         $this->assertSave($match->report());
 
         //Eliminated!!
+        var_dump([$opponent->id, $this->object->opponent->id]);
         $this->assertFalse($this->object->opponent());
     }
 
@@ -153,6 +155,7 @@ class BBTeamTest extends BBTest {
 
     /**
      * @covers BBTeam::eliminated_by
+     * @group fail
      */
     public function test_eliminated_by() {
         $this->set_object_with_open_match();
