@@ -164,8 +164,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.1
- * @date 2013-03-29
+ * @version 3.0.2
+ * @date 2013-04-01
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -572,7 +572,7 @@ class BBTeam extends BBModel {
 		if(is_null($this->opponent())) return $this->bb->ref(null);
 
 		//Use tournament to create the BBModel object, cache it, and return
-        $this->match = &$this->tournament->match($this, $this->opponent);
+        $this->match = &$this->tournament->open_match($this, $this->opponent);
 		return $this->match;
 	}
 
