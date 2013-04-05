@@ -303,7 +303,7 @@ class BBMatchTest extends BBTest {
 
     /**
      * Test the accuracy of toggle_team() with a valid BBTeam object
-     * @covers BBMatch::test_toggle_team
+     * @covers BBMatch::toggle_team()
      */
     public function test_toggle_team_valid_object() {
         $team1          = $this->object->team();
@@ -314,7 +314,7 @@ class BBMatchTest extends BBTest {
     }
     /**
      * Test the accuracy of toggle_team() with a valid team id
-     * @covers BBMatch::test_toggle_team
+     * @covers BBMatch::toggle_team()
      */
     public function test_toggle_team_valid_id() {
         $team1          = $this->object->team();
@@ -325,14 +325,14 @@ class BBMatchTest extends BBTest {
     }
     /**
      * Test the accuracy of toggle_team() with an invalid BBTeam object
-     * @covers BBMatch::test_toggle_team
+     * @covers BBMatch::toggle_team()
      */
     public function test_toggle_team_invalid_object() {
         $this->assertNull($this->object->toggle_team($this->get_invalid_team()));
     }
     /**
      * Test the accuracy of toggle_team() with an invalid team id
-     * @covers BBMatch::test_toggle_team
+     * @covers BBMatch::toggle_team()
      */
     public function test_toggle_team_invalid_id() {
         $invalid = $this->get_invalid_team();
@@ -521,7 +521,11 @@ class BBMatchTest extends BBTest {
     }
     /**
      * Report a match in elimination brackets
-     * @covers report
+     * @covers BBMatch::report()
+     * @covers BBMatch::game()
+     * @covers BBMatch::team()
+     * @covers BBMatch::opponent()
+     * @covers BBMatch::set_winner()
      */
     public function test_report_brackets() {
         $this->assertInstanceOf('BBTeam', $winner = &$this->object->opponent());
@@ -714,7 +718,7 @@ class BBMatchTest extends BBTest {
     }
     /**
      * Test updating games in an existing match
-     * @covers save_games
+     * @covers BBGame::save_games()
      */
     public function test_save_games() {
         $this->assertTrue($this->object->set_winner($this->object->team()));

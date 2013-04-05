@@ -559,7 +559,7 @@ class BBTournamentTest extends BBTest {
 
     /**
      * Tests open_match by providing a match object
-     * @covers open_match()
+     * @covers BBTournament::open_match()
      */
     public function test_open_match_valid_match_object() {
         $this->get_tournament_with_open_matches();
@@ -570,7 +570,7 @@ class BBTournamentTest extends BBTest {
     }
     /**
      * Tests open_match by providing a match object
-     * @covers open_match()
+     * @covers BBTournament::open_match()
      */
     public function test_open_match_valid_team_pair() {
         $this->get_tournament_with_open_matches();
@@ -583,7 +583,7 @@ class BBTournamentTest extends BBTest {
     }
     /**
      * Tests open_match by providing a match object
-     * @covers open_match()
+     * @covers BBTournament::open_match()
      */
     public function test_open_match_invalid_team_pair() {
         $this->get_tournament_with_open_matches();
@@ -602,7 +602,8 @@ class BBTournamentTest extends BBTest {
     }
 
     /**
-     * @covers BBTournament::groups
+     * Test bracket "drawing" handling
+     * @covers BBTournament::brackets()
      */
     public function test_brackets() {
         $this->get_tournament_with_open_matches();
@@ -625,6 +626,7 @@ class BBTournamentTest extends BBTest {
     }
 
     /**
+     * Testing group rounds "drawing" handling
      * @covers BBTournament::groups()
      */
     public function test_groups() {
