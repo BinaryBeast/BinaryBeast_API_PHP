@@ -164,8 +164,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.2
- * @date 2013-04-01
+ * @version 3.0.3
+ * @date 2013-04-02
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -389,7 +389,7 @@ class BBTeam extends BBModel {
      *      null indicates that this team currently has no opponent, if the tournament is active it means he's waiting for another match to finish
      *      false indicates that this team has been eliminated, you can use elimianted_by to see by whome
      */
-    public function &opponent($fail = false) {
+    public function &opponent() {
 		//Orphaned team
 		if($this->orphan_error()) return $this->bb->ref(null);
 
@@ -407,9 +407,6 @@ class BBTeam extends BBModel {
 		$result = $this->call(self::SERVICE_GET_OPPONENT, array(
 			'tourney_team_id' => $this->id
 			), self::CACHE_TTL_OPPONENTS, self::CACHE_OBJECT_TYPE, $this->id);
-        if($fail) {
-            return $result;
-        }
 
         //Default to false, unless we determine otherwise
         $this->eliminated_by = &$this->bb->ref(false);
