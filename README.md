@@ -1,9 +1,7 @@
-# BinaryBeast API PHP Library - v3.0.1
-#### Version 3.0.1 (2013-03-27)
+# BinaryBeast API PHP Library 3.0.5
+#### Version 3.0.5 (2013-04-05)
 
 ----------
-
-
 
 This library provides functionality for easily and quickly accessing the BinaryBeast API Services
 
@@ -138,6 +136,19 @@ foreach($races as $race) {
 ### Extending the Library
 
 Coming soon
+
+
+
+## Recent Changes
+
+### Version 3.0.5 (2013-04-05
+* Added custom callback support
+	* Added callback registration methods to [BBTournament](lib/BBTournament.php)
+* Added methods for fetching bracket/group data in [BBTournament](lib/BBTournament.php)
+	* Added examples in for drawing [brackets](examples/tournament/draw/brackets.php) and [groups](examples/tournament/draw/groups.php)
+
+
+----------
 
 
 
