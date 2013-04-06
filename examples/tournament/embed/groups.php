@@ -20,7 +20,7 @@ $bb = new BinaryBeast();
 $bb->disable_ssl_verification();
 
 /*
- * First - create a tournament with brackets
+ * First - create a tournament with groups -> brackets
  */
 $tournament = $bb->tournament();
 $tournament->title              = 'API Demo - Embedding Brackets';

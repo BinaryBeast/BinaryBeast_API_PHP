@@ -2,6 +2,13 @@
 /**
  * Simple example demonstrating how you would load a list of matches that still need to be reported
  * 
+ * @filesource
+ * 
+ * @version 1.0.0
+ * @date 2013-04-05
+ * @author Brandon Simmons
+ * 
+ * 
  * @package BinaryBeast
  * @subpackage Examples
  */
@@ -14,8 +21,8 @@ $bb->disable_ssl_verification();
  * First - create a tournament with brackets
  */
 $tournament = $bb->tournament();
-$tournament->title      = 'API Demo - Embedding Brackets';
-$tournament->description = 'Simple API PHP Library demonstrating how to embed brackets';
+$tournament->title      = 'API Demo - Listing Open Matches';
+$tournament->description = 'Simple API PHP Library demonstrating how to display a list of unplayed matches';
 $tournament->elimination = BinaryBeast::ELIMINATION_DOUBLE;
 //
 for($x = 0; $x < 16; $x++) {
