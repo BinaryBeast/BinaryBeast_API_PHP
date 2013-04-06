@@ -20,55 +20,92 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.2
- * @date 2013-03-29
+ * @version 3.0.3
+ * @date 2013-04-05
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBCache {
 
-    /** @var PDO */
+    /**
+     * @ignore
+     * @var PDO
+     */
     private $db;
 
-    /** @var BinaryBeast */
+    /**
+     * @ignore
+     * @var BinaryBeast
+     */
     private $bb;
 
-    /** @var BBConfiguration */
+    /**
+     * @ignore
+     * @var BBConfiguration
+     */
     private $config;
 
     /**
      * DSN Prefix values for each database type
+     * @ignore
      */
     private $dsn_prefix = array('mysql' => 'mysql'/*, 'postgres' => 'pgsql', 'postgresql' => 'pgsql'*/);
 
     /**
      * Default ports for each database type
      * (keyed by dns_prefix)
+     * @ignore
      */
     private $db_ports = array('mysql' => 3306, 'pgsql' => 5432);
 
     /**
      * After successfully connecting and checking for the existance
+     * @ignore
      */
     private $connected = false;
 
     /**
      * PDO connection options per db type
      * (keyed by dns_prefix)
+     * @ignore
      */
     private $pdo_options = array('mysql' => array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'), 'pgsql' => array());
 
-    /*
-     * Each record can have an object associated with it, and we identify the object type
-     *  by an integer - here are some constants for their values
+    /**
+     * ID for associating cached responses with a tournament
+     * @var int
      */
     const TYPE_TOURNAMENT           = 0;
+    /**
+     * ID for associating cached responses with a team
+     * @var int
+     */
     const TYPE_TEAM                 = 1;
+    /**
+     * ID for associating cached responses with countries
+     * @var int
+     */
     const TYPE_COUNTRY              = 2;
+    /**
+     * ID for associating cached responses with a games
+     * @var int
+     */
     const TYPE_GAME                 = 3;
+    /**
+     * ID for associating cached responses with a races
+     * @var int
+     */
     const TYPE_RACE                 = 4;
+    /**
+     * ID for associating cached responses with a maps
+     * @var int
+     */
     const TYPE_MAP                  = 5;
+    /**
+     * ID for associating cached responses with a callbacks
+     * @var int
+     */
     const TYPE_CALLBACK				= 6;
 
     /**
@@ -241,12 +278,11 @@ class BBCache {
      * 
      * It does not match arguments, but it matches tourney_id or tourney_team_id with the service
      * 
-     * @param string    $svc
-     * @param array     $args
-     * @param int       $ttl                In minutes, how long to keep the result as valid
-     * @param int       $object_type        Tournament, game, etc - use BBCache::TYPE_ constants for values
-     * @param int       $tourney_team_id 
-     * @param string    $game_code
+     * @param string        $svc
+     * @param array         $args
+     * @param int           $ttl                In minutes, how long to keep the result as valid
+     * @param int           $object_type        Tournament, game, etc - use BBCache::TYPE_ constants for values
+     * @param int|string    $object_id
      * 
      * @return boolean
      */

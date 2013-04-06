@@ -3,8 +3,6 @@
 /**
  * The main library class, used to communicate with the API and as a factory to generate model objects
  * 
- * @todo add development mode option, which would trigger fatal errors (like API - cURL errors) to be printed directly to the screen)
- * 
  * ## Before you do ANYTHING else - setup the configuration values
  * 
  * You must setup the configuration values in {@link BBConfiguration}
@@ -14,22 +12,24 @@
  * 
  * ### Getting started ###
  * 
- * 
  * This class is your starting point for everything - and there are a few ways to instantiate it
  * Here are a few examples of how to instantiate this class
  * 
+ * ********
  * <b>Example: Minimal setup, use settings from {@link lib/BBConfiguration.php}</b>
  * <code>
  *  $bb = new BinaryBeast();
  * </code>
  * 
+ * ********
  * <b>Example: Manually define your api_key</b>
  * <code>
  *  $bb = new BinaryBeast('e17d31bfcbedd1c39bcb018c5f0d0fbf.4dcb36f5cc0d74.24632846');
  * </code>
  * 
- * <b>Example: Use a custom BBConfiguration object, and define custom tournament team model extensions</b>
- * Of course you could define these in {@link lib/BBConfiguration.php}, but this demonstrates how to do it manually
+ * ********
+ * <b>Example: Use a custom BBConfiguration object</b><br />
+ * Pass in a custom {@link BBConfiguration} instance, and define classes for we would like to use for extending {@link BBTournament} and {@link BBTeam}<br /><br />
  * <code>
  *  $config = new BBConfiguration;
  *  $config->models_extensions['BBTournament']  = 'LocalTournament';
@@ -39,34 +39,38 @@
  * </code>
  * 
  * 
- * Next step: start using model objects
+ * ********
+ * Next step: models
  * 
  * 
- * ### Model Objects
+ * ### Models ### .[#models]
  * 
- * Models are the heart and soul of this library
+ * Model objects are the heart and soul of this library, ***most of your work will be with model objects***
  * 
- * Each model represnts a remote object stored on BinaryBeast's servers
+ * <br /><br />
+ * There are two types of model objects:
+ * - Full ({@link http://en.wikipedia.org/wiki/Crud CRUD})<br />
+ *      (Ability to view and fully manipulate any object
+ * - Simple <br />
+ *      Used only for loading lists and fetching data, like a list of games, or maps within a game etc
  * 
- * For example, you can have one object to represent a tournament, and that tournament can have many 
- *  child models, such as teams, matches, and rounds
  * 
- * Also for loading models with an existing id, note that the data is loaded only on-demand, so you don't have to 
- * worry about an excessive number of API calls if you load large objects with a lot of children'
- * (for example, loading a tournament with a hundred teams and matches in it)
+ * ### Full Models ###
  * 
- * Full model objects are provide basic CRUD functionality, as well as a lot of object-specific functionality
+ * Full models are objects that can be <b>loaded</b>, <b>changed</b>, and <b>deleted</b>, and represent data hosted by<br />
+ * BinaryBeast.com, like a tournament or a match result
  * 
- * All models provide the delete(); method for deleting, and save() for creating and updating
+ * <br />
+ * Models are designed so that the object's data is loaded only on-demand when you try to access or change something,<br />
+ * which is particularly nice when you have a complicated tournament model with hundreds of match results
+ * 
  * 
  * <b>Available models: </b>
- * <ul>
- *  <li>{@link BBTournament}</li>
- *  <li>{@link BBTeam}</li>
- *  <li>{@link BBRound}</li>
- *  <li>{@link BBMatch}</li>
- *  <li>{@link BBMatchGame}</li>
- * </ul>
+ * - {@link BBTournament}: A full tournament object
+ * - {@link BBTeam}: Teams / Players within a tournamnet
+ * - {@link BBRound}: Round Format / Configuration within a tournament
+ * - {@link BBMatch}: Used for reporting and viewing match results within a tournament
+ * - {@link BBMatchGame}: Single detailed game results within a match
  * 
  * ### Simple models
  * 
@@ -85,13 +89,14 @@
  *      }
  * </code>
  * 
+ * Each simple model has documentation with examples...<br />
  * <b>Available simple models:</b>
- * <ul>
- *  <li>{@link BBCountry}</li>
- *  <li>{@link BBGame}</li>
- *  <li>{@link BBMap}</li>
- *  <li>{@link BBRace}</li>
- * </ul>
+ * - {@link BBCountry}
+ * - {@link BBGame}
+ * - {@link BBMap}
+ * - {@link BBRace}
+ * - {@link BBCache}
+ * - {@link BBCallback}
  * 
  * 
  * ### Error Handling
@@ -182,11 +187,12 @@
  * <b>NULL</b> if your settings in {@link BBConfiguration} are invalid / not set
  * 
  * 
+ * @todo Add development mode option
+ * 
  * @package BinaryBeast
  * 
- * 
- * @version 3.0.4
- * @date 2013-03-30
+ * @version 3.0.5
+ * @date 2013-04-05
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -297,11 +303,11 @@ class BinaryBeast {
      */
     private $config;
 
-    /*
+    /**
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.0.1';
+    const API_VERSION = '3.0.5';
     /**
      * Each bracket is idenetifed by a number,
      * 0 indicates group roundes
@@ -594,8 +600,6 @@ class BinaryBeast {
      * 
      * @param string|BBConfiguration
      *      You can pass in either the api_key, or a customized BBConfiguration object
-     * 
-     * @return BinaryBeast
      */
     function __construct($api_key = null) {
         //Determine the path to the library directory
@@ -727,9 +731,16 @@ class BinaryBeast {
      *
      * Otherwise, it's just used internally so ignore it lol
      * 
-     * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_call_raw
-     *
-     * @param @see BinaryBeast::Call()
+     * <br /><br />
+     * The arguments are indentical to those in {@link call()}
+     * 
+     * @param string $svc
+     * @param array $args
+     * @param string $return_type
+     * <b>Possible Values:</b>
+     * - json
+     * - jsonp
+     * - xml
      *
      * @return string
      */
@@ -940,6 +951,8 @@ class BinaryBeast {
      * $new_tour = $bb->touranment(); - creating a new blank tournament
      * 
      * @param string $name
+     * 
+     * @return false|BBTournament|BBTeam|BBRound|BBMatch|BBMatchGame|BBMap|BBCountry|BBGame|BBRace|BBLegacy|BBCache|BBCallback
      */
     public function &__get($name) {
         //Define a list of acceptable methods that are allowed to be called as property
@@ -1209,10 +1222,17 @@ class BinaryBeast {
      * Call a legacy wrapper method
      * 
      * Intercept attempts to call missing methods that may have previous been
-     * defined in 2.7.2- or earlier version of this library
+     * defined in 2.7.5- or earlier version of this library
      * 
      * In which case, we'll use BBLegacy to do the work, since I want to keep this class 
      * as clean as possible
+     * 
+     * @param string $name
+     * @param array $array
+     * 
+     * @return false|object
+     * Returns <b>false</b> if <var>$name</var> does not match any of the service wrappers available in {@link BBLegacy}<br />
+     * Otherwise returns the result of BBLegacy::$name
      */
     public function __call($name, $args) {
 

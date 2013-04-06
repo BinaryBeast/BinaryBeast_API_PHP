@@ -10,8 +10,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.3
- * @date 2013-03-29
+ * @version 3.0.4
+ * @date 2013-04-05
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -286,16 +286,16 @@ abstract class BBModel extends BBSimpleModel {
     }
 
     /**
-     * Intercepts attempts to set property values
-     * Very simply stores in $this->new_data
+     * Set the property of a model
      * 
-     * This method actually returns itself to allow chaining
-     * @example
-     * $tournament = $bb->tournament->title = 'asdf';
+     * <br /><br />
+     * <b>Example usage: </b>
+     * <code>
+     *  $tournament = $bb->tournament->title = 'asdf';
+     * </code>
      * 
      * @param string $name
      * @param mixed $value
-     * 
      * @return void
      */
     public function __set($name, $value) {

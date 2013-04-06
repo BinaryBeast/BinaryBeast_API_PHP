@@ -13,7 +13,7 @@
  * <br />This will be demonstrated below
  * 
  * 
- * ### Handling Callbacks .[#handling] ###
+ * ### Handling Callbacks ### .[#handling]
  * 
  * When BinaryBeast executes a callback, it send information about the event in either <var>$_POST</var> or <var>$_GET</var>,<br />
  * Depending on what you set <var>$action</var> to in {@link register()}
@@ -68,8 +68,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.1
- * @date 2013-03-30
+ * @version 3.0.2
+ * @date 2013-04-05
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -278,6 +278,7 @@ class BBCallback {
 	 * <br /><br />
 	 * <b>Values Expected:</b>
 	 * - <b>string</b> description
+     * - <b>string</b> tourney_id
 	 * 
 	 * @var int
 	 */
@@ -423,7 +424,10 @@ class BBCallback {
      * 
      * You can either define a callback, as if you were calling {@link register()}, <br />
      * Or you can provide a callback id integer to use the values of a callback that you've already registered
-	 * 
+     * 
+     * @param int $callback_id
+     *  <b>Note:</b> This value takes priority over all other arguments<br />
+     *  If you've registered a callback, provide the callback_id, and BinaryBeast will use the event_id, url, trigger_id etc etc from your callback
 	 * @param int $event_id
 	 * @param int|string $trigger_id
 	 * @param string $url
@@ -566,24 +570,24 @@ class BBCallback {
  * @property BBTournament $tournament
  * <b>Only Included for the following event_ids:</b>
  * <ul>
- *	<li>8 (EVENT_TOURNAMENT_DELETED)</li>
- *	<li>10 (EVENT_TOURNAMENT_SETTINGS_CHANGED)</li>
+ *	<li>8 ({@link BBCallback::EVENT_TOURNAMENT_DELETED})</li>
+ *	<li>10 ({@link BBCallback::EVENT_TOURNAMENT_SETTINGS_CHANGED})</li>
  * </ul>
  * 
  * @property BBTeam $team
  * <b>Only Included for the following event_ids:</b>
  * <ul>
- *	<li>4 (EVENT_TOURNAMENT_TEAM_ADDED)</li>
- *	<li>5 (EVENT_TOURNAMENT_TEAM_REMOVED)</li>
- *	<li>9 (EVENT_TOURNAMENT_TEAM_STATUS_CHANGED)</li>
+ *	<li>4 ({@link BBCallback::EVENT_TOURNAMENT_TEAM_ADDED})</li>
+ *	<li>5 ({@link BBCallback::EVENT_TOURNAMENT_TEAM_REMOVED})</li>
+ *	<li>9 ({@link BBCallback::EVENT_TOURNAMENT_TEAM_STATUS_CHANGED})</li>
  * </ul>
  * 
  * @property BBMatch $match
  * <b>Only Included for the following event_ids:</b>
  * <ul>
- *	<li>3 (EVENT_TOURNAMENT_COMPLETE)</li>
- *	<li>6 (EVENT_TOURNAMENT_MATCH_REPORTED)</li>
- *	<li>7 (EVENT_TOURNAMENT_MATCH_UNREPORTED)</li>
+ *	<li>3 ({@link BBCallback::EVENT_TOURNAMENT_COMPLETE})</li>
+ *	<li>6 ({@link BBCallback::EVENT_TOURNAMENT_MATCH_REPORTED})</li>
+ *	<li>7 ({@link BBCallback::EVENT_TOURNAMENT_MATCH_UNREPORTED})</li>
  * </ul>
  * 
  * 

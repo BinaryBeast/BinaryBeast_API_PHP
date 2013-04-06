@@ -26,8 +26,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.2
- * @date 2013-03-29
+ * @version 3.0.3
+ * @date 2013-04-05
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -215,6 +215,7 @@ class BBHelper {
      * @example 403 becomes "Authentication error - you are not allowed to delete / update that object"
      * 
      * @param string $result
+     * @return string|int
      */
     public static function translate_result($result) {
         return self::translate($result, self::$result_codes);
@@ -433,6 +434,7 @@ class BBHelper {
      * Convenient if you'd like to use it to arrange your teams into groups before starting your tournament
      * 
      * @param BBTournament $tournament
+     * @return array
      */
     public static function get_empty_groups(BBTournament &$tournament) {
         //Initialize the output array

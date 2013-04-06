@@ -8,9 +8,6 @@
  * 
  * ### Quick Examples and Tutorials ###
  * 
- * - {@link binarybeast.com/content/api/docs/php/class-BBTournament.html#create Create a New Tournament}
- * - @todo finish this legend
- * 
  * The following examples assume <var>$bb</var> is an instance of {@link BinaryBeast}
  * 
  * 
@@ -121,7 +118,7 @@
  * 
  * ## Loading / Listing Unplayed Matches
  * 
- * We can use the {@link open_matches()) method, and the magic {@link $open_matches} property to find matches that need to be reported
+ * We can use the {@link open_matches()} method, and the magic {@link http://binarybeast.com/content/api/docs/php/class-BBTournament.html#m$open_matches $open_matches} property to find matches that need to be reported
  * 
  * <b>Example: </b> Using {@link open_matches()}
  * <code>
@@ -1035,7 +1032,7 @@ class BBTournament extends BBModel {
         //$this->teams();
         $this->open_matches = null;
     }
-    
+
     /**
      * Delete any cached API results for team opponents, and open match listing 
      * 
@@ -1058,7 +1055,7 @@ class BBTournament extends BBModel {
             self::SERVICE_LOAD_BRACKETS,
             self::SERVICE_LOAD_GROUPS
         ));
-        
+
         //Delete ALL team-opponent/match/elimination cache, unfortunately there's no simple way to limit it to this tournament
         $this->clear_service_cache(array(
             BBTeam::SERVICE_LIST_OPPONENTS,
@@ -2346,9 +2343,33 @@ class BBTournament extends BBModel {
     /**
      * Fetch the data object that determines the elimination bracket participiants and results
      * 
-     * @todo document return format
-     * 
-     * @return - define groups data struct here
+     * @return object
+     *  Contains an array of array of matches for each group<br /><br />
+     *  <b>Format: </b><br />
+     *  <pre>
+     *  {
+     *  //Group A
+     *   'a' => [
+     *          //First round
+     *       0 => [
+     *           //First match in the first round
+     *           0 => {@link BBMatchObject},
+     *   
+     *           //Second match in the first round
+     *           0 => {@link BBMatchObject},
+     *          ], 
+     *       //Second round 
+     *        1 => [
+     *            // ... and so on
+     *       ]
+     *      ],
+     *  
+     *      //Group B
+     *      [
+     *       // ... etc
+     *      ]
+     *  }
+     * </pre>
      */
     public function &groups() {
         //Already set
@@ -2430,6 +2451,14 @@ class BBTournament extends BBModel {
                 $match_object->match = $this->open_match($match_object->team, $match_object->opponent);
             }
         }
+        
+        //Default null
+        if(!isset($match_object->team))     $match_object->team = null;
+        if(!isset($match_object->opponent)) $match_object->opponent = null;
+        if(!isset($match_object->match))    $match_object->match = null;
+
+        //Success!
+        return $match_object;
     }
 }
 

@@ -3,8 +3,6 @@
 /**
  * Model object representing a participant within a {@link BBTournament}
  * 
- * @todo add callbacks
- * 
  * The naming may be a bit misleading, seeing as you can do 1v1s (players) as well 2v2+'s (teams).
  * 
  * This is because in the BinaryBeast back end, all 1v1 "players" are actually treated as
@@ -160,12 +158,13 @@
  *  the BBTeam object of the team that eliminated this team, if applicable<br />
  *  <b>FALSE return means the team has not yet been eliminated</b>
  * 
+ * @todo add callbacks
  * 
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.3
- * @date 2013-04-02
+ * @version 3.0.4
+ * @date 2013-04-05
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html

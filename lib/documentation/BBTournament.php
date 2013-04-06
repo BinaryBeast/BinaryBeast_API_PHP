@@ -38,7 +38,7 @@
  *          0 => {@link BBMatchObject},
  * 
  *          //Second match in the first round
- *          0 => {@link BBMatchObject},
+ *          1 => {@link BBMatchObject},
  *      ], 
  *      //Second round 
  *      1 => [
@@ -48,43 +48,40 @@
  * </pre>
  * 
  * ### Example Script .[#example]
+ * There is a full example available in {@link examples/tournaments/draw/brackets.php}
+ *
  * Notice how the <b>vdoc</b> for code hinting in <var>/* @var $match BBMatch {@*}</var>
  * <code>
- *          foreach($tournament->brackets->losers as $round => $matches) {
- *              echo '<h3>Round ' . ($round + 1) . '</h3>';
- *              foreach($matches as $i => $match) {
- *                  echo '<h4>Match ' . ($i + 1) . '</h4>';
- * 
- *                  /* @var $match BBMatchObject {@*}
- *                  if(!is_null($match->team)) {
- *                      echo $match->team->display_name;
- * 
- *                      //Waiting on an opponent
- *                      if(is_null($match->opponent)) {
- *                          echo ' - Waiting on an Opponent <br />';
- *                      }
- *                      else {
- *                          echo ' VS ' . $match->opponent->display_name;
- *                          
- *                          //Print the winner name
- *                          if(!is_null($match->match)) {
- *                              if(!is_null($match->match->id)) {
- *                                  echo ' (Winner: ' . $match->match->winner->display_name) . ')';
- *                              }
- *                          }
- * 
- *                          echo '<br />';
- *                      }
- *                  }
- *                  //Waiting on an opponent
- *                  else if(!is_null($match->opponent)) {
- *                          echo $match->opponent->display_name . ' - Waiting on an Opponent <br />';
- *                  }
- *              }
- *          }
+ * foreach($tournament->brackets->winners as $round => $matches) {
+ *     echo '<h3>Round ' . ($round + 1) . '</h3>';
+ *     foreach($matches as $i => $match) {
+ *         echo '<h4>Match ' . ($i + 1) . '</h4>';
+ *         /* @var $match BBMatchObject {@*}
+ *         if(!is_null($match->team)) {
+ *             echo $match->team->display_name;
+ *             //Waiting on an opponent
+ *             if(is_null($match->opponent)) {
+ *                 echo ' - Waiting on an Opponent';
+ *             }
+ *             else {
+ *                 echo ' vs. ' . $match->opponent->display_name;
+ *                 //Print the winner name
+ *                 if(!is_null($match->match)) {
+ *                     if(!is_null($match->match->id)) {
+ *                         echo ' (Winner: ' . $match->match->winner->display_name . ')';
+ *                     }
+ *                 }
+ *             }
+ *         }
+ *         //Waiting on an opponent
+ *         else if(!is_null($match->opponent)) {
+ *                 echo $match->opponent->display_name . ' - Waiting on an Opponent <br />';
+ *         }
+ *     }
+ * }
  * </code>
  *
- * 
+ * @example examples/tournament/draw/brackets.php
  * 
  * @package BinaryBeast
  * @subpackage Model_ObjectStructure
@@ -98,7 +95,7 @@ abstract class BBBracketsObject {
      * <b>See an example script </b> in the {@link binarybeast.com/content/api/docs/php/class-BBBracketsObject.html#example class documentation}<br /><br />
      * <b>The format</b> is also defined in the {@link binarybeast.com/content/api/docs/php/class-BBBracketsObject.html#format class documentation}
      * 
-     * @var BBMatchObject[][]|rounds[]
+     * @var BBMatchObject[][]|round[]
      */
     public $winners;
 
@@ -112,7 +109,7 @@ abstract class BBBracketsObject {
      * <b>See an example script </b> in the {@link binarybeast.com/content/api/docs/php/class-BBBracketsObject.html#example class documentation}<br /><br />
      * <b>The format</b> is also defined in the {@link binarybeast.com/content/api/docs/php/class-BBBracketsObject.html#format class documentation}
      * 
-     * @var BBMatchObject[][]|rounds[]
+     * @var BBMatchObject[][]|round[]
      */
     public $losers;
 
@@ -127,7 +124,7 @@ abstract class BBBracketsObject {
      * <b>See an example script </b> in the {@link binarybeast.com/content/api/docs/php/class-BBBracketsObject.html#example class documentation}<br /><br />
      * <b>The format</b> is also defined in the {@link binarybeast.com/content/api/docs/php/class-BBBracketsObject.html#format class documentation}
      * 
-     * @var BBMatchObject[][]|rounds[]
+     * @var BBMatchObject[][]|round[]
      */
     public $bronze;
 
@@ -141,23 +138,14 @@ abstract class BBBracketsObject {
      * <b>See an example script </b> in the {@link binarybeast.com/content/api/docs/php/class-BBBracketsObject.html#example class documentation}<br /><br />
      * <b>The format</b> is also defined in the {@link binarybeast.com/content/api/docs/php/class-BBBracketsObject.html#format class documentation}
      * 
-     * @var BBMatchObject[][]|rounds[]
+     * @var BBMatchObject[][]|round[]
      */
     public $finals;
 
     /**
      * <b>Documentation Hack</b><br /><br />
-     * An array of rounds, each round is an array of {@link BBMatchObject}<br /><br />
-     * 
-     * @static
-     * @var matches[]
-     */
-    public static $rounds;
-    /**
-     * <b>Documentation Hack</b><br /><br />
      * An array of {@link BBMatchObject} in a round<br /><br />
      * 
-     * @static
      * @var BBMatchObject[]
      */
     public static $round;
