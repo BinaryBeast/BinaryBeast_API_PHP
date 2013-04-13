@@ -26,11 +26,11 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.3
- * @date 2013-04-05
- * @author Brandon Simmons <contact@binarybeast.com>
- * @license http://www.opensource.org/licenses/mit-license.php
- * @license http://www.gnu.org/licenses/gpl.html
+ * @version     3.0.3
+ * @date        2013-04-13
+ * @author      Brandon Simmons <contact@binarybeast.com>
+ * @license     http://www.opensource.org/licenses/mit-license.php
+ * @license     http://www.gnu.org/licenses/gpl.html
  */
 class BBHelper {
 
@@ -164,8 +164,8 @@ class BBHelper {
      */
     public static function get_loser_rounds($players) {
         //Basically the number of rounds in the winners bracket, plus another bracket half the size - 1
-        return $this->get_winner_rounds($players)
-                + $this->get_winner_rounds($players / 2) - 1;
+        return self::get_winner_rounds($players)
+                + self::get_winner_rounds($players / 2) - 1;
     }
 
     /**
