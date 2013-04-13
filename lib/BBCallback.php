@@ -68,11 +68,11 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.2
- * @date 2013-04-05
- * @author Brandon Simmons <contact@binarybeast.com>
- * @license http://www.opensource.org/licenses/mit-license.php
- * @license http://www.gnu.org/licenses/gpl.html
+ * @version     3.0.3
+ * @date        2013-04-13
+ * @author      Brandon Simmons <contact@binarybeast.com>
+ * @license     http://www.opensource.org/licenses/mit-license.php
+ * @license     http://www.gnu.org/licenses/gpl.html
  */
 class BBCallback {
 
@@ -500,7 +500,9 @@ class BBCallback {
 		}
 
 		//Couldn't even find a callback_id - return null to indicate failure
-		return $this->bb->set_error('Unable to locate a "callback_id" value in either $_POST or $_GET');
+		else {
+            return $this->bb->set_error('Unable to locate a "callback_id" value in either $_POST or $_GET');
+        }
 
 		//All standard callback values must be present
 		$keys = array('callback_id', 'event_id', 'event_description', 'event_utc_date');
