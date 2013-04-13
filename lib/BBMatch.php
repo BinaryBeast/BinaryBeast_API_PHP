@@ -324,25 +324,19 @@
  * <b>Alias for {@link BBMatch::opponent()}</b><br />
  * BBTeam object for the second player in this match
  * 
- * @property-read BBTeam $winner
- * <b>Alias for {@link BBMatch::winner()}</b><br />
+ * @property BBTeam $winner
+ * <b>When Reading: </b> alias for {@link BBMatch::winner()}<br />
+ * <b>When Assigning: </b> Alias for {@link BBMatch::set_winner()}<br />
  * BBTeam object for the winner of the match<br />
  * <b>Returns NULL if set_winner hasn't been called</b><br />
  * <b>Returns FALSE if match was a draw</b>
- * 
- * @property-write BBTeam $winner
- * <b>Alias for {@link BBMatch::set_winner()}</b><br />
- * Alternate way of defining the winner, by setting it as a property<br /><br />
- * 
+ *
  * @property-read BBTeam $loser
- * <b>Alias for {@link BBMatch::loser()}</b><br />
+ * <b>When Reading: </b>alias for {@link BBMatch::loser()}<br />
+ * <b>When Writing: </b>Alias for {@link BBMatch::set_loser()}<br />
  * BBTeam object for the loser of the match<br />
  * <b>Returns NULL if set_winner hasn't been called</b><br />
  * <b>Returns FALSE if match was a draw</b>
- * 
- * @property-write BBTeam $loser
- * <b>Alias for {@link BBMatch::set_loser()}</b><br />
- * Alternate way of defining the loser, by setting it as a property<br /><br />
  * 
  * @property BBTournament $tournament
  *  <b>Alias for {@link BBMatch::tournament()}</b>
@@ -357,8 +351,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.5
- * @date 2013-04-05
+ * @version 3.0.6
+ * @date    2013-04-13
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
