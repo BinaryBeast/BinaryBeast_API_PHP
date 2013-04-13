@@ -20,8 +20,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.3
- * @date 2013-04-05
+ * @version 3.0.4
+ * @date 2013-04-13
  * @author Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -193,7 +193,6 @@ class BBCache {
         if(!$this->check_table()) {
             if(!$this->create_table()) {
                 return $this->db->errorInfo();
-                return 'Error creating the table "' . $this->config->cache_db_table . '", please make sure user "' . $this->config->cache_db_username . '" has permission to create tables on database "' . $this->config->cache_db_database . '"';
             }
         }
 
