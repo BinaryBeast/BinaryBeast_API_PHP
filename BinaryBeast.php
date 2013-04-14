@@ -644,6 +644,7 @@ class BinaryBeast {
         $bb->load_library('BBSimpleModel');
         $bb->load_library('BBModel');
         $bb->load_library('BBCache');
+        $bb->load_library('BBCallback');
 
         //Next instantiation will know not to call this method
         self::$first = false;
