@@ -1,45 +1,21 @@
 <?php
 /**
  * Simple example demonstrating how you would load a list of matches that still need to be reported
- * 
+ *
+ * @global BBTournament $tournament
+ *
  * @filesource
  * 
- * @version 1.0.0
- * @date 2013-04-05
- * @author Brandon Simmons
+ * @version 1.0.1
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * 
  * 
  * @package BinaryBeast
  * @subpackage Examples
  */
 
-require('../../../BinaryBeast.php');
-$bb = new BinaryBeast();
-$bb->disable_ssl_verification();
-
-/*
- * First - create a tournament with brackets
- */
-$tournament = $bb->tournament();
-$tournament->title      = 'API Demo - Listing Open Matches';
-$tournament->description = 'Simple API PHP Library demonstrating how to display a list of unplayed matches';
-$tournament->elimination = BinaryBeast::ELIMINATION_DOUBLE;
-//
-for($x = 0; $x < 16; $x++) {
-    $team = $tournament->team();
-    $team->confirm();
-    $team->display_name = 'Demo Player ' . ($x + 1);
-}
-//
-if(!$tournament->save()) {
-    var_dump(array('Error saving tournament', 'errors' => $bb->error_history));
-    die();
-}
-if(!$tournament->start()) {
-    var_dump(array('Error starting the brackets', 'errors' => $bb->error_history));
-    die();
-}
-
+require_once('../__brackets.php');
 ?>
 
 <h1>Tournament Brackets (<?php echo $tournament->id; ?>)</h1>
@@ -56,7 +32,7 @@ if(!$tournament->start()) {
     $matches = $tournament->open_matches();
     foreach($matches as $match) {
         echo $match->team->display_name .' vs ' . $match->team2->display_name .
-            ' in round ' . $match->round->round . '<br />';
+            ' in round ' . $match->round . '<br />';
     }
 ?>
 

@@ -3,42 +3,18 @@
  * Simple example demonstrating how to manually load brackets
  * 
  * @filesource
- * 
- * @version 1.0.0
- * @date 2013-04-05
- * @author Brandon Simmons
- * 
+ *
+ * @global BBTournament $tournament
+ *
  * @package BinaryBeast
  * @subpackage Examples
+ *
+ * @version 1.0.1
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
  */
 
-require('../../../BinaryBeast.php');
-$bb = new BinaryBeast();
-$bb->disable_ssl_verification();
-
-/*
- * First - create a tournament with brackets
- */
-$tournament = $bb->tournament();
-$tournament->title      = 'API Demo - Drawing Brackets';
-$tournament->description = 'Simple API PHP Library demonstrating how fetch raw bracket data';
-$tournament->elimination = BinaryBeast::ELIMINATION_DOUBLE;
-//
-for($x = 0; $x < 16; $x++) {
-    $team = $tournament->team();
-    $team->confirm();
-    $team->display_name = 'Demo Player ' . ($x + 1);
-}
-//
-if(!$tournament->save()) {
-    var_dump(array('Error saving tournament', 'errors' => $bb->error_history));
-    die();
-}
-if(!$tournament->start()) {
-    var_dump(array('Error starting the brackets', 'errors' => $bb->error_history));
-    die();
-}
-
+require('../__brackets.php');
 ?>
 
 <h1>Winners Bracket (<?php echo $tournament->id; ?>)</h1>
