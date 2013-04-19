@@ -68,11 +68,11 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version     3.0.3
- * @date        2013-04-13
- * @author      Brandon Simmons <contact@binarybeast.com>
- * @license     http://www.opensource.org/licenses/mit-license.php
- * @license     http://www.gnu.org/licenses/gpl.html
+ * @version 3.0.3
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBCallback {
 
@@ -292,7 +292,6 @@ class BBCallback {
 	 * @ignore
 	 * 
 	 * @param BinaryBeast $bb
-	 * @return void
      */
     function __construct(BinaryBeast &$bb) {
         $this->bb = &$bb;
@@ -425,15 +424,21 @@ class BBCallback {
      * You can either define a callback, as if you were calling {@link register()}, <br />
      * Or you can provide a callback id integer to use the values of a callback that you've already registered
      * 
-     * @param int $callback_id
+     * @param int $callback_id <br />
      *  <b>Note:</b> This value takes priority over all other arguments<br />
      *  If you've registered a callback, provide the callback_id, and BinaryBeast will use the event_id, url, trigger_id etc etc from your callback
 	 * @param int $event_id
+     * <br /><b>Only used if <var>$callback_id</var> not provided</b>
 	 * @param int|string $trigger_id
+     * <br /><b>Only used if <var>$callback_id</var> not provided</b>
 	 * @param string $url
+     * <br /><b>Only used if <var>$callback_id</var> not provided</b>
 	 * @param string $action
+     * <br /><b>Only used if <var>$callback_id</var> not provided</b>
 	 * @param boolean $recurrent
-	 * @param array $args
+     * <br /><b>Only used if <var>$callback_id</var> not provided</b>
+	 * @param array|object $args
+     * <br /><b>Only used if <var>$callback_id</var> not provided</b>
 	 * 
 	 * @return string|boolean
 	 *	<b>False</b> If BinaryBeast failed to call your URL, like non-200 result codes from your $url

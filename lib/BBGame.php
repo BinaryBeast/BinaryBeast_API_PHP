@@ -71,14 +71,22 @@
  * @package BinaryBeast
  * @subpackage SimpleModel
  * 
- * @version 3.0.1
- * @date 2013-03-28
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @version 3.0.2
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBGame extends BBSimpleModel {
+    /**
+     * Service name for searching games
+     * @var string
+     */
     const SERVICE_SEARCH        = 'Game.GameSearch.Search';
+    /**
+     * Service name for listing popular games
+     * @var string
+     */
     const SERVICE_LIST_POPULAR  = 'Game.GameSearch.Top';
 
     //Cache setup (cache for 1 day)

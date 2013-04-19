@@ -3,7 +3,7 @@
 /**
  * The data structure for values returned from the BBMap services
  * 
- * This class is never used, it soley exists for documentation
+ * This class is never used, it solely exists for documentation
  * 
  * @property-read int $map_id
  *  The unique map id integer<br />
@@ -30,6 +30,10 @@
  * 
  * @package BinaryBeast
  * @subpackage SimpleModel_ObjectStructure
+ *
+ * @version 1.0.1
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com
  */
 abstract class BBMapObject {
     //Nothing here - used for documentation only

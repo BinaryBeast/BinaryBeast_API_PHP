@@ -44,10 +44,7 @@ class BBLegacy {
 	 * Allows BBCache to give us errors to keep track of
 	 */
 	public function set_error($error, $class = null) {
-		$this->error_history[] = array(
-			'error_message'	=> $error, 
-			'class'			=> $class
-		);
+		$this->bb->set_error($error, $class);
 	}
 
     /**
@@ -93,7 +90,7 @@ class BBLegacy {
      * 
      * @param string $tourney_id 
      * 
-     * @return {object}
+     * @return call()
      */
     public function tournament_load($tourney_id) {
         return $this->call('Tourney.TourneyLoad.Info', array('tourney_id' => $tourney_id));
@@ -103,10 +100,12 @@ class BBLegacy {
      * Retrieves round format
      * 
      * You can pass '*' for the bracket to retrieve for the entire tournament
+     *
+     * @param string $tourney_id
+     * @param int|string $bracket
+     *  Optional - limits the return scope to a single bracket
      * 
-     * @param int $bracket 
-     * 
-     * @return {object}
+     * @return object
      */
     public function tournament_load_round_format($tourney_id, $bracket = '*') {
         return $this->call('Tourney.TourneyLoad.Rounds', array('tourney_id' => $tourney_id, 'bracket' => $bracket));
@@ -175,12 +174,12 @@ class BBLegacy {
      * @param int $max_teams
      * @param int $team_mode
      * @param int $teams_from_group
-     * @param date $date_start YYYY-MM-DD HH:SS
+     * @param string $date_start YYYY-MM-DD HH:SS
      * @param string $location
      * @param array $teams
-     * @param type $return_data
+     * @param int $return_data
      * 
-     * @return {object} 
+     * @return object
      */
     private function tournament_create_legacy($title, $description = null, $public = 1, $game_code = null, $type_id = 0, $elimination = 1, $max_teams = 16, $team_mode = 1, $teams_from_group = 2, $date_start = null, $location = null, array $teams = null, $return_data = 0) {
         $args = array(
@@ -251,20 +250,20 @@ class BBLegacy {
      * The new method of calling complicated services is to pass in an associative array of arguments
      * 
      * @ignore
-     * 
-     * @param type $tourney_id
-     * @param type $title
-     * @param type $description
-     * @param type $public
-     * @param type $game_code
-     * @param type $type_id
-     * @param type $elimination
-     * @param type $max_teams
-     * @param type $team_mode
-     * @param type $teams_from_group
-     * @param type $date_start
-     * @param type $location
-     * @return {object} 
+     *
+     * @param string $tourney_id
+     * @param string $title
+     * @param string $description
+     * @param string $public
+     * @param string $game_code
+     * @param string $type_id
+     * @param string $elimination
+     * @param string $max_teams
+     * @param string $team_mode
+     * @param string $teams_from_group
+     * @param string $date_start
+     * @param string $location
+     * @return object
      */
     private function tournament_update_legacy($tourney_id, $title, $description = 'null', $public = 'null', $game_code = 'null', $type_id = 'null', $elimination = 'null', $max_teams = 'null', $team_mode = 'null', $teams_from_group = 'null', $date_start = 'null', $location = 'null') {
         $args = array(
@@ -351,13 +350,13 @@ class BBLegacy {
      * 
      * @see link http://wiki.binarybeast.com/index.php?title=API_PHP:_tournament_round_update_batch
      * 
-     * @param string         $tourney_id
-     * @param int           $bracket      - which bracket the round effects - ie 0 = groups, 1 = winners (there are class constants for these values
-     * @param <int>array    $best_ofs     - array of best_of values to update, IN ORDER ($best_ofs[0] = round 1, $best_ofs[1] = round 2)
-     * @param <string>array $maps         - array of maps for this bracket
-     * @param <string>array $dates        - array of dates for this bracket
-     * @param <int>array    $map_ids      - array of map_ids - official maps with stat tracking etc in our databased, opposed to simply trying to give us the name of the map - use map_list to get maps ids
-     * 
+     * @param string            $tourney_id
+     * @param int               $bracket      which bracket the round effects - ie 0 = groups, 1 = winners (there are class constants for these values
+     * @param int[]             $best_ofs     array of best_of values to update, IN ORDER ($best_ofs[0] = round 1, $best_ofs[1] = round 2)
+     * @param string[]|int[]    $maps         array of maps names or map_ids for this bracket
+     * @param string[]          $dates        array of dates for this bracket
+     * @param int[]             $map_ids      array of map_ids - official maps with stat tracking etc in our databased, opposed to simply trying to give us the name of the map - use map_list to get maps ids
+     * @return call()
      */
     public function tournament_round_update_batch($tourney_id, $bracket, $best_ofs = array(), $maps = array(), $dates = array(), $map_ids = array()) {
         return $this->call('Tourney.TourneyRound.BatchUpdate', array(
@@ -411,7 +410,8 @@ class BBLegacy {
      * 
      * Complete -> Active,Active-Brackets -> Active-Brackets -> Active-Groups, Active/Active-Groups -> Confirmation
      * 
-     * @param string $tourney_id 
+     * @param string $tourney_id
+     * @return call()
      */
     public function tournament_reopen($tourney_id) {
         return $this->call('Tourney.TourneyReopen.Reopen', array('tourney_id' => $tourney_id));
@@ -491,8 +491,8 @@ class BBLegacy {
      *      array  players              If the TeamMode is > 1, you can provide a list of players to add to this team, by CSV (Player1,,Player2,,Player3)
      *      string network_name         If the game you've chosen for the tournament has a network configured (like sc2 = bnet 2, sc2eu = bnet europe), you can provide their in-game name here
      *
-     * @param type $tourney_team_id
-     * @param type $options 
+     * @param int $tourney_team_id
+     * @param array $options
      * 
      * @return object {int result}
      */
@@ -510,7 +510,9 @@ class BBLegacy {
      * 
      * @see @link http://wiki.binarybeast.com/index.php?title=API_PHP:_team_confirm
      * 
-     * @param type $tourney_team_id 
+     * @param int $tourney_team_id
+     * @param string $tourney_id
+     * <b>Optional</b>
      * 
      * @return object {int result [, int tourney_team_id]}
      */

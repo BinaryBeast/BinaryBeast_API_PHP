@@ -60,14 +60,22 @@
  * @package BinaryBeast
  * @subpackage SimpleModel
  * 
- * @version 3.0.1
- * @date 2013-03-28
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @version 3.0.2
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBRace extends BBSimpleModel {
+    /**
+     * API svc name for searching for game races
+     * @var string
+     */
     const SERVICE_SEARCH    = 'Game.GameRace.Search';
+    /**
+     * API svc name for loading game races
+     * @var string
+     */
     const SERVICE_LIST      = 'Game.GameRace.LoadList';
 
     //Cache setup (cache for 1 day)
@@ -84,7 +92,7 @@ class BBRace extends BBSimpleModel {
      *  in each game if you'd like to display an image of the race
      * 
      * @param string $game_code
-     * @return BBRaceData[]
+     * @return BBRaceObject[]
      */
     public function game_list($game_code) {
         return $this->get_list(self::SERVICE_LIST, array('game_code' => $game_code), 'list');
@@ -103,7 +111,8 @@ class BBRace extends BBSimpleModel {
     /**
      * Returns an array of races used in the provided $game_code, after applying
      *      a filter against it
-     * 
+     *
+     * @param string $game_code
      * @param string $filter    Search filter
      * @return BBRaceObject[]
      */

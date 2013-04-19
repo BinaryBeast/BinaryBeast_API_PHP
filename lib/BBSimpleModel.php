@@ -6,7 +6,7 @@
  * The SimpleModel class provides most of the error handling / result storage, 
  *      logic for determining a service name, and so on
  * 
- * It does not howerver, provide any functionality for updating, creating, or deleting data
+ * It does not however, provide any functionality for updating, creating, or deleting data
  * 
  * That's why I've separated that logic into a different model: BBModel
  * 
@@ -15,15 +15,15 @@
  *  data they have the ability to manipulate
  * 
  * So this class is used primary for service wrapper hosting (like BBGame)
- *      while BBModel is used for full manipulatable objects for creating/creating/updating - like BBTournament
+ *      while BBModel is used for full manipulable objects for creating/creating/updating - like BBTournament
  *  
  * 
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.1
- * @date 2013-03-29
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @version 3.0.2
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
@@ -31,33 +31,65 @@ class BBSimpleModel {
 
     /**
      * Reference to the main API library class
+     * @ignore
      * @var BinaryBeast
      */
     protected $bb;
 
     /**
      * If loading failed, stored the result
-     * @var array
+     * @var object
      */
     protected $last_error = null;
+
     /**
+     * API Service name for loading object details
+     * @var string
+     */
+    const SERVICE_LOAD      = null;
+    /**
+     * API Service name for creating a new object
+     * @var string
+     */
+    const SERVICE_CREATE    = null;
+    /**
+     * API Service name for updating an existing object
+     * @var string
+     */
+    const SERVICE_UPDATE    = null;
+    /**
+     * API Service name for deleting the object
+     * @var string
+     */
+    const SERVICE_DELETE    = null;
+
+    /**
+     * Caching type
+     *
      * Allows child classes to define the object_type when caching api responses, and
      *  ttls for certain tasks (listing / loading)
      * 
      * cache all results for 10 minutes by default
+     *
+     * @param int
      */
     const CACHE_OBJECT_TYPE = null;
+    /**
+     * Default TTL for cached list results - 10 minutes
+     * @var int
+     */
     const CACHE_TTL_LIST    = 10;
+    /**
+     * Default TTL for cached load results - 10 minutes
+     * @var int
+     */
     const CACHE_TTL_LOAD    = 10;
 
 	/**
-	 * To insure that each child is truly unique while flagging changes, we give each
-	 *		new object an arbitrary "uid"
-	 * 
-	 * Determined this to be necessary once we realized that when child classes attempted to 
-	 *	flag themselves as changed with their parents, it would fail to be flagged
-	 *	if there happend to be any other objects with the exact same values, setting this
-	 *	unique id prevents that from happening
+     * Unique object ID, to insure each object is unique, even if
+     *  their values are identical
+     * @ignore
+     * @var string
 	 */
 	protected $uid;
 
@@ -125,7 +157,7 @@ class BBSimpleModel {
 
     /**
      * Returns the last error (if it exists)
-     * @return mixed
+     * @return object|null
      */
     public function error() {
         return $this->last_error;
@@ -232,6 +264,7 @@ class BBSimpleModel {
 
 		//For full models, use the current ID
 		if($this instanceof BBModel) {
+
 			if(!is_null($this->id)) $object_id = $this->id;
 		}
 
@@ -272,10 +305,11 @@ class BBSimpleModel {
      * Note: The scope will be limited to the classes' CACHE_OBJECT_TYPE object_ttl
      * 
      * Use {@link BBSimpleModel::clear_service_cache} for removing
-     *  cached API reponses, without worrying about the object type values
+     *  cached API responses, without worrying about the object type values
      * 
      * 
-     * @param string|array $services
+     * @param string|array $svc
+     * @return boolean
      */
     public function clear_object_service_cache($svc) {
         $object_type = $this->get_cache_setting('object_type');
@@ -287,10 +321,11 @@ class BBSimpleModel {
      * Note: This method does NOT limit the scope of the services, 
      * it will remove ANY response cache that used the given $svc name
      * 
-     * @param string|array $services
+     * @param string|array $svc
+     * @return boolean
      */
     public function clear_service_cache($svc) {
-        $this->bb->clear_cache($svc);
+        return $this->bb->clear_cache($svc);
     }
     /**
      * Clears ALL cache associated with this object_type

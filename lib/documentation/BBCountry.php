@@ -3,7 +3,7 @@
 /**
  * The data structure for values returned from the BBCountry services
  * 
- * This class is never used, it soley exists for documentation
+ * This class is never used, it solely exists for documentation
  * 
  * @property-read string $country
  *  The country name
@@ -22,6 +22,10 @@
  * 
  * @package BinaryBeast
  * @subpackage SimpleModel_ObjectStructure
+ *
+ * @version 1.0.1
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com
  */
 abstract class BBCountryObject {
     //Nothing here - used for documentation only

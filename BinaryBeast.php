@@ -191,46 +191,19 @@
  * 
  * @package BinaryBeast
  * 
- * @version 3.0.5
- * @date 2013-04-05
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @version 3.0.6
+ * @date    2013-04-19
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 class BinaryBeast {
 
-    //URL to send API Requests
+    /**
+     * URL to which to send API requests
+     * @var string
+     */
     private static $url = 'https://api.binarybeast.com/';
-
-    /**
-     * Base path to the binarybeast library folder
-     * @var string
-     */
-    public $lib_path;
-
-    /**
-     * BinaryBeast API Key
-     * @access private
-     * @var string
-     */
-    private $api_key = null;
-
-    /**
-     * Login email cache
-     */
-    private $email = null;
-    private $password = null;
-
-    /**
-     * If the ssl verification causes issues, developers can disable it
-     */
-    private $verify_ssl = true;
-
-    /**
-     * Constructor flags wether or not server is capable of requesting and processing the API requests
-     * Static so that we don't have to check it more than once if instantiated again
-     */
-    private static $server_ready = null;
 
     /**
      * Store the result codes / values for the previous
@@ -252,12 +225,56 @@ class BinaryBeast {
      * A history of error messages
      * @var object[]
      */
-    public $error_history   = array();
+    public $error_history = array();
     /**
      * A history of API call results
      * @var object[]
      */
-    public $result_history  = array();
+    public $result_history = array();
+
+    /**
+     * Simple constant that contains the library version
+     * @var string
+     */
+    const API_VERSION = '3.0.6';
+
+    //<editor-fold defaultstate="collapsed" desc="Private Properties">
+    /**
+     * Base path to the binarybeast library folder
+     * @var string
+     */
+    private $lib_path;
+
+    /**
+     * BinaryBeast API Key
+     * @access private
+     * @var string
+     */
+    private $api_key = null;
+
+    /**
+     * Login email cache
+     * @var string
+     */
+    private $email = null;
+    /**
+     * Login password - goes along with {@link $email}
+     * @var string
+     */
+    private $password = null;
+
+    /**
+     * If the ssl verification causes issues, developers can disable it
+     * @var boolean
+     */
+    private $verify_ssl = true;
+
+    /**
+     * Constructor flags whether or not server is capable of requesting and processing the API requests
+     * Static so that we don't have to check it more than once if instantiated again
+     * @var boolean
+     */
+    private static $server_ready = null;
 
     /**
 	 * Cached instance of BBLegacy
@@ -285,6 +302,7 @@ class BinaryBeast {
     /**
      * List of dependent models to auto-load when we load
      * a library that needs them
+     * @var string[]
      */
     private static $auto_load_libraries = array(
         'BBTournament'  => array('BBTeam', 'BBRound', 'BBMatch'),
@@ -294,6 +312,7 @@ class BinaryBeast {
     /**
      * The first time this class is instantiated, we'll auto-load 
      * some libraries, but skip that step if another instance is created
+     * @var boolean
      */
     private static $first = true;
 
@@ -302,15 +321,12 @@ class BinaryBeast {
      * @var BBConfiguration
      */
     private $config;
+    //</editor-fold>
 
+    //<editor-fold defaultstate="collapsed" desc="Tournament constants">
     /**
-     * Simple constant that contains the library version
-     * @var string
-     */
-    const API_VERSION = '3.0.5';
-    /**
-     * Each bracket is idenetifed by a number,
-     * 0 indicates group roundes
+     * Each bracket is identified by a number,
+     * 0 indicates group rounds
      * @var int
      */
     const BRACKET_GROUPS    = 0;
@@ -444,6 +460,9 @@ class BinaryBeast {
      * @var int
      */
     const TEAM_STATUS_BANNED                = -1;
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="Result code constants">
     /**
      * <b>API Result Code</b><br />
      * The API call was successful
@@ -592,6 +611,7 @@ class BinaryBeast {
      * @var int
      */
     const RESULT_TOURNAMENT_STATUS              = 715;
+    //</editor-fold>
 
     /**
      * Library constructor
@@ -667,7 +687,7 @@ class BinaryBeast {
      * a more traditional email and password
      * 
      * @param string $email
-     * @param string $Password
+     * @param string $password
      * @param bool   $test
      * 
      * @return boolean
@@ -899,9 +919,10 @@ class BinaryBeast {
     /**
      * Make a service call to the BinaryBeast API via the cURL library
      *
-     * @access private
+     * @ignore
      *
-     * @param string URL encoded arguments
+     * @param string $args
+     * URL encoded arguments
      *
      * @return string
      */
@@ -949,11 +970,12 @@ class BinaryBeast {
      * Allows us to create new model classes as if accessing attributes, avoiding the
      * need to call it as a function, so we can get a tournament instance for example, like this:
      * $new_tour = $bb->tournament; which translates to:
-     * $new_tour = $bb->touranment(); - creating a new blank tournament
-     * 
+     * $new_tour = $bb->tournament(); - creating a new blank tournament
+     *
+     * @ignore
      * @param string $name
      * 
-     * @return false|BBTournament|BBTeam|BBRound|BBMatch|BBMatchGame|BBMap|BBCountry|BBGame|BBRace|BBLegacy|BBCache|BBCallback
+     * @return BBModel|object|boolean
      */
     public function &__get($name) {
         //Define a list of acceptable methods that are allowed to be called as property
@@ -981,7 +1003,8 @@ class BinaryBeast {
     /**
      * Returns a new BBTeam model class
      * 
-     * @param object|intstring $team_data    Optionally pre-define the team's data or id
+     * @param object|array|int $team_data
+     * Optionally pre-define the team's data or id
      * @return BBTeam
      */
     public function &team($team_data = null) {
@@ -1017,11 +1040,12 @@ class BinaryBeast {
 	 * Returns a new BBMatch model class
 	 *	Only useful if you know the match_id, it otherwise can't be saved / reported
 	 *	without a tournament associated with it
+	 *
+     * <br /><br />
+	 * If you DO however know the match id, you can use this to load the match,<br />
+	 *	and then load its tournament by accessing <var>$match->tournament</var> or {@link BBMatch::tournament()}
 	 * 
-	 * If you DO however know the match id, you can use this to load the match,
-	 *	and then to load it's touranment by accessing $match->tournament or $match->tournament()
-	 * 
-	 * @param int|object $game      Either the tourney_match_game_id or the game data
+	 * @param int|object $game_data      Either the tourney_match_game_id or the game data
 	 * @return BBMatchGame
 	 */
 	public function &match_game($game_data = null) {
@@ -1113,10 +1137,16 @@ class BinaryBeast {
      * To avoid the overhead of include|require_once.. we use this method
      * to load libraries on demand, but we use class_exists first to see
      * if we actually need to load the file
+     *
+     * @ignore
      * 
-     * @param string        $library        Full library class name / file name
-     * @param string        $lib_path       Optionally override the default /lib 
-     *      Usefulf or loading extended model classes from a specific directory
+     * @param string        $library
+     *  Full library class name / file name
+     * @param string        $lib_path
+     *  Optionally override the default /lib<br />
+     *  Useful or loading extended model classes from a specific directory
+     *
+     * @return boolean
      */
     private function load_library($library, $lib_path = null) {
 
@@ -1169,7 +1199,7 @@ class BinaryBeast {
         if(isset($this->models_cache[$model])) return $this->models_cache[$model];
 
         //Store the new instance returned by get_model directly into the local model cache
-        if(!$this->models_cache[$model] = $this->get_model($model, null)) return $this->ref(false);
+        if(!($this->models_cache[$model] = $this->get_model($model, null))) return $this->ref(false);
 
         //Cache it, and return the cached version
         return $this->models_cache[$model];
@@ -1179,7 +1209,8 @@ class BinaryBeast {
      * 
      * @param string  $model        Full name of the model (example: BBTournament, BBMatchGame)
      * @param string  $data         Optional data to send to the new model, like a result set or id value
-     * @return BBModal              False if the $model name is invalid
+     * @return BBModel|boolean
+     * - <b>False</b> if the $model name is invalid
      */
     private function get_model($model, $data = null) {
         /**
@@ -1229,7 +1260,7 @@ class BinaryBeast {
      * as clean as possible
      * 
      * @param string $name
-     * @param array $array
+     * @param array $args
      * 
      * @return false|object
      * Returns <b>false</b> if <var>$name</var> does not match any of the service wrappers available in {@link BBLegacy}<br />
@@ -1271,7 +1302,7 @@ class BinaryBeast {
 	 * Attempt to clear cache (keyed by any combination of service name[s], object_type, and object_id)
 	 *	without having to worry about wether or not BBCache is setup
 	 * 
-	 * @param strinig|array $svc
+	 * @param string|array $svc
 	 * @param string		$object_type
 	 * @param mixed			$object_id
 	 * @return boolean

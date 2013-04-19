@@ -26,11 +26,11 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version     3.0.3
- * @date        2013-04-13
- * @author      Brandon Simmons <contact@binarybeast.com>
- * @license     http://www.opensource.org/licenses/mit-license.php
- * @license     http://www.gnu.org/licenses/gpl.html
+ * @version 3.0.3
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
+ * @license http://www.opensource.org/licenses/mit-license.php
+ * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBHelper {
 
@@ -58,7 +58,7 @@ class BBHelper {
         '500'               => 'Generic error, likely something wrong on BinaryBeast\'s end',
         '601'               => 'The "$filter" value provided is too short',
         '604'               => 'Invalid user_id',
-        '705'               => 'Proivded tourney_team_id and tourney_id do not match!',        
+        '705'               => 'Provided tourney_team_id and tourney_id do not match!',
         '704'               => 'Tournament not found / invalid tourney_id (or.. invalid map_id)',
         '706'               => 'Team not found / invalid tourney_team_id',
         '708'               => 'Match not found / invalid tourney_match_id',
@@ -83,8 +83,8 @@ class BBHelper {
      * 
      * @ignore
      * @param mixed $value
-     * @param array $translation
-     * @param mixed     
+     * @param array $translations
+     * @return string|int|null
      */
     private static function translate($value, $translations) {
         //Invalid value type - just send it back
@@ -225,6 +225,7 @@ class BBHelper {
      * Attempts to return the string value of a tournament's type_id
      * 
      * @param int $type_id
+     * @return string|null
      */
     public static function translate_tournament_type_id($type_id) {
         return self::translate($type_id, self::$tournament_types);
@@ -246,7 +247,7 @@ class BBHelper {
     /**
      * Translate the integer of replay_uploads into a readable string value
      * 
-     * @param int $replay_downloads
+     * @param int $replay_uploads
      * @return string
      */
     public static function translate_replay_uploads($replay_uploads) {
@@ -545,10 +546,15 @@ class BBHelper {
 	 * Used by get_available_brackets to add a bracket to the 
 	 *	$brackets array, based on labels / arrays 
      * @ignore
+     * @param array     $brackets
+     * @param int       $bracket
+     * @param string    $label
+     * @param boolean   $labels
+     * @param boolean   $arrays
 	 * @return void - works on $brackets by reference
 	 */
 	private static function get_bracket(&$brackets, $bracket, $label, $labels, $arrays) {
-		//Use label if $lables is true
+		//Use label if $labels = true
 		if($labels) $bracket = $label;
 		if($arrays) $brackets[$bracket] = array();
 		else		$brackets[] = $bracket;

@@ -183,7 +183,14 @@
  * Use {@link BBRace::game_list()} for race_ids values<br /><br />
  * 
  * {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#example-races Check out the example}
- * 
+ *
+ * @property-read int $race_id
+ * <b>Read-only</b> race_id value, derived from the value provided for {@link $race}
+ *
+ * @property-read int $o_race_id
+ * <b>Read-only</b> o_race_id value, derived from the value provided for {@link $o_race}
+ *
+ *
  * @property string|int $o_race
  * The match loser's race - can be the race_id integer, or a custom race name string<br />
  * Use {@link BBRace::game_list()} for race_ids values<br /><br />
@@ -217,9 +224,9 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.1
- * @date 2013-03-28
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @version 3.0.2
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
@@ -290,7 +297,7 @@ class BBMatchGame extends BBModel {
     /**
      * Since PHP doens't allow overloading the constructor with a different paramater list,
      * we'll simply use a psuedo-constructor and call it init()
-     * 
+     *
      * @param BBTournament  $tournament
      * @param BBMatch       $match
      * @return void
@@ -307,12 +314,9 @@ class BBMatchGame extends BBModel {
     /**
      * Overloaded to update map when trying to set map_id, and so we can treat
      *  attempts to change team ids by calling set_winner|loser
-     * 
-     * @see BBModel::__set()
-     * 
+     *
      * @ignore
-     * 
-     * @return void
+     * {@inheritdoc}
      */
     public function __set($name, $value) {
         //If setting team ids, run it through set_winner / set_loser
@@ -336,10 +340,9 @@ class BBMatchGame extends BBModel {
     }
 
     /**
-     * Overloads BBModel::save so we can make sure that the match
-     *  is saved before trying to update any games
-     * 
-     * @return boolean
+     * Save the game details
+     *
+     * {@inheritdoc}
      */
     public function save($return_result = false, $child_args = null) {
         //If the match hasn't been saved yet, stop now
@@ -424,12 +427,16 @@ class BBMatchGame extends BBModel {
 	 * 
 	 * Set winner to null to indiciate a draw
      * 
-     * @param BBTeam|int    $winner        The winning team - can be a BBTeam instance of a tourney_team_id integer
-     *      returns false if provided team is invalid
+     * @param BBTeam|int    $winner
+     *  The winning team - can be a BBTeam instance of a tourney_team_id integer<br/ >
+     *  returns false if provided team is invalid
      * @param int           $match_winner_score
-     *      The score of the team who won the match 
+     *  The score of the team who won the match
      * @param int           $match_loser_score
-     *      The score of the team who lost the match 
+     *  The score of the team who lost the match
+     *
+     * @return boolean
+     * <b>False</b> if the provided team is invalid, or the winner can no longer be changed
      */
     public function set_winner($winner, $match_winner_score = null, $match_loser_score = null) {
         if($this->orphan_error()) return false;
@@ -474,6 +481,8 @@ class BBMatchGame extends BBModel {
     }
 	/**
 	 * Set the winner of this game to null, indicating a draw
+     * @param int $match_winner_score
+     * @param int $match_loser_score
 	 * @return boolean
 	 */
 	public function set_draw($match_winner_score = null, $match_loser_score = null) {

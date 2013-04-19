@@ -4,11 +4,11 @@
 /**
  * The object structure used in {@link BBTournament::rounds()}
  * 
- * This class is never used, it soley exists for documentation
+ * This class is never used, it solely exists for documentation
  * 
- * @version 1.0.0
- * @date 2013-04-05
- * @author Brandon Simmons
+ * @version 1.0.2
+ * @date    2013-04-13
+ * @author Brandon Simmons <contact@binarybeast.com
  *  
  * @package BinaryBeast
  * @subpackage Model_ObjectStructure

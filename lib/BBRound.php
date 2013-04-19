@@ -2,7 +2,8 @@
 
 /**
  * Model object representing the round format (best_of / date etc) within a {@link BBTournament}
- * 
+ *
+ * @todo write quick examples / tutorials here
  * 
  * 
  * @property int $best_of
@@ -36,16 +37,14 @@
  * @subpackage Model
  * 
  * 
- * @version 3.0.0
- * @date 2013-03-26
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @version 3.0.1
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBRound extends BBModel {
 
-    //Service names for the parent class to use for common tasks
-    //const SERVICE_LOAD   = 'Tourney.TourneyLoad.Info'; //This class is instantiated manually, we don't call the load service from here
     const SERVICE_CREATE = 'Tourney.TourneyRound.Update';
     const SERVICE_UPDATE = 'Tourney.TourneyRound.Update';
     const SERVICE_DELETE = 'Tourney.TourneyRound.Delete';
@@ -74,11 +73,7 @@ class BBRound extends BBModel {
      */
     public $round;
 
-    /**
-     * Default values for a new tournament
-     * @see BinaryBeast::update()
-     * @var array
-     */
+
     protected $default_values = array(
         'best_of'           => 1,
         'map_id'            => null,
@@ -88,7 +83,7 @@ class BBRound extends BBModel {
 
     /**
      * Since PHP doens't allow overloading the constructor with a different paramater list,
-     * we'll simply use a psuedo-constructor and call it init()
+     * we'll simply use a pseudo-constructor and call it init()
      * 
      * @param BBTournament $tournament
      * @param int $bracket
@@ -108,11 +103,8 @@ class BBRound extends BBModel {
      * Overloaded so that we can validate the value of best_of,
 	 *		and re-calculate the wins_needed when it changes
      * 
-     * @see BBModel::__set()
-     * 
      * @ignore
-     * 
-     * @return void
+     * {@inheritdoc}
      */
     public function __set($name, $value) {
         //Make sure that when setting best_of, that it's a valid value
@@ -129,14 +121,11 @@ class BBRound extends BBModel {
     }
 
     /**
-     * Overloadsd BBModel because we have unique needs as far as how to
-     * let know BinaryBeast what our unique id is, we a round
-     * doesn't actually have a unique id value, it's a combination 
-     * of tournament id, round, and bracket
-     * 
-     * We also notify the tournament this round no longer has unsaved changes
-     * 
-     * @return boolean
+     * Save the changes to this round
+     *
+     * Overloaded for special API argument requirements
+     *
+     * {@inheritdoc}
      */
     public function save($return_result = false, $child_args = null) {
 
@@ -173,7 +162,7 @@ class BBRound extends BBModel {
         else return $this->set_error($result);
     }
     /**
-     * Since we dont' have an id, and we don't create rounds
+     * Since we don't have an id, and we don't create rounds
      *  one at a time, we handle this flag differently than BBmodel
      * 
      * @return boolean

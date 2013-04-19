@@ -77,17 +77,24 @@
  * @subpackage SimpleModel
  * 
  * 
- * @version 3.0.1
- * @date 2013-03-28
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @version 3.0.2
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBMap extends BBSimpleModel {
+    /**
+     * Service name for searching listing game maps
+     * @var string
+     */
     const SERVICE_LIST      = 'Game.GameMap.LoadList';
+    /**
+     * Service name for searching searching for game maps
+     * @var string
+     */
     const SERVICE_SEARCH    = 'Game.GameMap.Search';
-    
-    //Cache setup (1 day cache)
+
     const CACHE_OBJECT_TYPE      = BBCache::TYPE_MAP;
     const CACHE_TTL_LIST         = 1440;
 
@@ -101,7 +108,6 @@ class BBMap extends BBSimpleModel {
      *  show up here until we approve them
      * 
      * @param string $game_code
-     * @param string $filter
      * @return BBMapObject[]
      */
     public function game_list($game_code) {
@@ -115,7 +121,7 @@ class BBMap extends BBSimpleModel {
      */
     public function load_list($game_code, $filter = null) {
         if(is_null($filter)) return $this->game_list($game_code);
-        return $this->search($game_code, $filter);
+        return $this->game_search($game_code, $filter);
     }
     /**
      * Return a filtered set of maps associated with the given game_code

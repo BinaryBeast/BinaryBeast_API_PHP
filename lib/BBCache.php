@@ -114,7 +114,8 @@ class BBCache {
      * 
      * @ignore
      * 
-     * @param BinaryBeast   $bb
+     * @param BinaryBeast       $bb
+     * @param BBConfiguration   $config
      */
     function __construct(BinaryBeast &$bb, BBConfiguration &$config) {
         $this->bb       = &$bb;
@@ -359,6 +360,7 @@ class BBCache {
      * @param mixed $object_id
      * @param int $ttl
      * @param string $result
+     * @return boolean
      */
     private function insert($svc, $object_type, $object_id, $ttl, $result) {
         $statement = $this->db->prepare("
@@ -376,6 +378,7 @@ class BBCache {
      * 
      * @ignore
      * @param array     object to compress
+     * @return string
      */
     private function compress($result) {
 		//First, JSON encode the array / object into a string

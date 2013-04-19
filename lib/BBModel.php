@@ -10,17 +10,20 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.4
- * @date 2013-04-05
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @version 3.0.5
+ * @date    2013-04-13
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 abstract class BBModel extends BBSimpleModel {
 
     /**
-     * Public "preview" of current data values, mostly for the benefit
-     *  for var_dump, as it will always have the latest value (even pending save())
+     * Public "preview" of current data values<br />
+     * <b>Includes unsaved changes</b><br /><br />
+     *
+     * mostly for the benefit of var_dump/print_r,<br />
+     * as it will always have the latest value (even pending save())
      * @var array
      */
     public $data = array();
@@ -28,78 +31,110 @@ abstract class BBModel extends BBSimpleModel {
     /**
      * Array of original data that we can use later if we need to 
      *  revert changed
+     * @ignore
      * @var array
      */
     protected $current_data = array();
 
     /**
      * Stores JUST values that have been changed and are pending the next save()
+     * @ignore
      * @var array
      */
     protected $new_data = array();
 
-    //Should be defined by children classes to let us know which property to use as the unique ID for this instance
-    //For example for a tournament, this value should be tourney_id, so we can refer to $this->tourney_id dynamically
-    protected $id_property = 'id';
+    /**
+     * This object's unique ID
+     * Standardized for convenience, as BinaryBeast uses unique naming for each object
+     * For example: {@link BBTournament::tourney_id} and {@link BBTeam::tourney_team_id}
+     * @var int|string|null
+     */
     public $id;
 
     /**
-     * Overloaded by children to define default values to use when creating a new object
-     * This also allows us to define public properties for models, IDE auto-completion
-     *  however we still want __set and __get to handle the values, so we use the keys in
-     *  this array to unset() the properties, so the magic methods will still be called
+     * Child-specified property name for this object's ID
+     * each object defines the ID differently, for example tourney_team_id and tourney_match_id
+     * @ignore
+     * @var string
+     */
+    protected $id_property = 'id';
+
+    /**
+     * Default property values for new objects
+     *
+     * Overloaded by children for model-specific values
+     *
+     * @var array
      */
     protected $default_values = array();
 
-    //Overloaded by children to define a list of values that developers are NOT allowed to change
+    /**
+     * Array of property names to set as read-only,
+     * thereby denying attempts to __set them
+     *
+     * Overloaded by child objects for model-specific values
+     *
+     * @ignore
+     * @var array
+     */
     protected $read_only = array();
 
     /**
-     * Child classes can define a data extract key to attempt to use
-     * This is necessary due to the fact that BinaryBeast does not return consistent formats unfortunately
-     * For example Tourney.TourneyLoad.Info returns array[int result, array tourney_inf], so BBTournament
-     *      defines this values as 'tourney_info', 
-     * But Tourney.TourneyLoad.match returns array[int result, array match_info], so BBMatch
-     *      defines this value as 'match_info'
-     * 
-     * It just let's import_values() know to first try extract from $result['match_info'] before importing
-     * $result directly
-     * 
-     * @access protected
+     * The property name used by BinaryBeast to define this object's data
+     *
+     * Defined by model classes for object-specific values
+     *
+     * For example BBTournament defines it as 'tourney_info', so when BinaryBeast responds with
+     * response => {'result' => 200, 'tourney_info' => {}}... the tourney_info object is
+     * automatically extracted to use for this object's property values
+     *
+     * Used by {@link import_values()}
+     *
+     * @ignore
+     * @var string
      */
     protected $data_extraction_key;
 
     /**
-     * Flags wether or not this object has any unsaved changes
+     * Flags whether or not this object has any unsaved changes
+     * @var boolean
      */
     public $changed = false;
 
     /**
      * Keep track of child model classes that have unsaved changes
+     * @ignore
+     * @var BBModel[]
      */
     protected $changed_children = array();
+    /**
+     * Number of children currently flagged as having changes
+     * @ignore
+     * @var int
+     */
     protected $changed_children_count = 0;
 
     /**
-     * Allows models to define their parent class, so that we can 
-     *  execute the parent's flag_child_changed() method when appropriate
-     * 
-     * Moved this here once I realized that half of my models were overriding everything so that
-     *  they could flag changes
-     * 
-     * @var BBModel
+     * This object's parent model object
+     *
+     * Null if not applicable, for example a tournament won't have a parent
+     * @ignore
+     * @var BBModel|null
      */
     protected $parent = null;
 
 	/**
      * Used by a few child classes (like teams and MatchGames) to flag themselves
      *  after having been deleted - to prevent any further manipulation
+     * @ignore
+     * @var boolean
 	 */
 	private $orphan = false;
 
 	/**
 	 * BBClasses objects can set this "iterating" flag to indicate that we're in the middle
 	 *		of a batch update, and should therefore ignore attempts to unflag / flag changes in child classes
+     * @ignore
 	 * @var boolean
 	 */
 	protected $iterating = false;
@@ -229,7 +264,7 @@ abstract class BBModel extends BBSimpleModel {
      *      $data
      *      $new_data
      *      $id as ${$id_property}
-     * 
+     *
      * @param string $name
      * @return mixed
      */
@@ -278,6 +313,7 @@ abstract class BBModel extends BBSimpleModel {
     
     /**
      * Returns the default value for the given $key if available
+     * @param string $key
      * @return mixed
      */
     public function default_value($key) {
@@ -570,10 +606,13 @@ abstract class BBModel extends BBSimpleModel {
      *      However for $return_result = true, it will simply return the API's response directly
      * 
      * Specific classes may also define additional arguments to send using the second $args argument
+     *
+     * @param bool      $return_result
+     * @param array     $child_args		child classes may define additional arguments to send along with the request
      * 
-     * @param array   $args		child classes may define additional arguments to send along with the request
-     * 
-     * @return string|int       false if the call failed
+     * @return string|int|BBResultObject       false if the call failed
+     * - int/string returned if the call succeeds, it represents this objects id
+     * - object returned if <var>$return_result</var> is set to true
      */
     public function save($return_result = false, $child_args = null) {
         if($this->orphan_error()) return false;
@@ -694,7 +733,7 @@ abstract class BBModel extends BBSimpleModel {
         return is_null($this->id);
     }
     /**
-     * Returns a boolean that reflects whehter or not this object
+     * Returns a boolean that reflects whether or not this object
      *  has been orphaned
      * 
      * Orphaned objects are BBModel instances that have been removed from their parent BBModel objects,
@@ -768,7 +807,8 @@ abstract class BBModel extends BBSimpleModel {
      * When a child is flagged as having unsaved changes, we store a reference
      *      to the child in $this->changed_children['type'][], and also update
      *      the integer changed_children_count
-     * 
+     *
+     * @ignore
      * @param BBModel $child - a reference to child object to be tracked
      * @return void
      */
@@ -794,7 +834,8 @@ abstract class BBModel extends BBSimpleModel {
     /**
      * Removes any references to a child class (team/round for tournaments.. etc), so we know that
      * the child has no unsaved changes
-     * 
+     *
+     * @ignore
      * @param BBModel $child - a reference to the child to unflag
      * @return void
      */
@@ -864,7 +905,8 @@ abstract class BBModel extends BBSimpleModel {
     /**
      * Retrieve an array of children of the provided $class name, that have been flagged
      *  as having unsaved changes
-     * 
+     *
+     * @ignore
      * @param string $class		null returns ALL children with changes
      * @return array
      */
@@ -1007,7 +1049,9 @@ abstract class BBModel extends BBSimpleModel {
      *  notify parent classes of unsaved changes when appropriate
      * 
      * @ignore
-     * @param bool $changed    true by default, set to false to skip notifying the parent class of changes
+     * @param bool $flag_parent
+     * true by default, set to false to skip notifying the parent class of changes
+     *
      * @return void
      */
     protected function flag_changed($flag_parent = true) {
@@ -1049,7 +1093,12 @@ abstract class BBModel extends BBSimpleModel {
 	 * List all callbacks registered with this object's ID
 	 * 
 	 * You may optionally limit the results by defining a $url and/or $event_id
-	 * 
+	 *
+     * @param string $url
+     *  Optionally filter by URL
+     * @param int $event_id
+     *  Optionally filter by event type
+     *
 	 * @return BBCallbackObject[]|null
 	 *	<b>Null</b> is returned if this object does not have an ID
 	 */
