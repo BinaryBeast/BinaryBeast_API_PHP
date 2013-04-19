@@ -202,7 +202,7 @@
  *  $game3 = $match->game($team1);
  * </code>
  * 
- * **Note** that since <var>$match->round->best_of</var> is set to 3, we would not be allowed to create any new games
+ * **Note** that since <var>$match->round_format->best_of</var> is set to 3, we would not be allowed to create any new games
  * 
  * Therefore extending the previous code block, the following line would return NULL
  * <code>
@@ -221,21 +221,21 @@
  * 
  * <br /><br />
  * If enabled, the the report will fail unless <var>$match->winner()</var> wins exactly enough {@link BBMatchGame} games<br />
- * to satisfy <var>$match->round->best_of</var> and <var>$match->round->wins_needed</var>
+ * to satisfy <var>$match->round_format->best_of</var> and <var>$match->round_format->wins_needed</var>
  * 
  * 
  * <b>Example: Strict report with invalid game wins for the winner</b>
  * 
- * <var>$team</var> Gets 3 wins, but he needs two according to <var>$round->best_of</var>
+ * <var>$team</var> Gets 3 wins, but he needs two according to <var>$round_format->best_of</var>
  * <code>
  *  //Just insure that the round's best_of is 3
- *  $match->round->best_of = 3;
- *  $match->round->save();
+ *  $match->round_format->best_of = 3;
+ *  $match->round_format->save();
  * 
  *  //Prove that it's best_of 3, which requires 2 wins
  *  echo $match->team->display_name . ' vs ' . $match->team2->display_name .
- *      ' is a best_of ' . $match->round->best_of . ' series, requiring ' .
- *      $match->round->wins_needed . ' wins';
+ *      ' is a best_of ' . $match->round_format->best_of . ' series, requiring ' .
+ *      $match->round_format->wins_needed . ' wins';
  * 
  *  //Give $team 3 wins, which is invalid
  *  $winner = $match->team();
@@ -307,8 +307,11 @@
  * <b>Alias for {@link BBMatch::games()}</b><br />
  * an array of games in this match
  * 
- * @property BBRound $round
- * <b>Alias for {@link BBMatch::round()}</b><br />
+ * @property-read int $round
+ * The round this match is played in
+ *
+ * @property BBRound $round_format
+ * <b>Alias for {@link BBMatch::round_format()}</b><br />
  * The BBRound object defining the format for this match<br />
  * <b>NULL return:</b> unable to determine which round this match was in
  * 
@@ -326,24 +329,22 @@
  * 
  * @property BBTeam $winner
  * <b>When Reading: </b> alias for {@link BBMatch::winner()}<br />
- * <b>When Assigning: </b> Alias for {@link BBMatch::set_winner()}<br />
+ * <b>When Assigning: </b> alias for {@link BBMatch::set_winner()}<br />
  * BBTeam object for the winner of the match<br />
  * <b>Returns NULL if set_winner hasn't been called</b><br />
  * <b>Returns FALSE if match was a draw</b>
  *
  * @property-read BBTeam $loser
  * <b>When Reading: </b>alias for {@link BBMatch::loser()}<br />
- * <b>When Writing: </b>Alias for {@link BBMatch::set_loser()}<br />
+ * <b>When Writing: </b>alias for {@link BBMatch::set_loser()}<br />
  * BBTeam object for the loser of the match<br />
  * <b>Returns NULL if set_winner hasn't been called</b><br />
  * <b>Returns FALSE if match was a draw</b>
  * 
  * @property BBTournament $tournament
- *  <b>Alias for {@link BBMatch::tournament()}</b>
- *  <pre>
- *      The tournament this match is in
- *  </pre>
- * 
+ *  <b>Alias for {@link BBMatch::tournament()}</b><br />
+ *  The tournament this match is in
+ *
  * 
  * @todo add callbacks
  * 
@@ -352,41 +353,42 @@
  * @subpackage Model
  * 
  * @version 3.0.6
- * @date    2013-04-13
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @date    2013-04-14
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBMatch extends BBModel {
 
-    //Service names for the parent class to use for common tasks
-    const SERVICE_LOAD          = 'Tourney.TourneyLoad.Match'; 
+    //<editor-fold defaultstate="collapsed" desc="API svc names">
+    const SERVICE_LOAD          = 'Tourney.TourneyLoad.Match';
     const SERVICE_CREATE        = 'Tourney.TourneyTeam.ReportWin';
     const SERVICE_UPDATE        = 'Tourney.TourneyMatch.Update';
     const SERVICE_DELETE        = 'Tourney.TourneyMatch.Delete';
-    //
+    /**
+     * API svc name for unreporting the match
+     * @var string
+     */
     const SERVICE_UNREPORT      = 'Tourney.TourneyTeam.UnreportWin';
+    /**
+     * API svc name for saving game details in batch
+     * @var string
+     */
 	const SERVICE_UPDATE_GAMES  = 'Tourney.TourneyMatchGame.ReportBatch';
+    //</editor-fold>
 
-    //Cache setup (cache for 10 minutes)
+    //<editor-fold defaultstate="collapsed" desc="Local cache settings">
     const CACHE_OBJECT_TYPE		= BBCache::TYPE_TOURNAMENT;
     const CACHE_TTL_LIST        = 10;
     const CACHE_TTL_LOAD        = 10;
+    //</editor-fold>
 
+    //<editor-fold defaultstate="collapsed" desc="Private properties and children arrays">
     /**
      * Keep a reference to the tournament that instantiated this class
      * @var BBTournament
      */
     private $tournament;
-
-    //This Match's ID, using BinaryBeast's naming convention
-    public $tourney_match_id;
-
-    //So BBModal knows which property use as the unique id
-    protected $id_property = 'tourney_match_id';
-
-    //Helps BBModal know how to extract the right value from the API result
-    protected $data_extraction_key = 'match_info';
 
     /**
      * Public array of games within this match
@@ -402,9 +404,10 @@ class BBMatch extends BBModel {
 
     /**
      * BBRound format for this match's round
+     * @todo rename this to round_format and add $round, which will be a simple integer telling us which round the match is actually in
      * @var BBRound
      */
-    private $round;
+    private $round_format;
 
     /**
      * BBTeam object for player 1 -- winner for existing matches
@@ -417,6 +420,12 @@ class BBMatch extends BBModel {
      * @var BBTeam
      */
     private $opponent;
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="BBModel implementations">
+    protected $id_property = 'tourney_match_id';
+    protected $data_extraction_key = 'match_info';
+    protected $read_only = array('team', 'opponent', 'draw', 'bracket');
 
     /**
      * Default values for a new match
@@ -431,9 +440,13 @@ class BBMatch extends BBModel {
 		'o_score'					=> 0,
         'draw'                      => false
     );
+    //</editor-fold>
 
-    //Values sent from the API that I don't want developers to accidentally change
-    protected $read_only = array('team', 'opponent', 'draw', 'bracket');
+    /**
+     * This Match's ID, using BinaryBeast's naming convention
+     * @var int
+     */
+    public $tourney_match_id;
 
     /**
      * Import parent tournament class
@@ -456,7 +469,7 @@ class BBMatch extends BBModel {
      * 
      * If you wish to delete a match that has already been reported, please see {@link BBMatch::unreport()}
      * 
-     * @return boolean
+     * {@inheritdoc}
      */
     public function delete() {
         //Only continue if the match hasn't been reported
@@ -471,9 +484,7 @@ class BBMatch extends BBModel {
     /**
      * Overloads the BBModel save() so we can define additional arguments to send
      * 
-     * @param boolean $return_result    Ignored
-     * @param array $child_args         Ignored
-     * @return boolean
+     * {@inheritdoc}
      */
     public function save($return_result = false, $child_args = null) {
 		//Report() before saving
@@ -496,9 +507,7 @@ class BBMatch extends BBModel {
      * Overload BBModel::__get so that when score and o_score are accessed, we can
      *  return the number of game_wins instead of the not-likely-to-be-used score and o_score values
      * 
-     * @ignore
-     * @param string $name
-     * @return mixed
+     * {@inheritdoc}
      */
     public function &__get($name) {
         if($name == 'score' || $name == 'o_score') {
@@ -513,9 +522,9 @@ class BBMatch extends BBModel {
 
     /**
      * Overload BBModel's __set so we can handle setting team ids, and draw manually
+     *
      * @ignore
-     * @param string $name
-     * @param mixed $value
+     * {@inheritdoc}
      */
     public function __set($name, $value) {
         if($name == 'tourney_team_id')      return $this->set_winner($value);
@@ -529,9 +538,9 @@ class BBMatch extends BBModel {
 
     /**
      * Overrides BBModel::reset() so we can define the $teams array for removing unsaved teams,
-     *  and so we can unflag $winner_set if appropriate
+     *  and so we can unflag {@link $winner_set} if appropriate
      * 
-     * @return boolean|true
+     * {@inheritdoc}
      */
     public function reset() {
         //BBModel's default action first
@@ -550,21 +559,21 @@ class BBMatch extends BBModel {
      * Returns the BBRound containing the round format for this match
      * 
      * returns null if unable to determine the round format
-     * 
+     *
      * @return BBRound|null - null if unavailable
      */
-    public function &round() {
+    public function &round_format() {
         //Already set
-        if(!is_null($this->round)) return $this->round;
+        if(!is_null($this->round_format)) return $this->round_format;
         
         //If we have a value for round and bracket, grab the round from the tournament now
         if(isset($this->current_data['round']) && isset($this->current_data['bracket'])) {
             //The tournament's rounds array is keyed by "friendly" bracket, determine ours now
-            $bracket = BBHelper::get_bracket_label($this->current_data['bracket'], true);
-            $round  = $bracket == 'groups' ? 0 : $this->current_data['round'];
+            $bracket    = BBHelper::get_bracket_label($this->current_data['bracket'], true);
+            $round      = $this->current_data['round'];
 
             //Found it!
-            $this->round = &$this->tournament->rounds->{$bracket}[$round];
+            $this->round_format = &$this->tournament->rounds->{$bracket}[$round];
         }
 
         //Failure!
@@ -574,7 +583,7 @@ class BBMatch extends BBModel {
         }
 
         //Success!
-        return $this->round;
+        return $this->round_format;
     }
 
     /**
@@ -589,23 +598,12 @@ class BBMatch extends BBModel {
     }
 
     /**
-     * Overrides BBModal::load because we need to change the argument
-     * of get_round when requesting the data from BinaryBeast
-	 * 
-	 * This also allows us to initialize a tournament object for this match
-	 *		if created directly without calling init()
-     * 
-     * get_round asks BinaryBeast to make sure that it sends the round information
-     * used for this match in addition to the match details
-     * 
-     * All we have to do is build additional paramaters and then let
-     * BBModal handle the rest
-     * 
-     * @param mixed $id     If you did not provide an ID in the instantiation, they can provide one now
-     * @param array $args   ignored
-     * @param boolean   $skip_cache     Disabled by default - set true to NOT try loading from local cache
-     * 
-     * @return self|false - false if there was an error loading
+     * Load the match details
+     *
+     * Overrides {@link BBModel::load} so we can specify certain
+     *  arguments required by the API for this object
+     *
+     * {@inheritdoc}
      */
     public function &load($id = null, $args = array(), $skip_cache = false) {
         //Let BBModal handle this, just pass it extra paramater
@@ -657,7 +655,7 @@ class BBMatch extends BBModel {
         return $this->opponent;
     }
     /**
-     * alias for BBMatch::opponent()
+     * alias for {@link opponent()}
      * @return BBTeam
      */
     public function &team2() {
@@ -718,7 +716,7 @@ class BBMatch extends BBModel {
      * 
      * returns null if the match hasn't been reported
      * 
-     * @return BBTeam|team|false
+     * @return BBTeam|false
      *      NULL if no team yet defined
      *      FALSE if this match is a draw
      */
@@ -739,7 +737,7 @@ class BBMatch extends BBModel {
     /**
      * Return the BBTeam object of this match's losing team
      * 
-     * @return BBTeam|team|false
+     * @return BBTeam|false
      *      NULL if no team yet defined
      *      FALSE if this match is a draw
      */
@@ -766,17 +764,10 @@ class BBMatch extends BBModel {
     }
 
     /**
-     * BinaryBeast sends 'match_info', as well as the array 'games', so 
-     * we need overload BBModal to ensure that the games array is imported
-     * as well
-     * 
-     * Once games is imported, we pass control back to BBModal
-     * 
-     * If we find the games array, we will cast each value into a new
-     *  BBMatchGame class, then pass control back to BBModal for the rest 
-     * 
-     * @param object $data
-     * @return void
+     * Attempt to extract the 'games' array, then pass control
+     * back to {@link BBModel::import_values()}
+     *
+     * {@inheritdoc}
      */
     public function import_values($data) {
         //Found it!
@@ -953,17 +944,17 @@ class BBMatch extends BBModel {
 
         //We can't report the match if the round has unsaved changes, because the API may not process it correctly, as it may
         //have a different value for this round's best_of
-        $round = &$this->round();
-        if(!is_null($round)) {
+        $format = &$this->round_format();
+        if(!is_null($format)) {
             //Stop now - round has to be saved first
-            if($round->changed) {
-                return $this->set_error('The round for this match has unsaved changes, please save them first (either with $round->save(), $tournament->save_rounds, or $tournament->save()');
+            if($format->changed) {
+                return $this->set_error('The round for this match has unsaved changes, please save them first (either with $round->save(), $tournament->save_rounds(), or $tournament->save()');
             }
 
             //Strict - validate the winner has enough game wins first
             if($strict) {
                 if(!$this->validate_winner_games($strict)) {
-                    return $this->set_error('Winning team does not have enough game wins! This round requires at least ' . $this->round->best_of . ' game wins');
+                    return $this->set_error('Winning team does not have enough game wins! This round requires at least ' . $format->best_of . ' game wins');
                 }
             }
         }
@@ -1073,13 +1064,13 @@ class BBMatch extends BBModel {
      */
     public function validate_winner_games($strict = false) {
         //Continue only if we can figure out the round format for this match
-        if(!is_null($round = &$this->round())) {
+        if(!is_null($format = &$this->round_format())) {
             $winner = &$this->winner();
             $wins = $this->get_game_wins($winner);
 
             //In strict mode, he must have EXACTLY enough wins - otherwise we flag valid if he has at LEAST enough wins
-            if($strict) return $wins == $round->wins_needed;
-            if($wins >= $round->wins_needed) return true;
+            if($strict) return $wins == $format->wins_needed;
+            if($wins >= $format->wins_needed) return true;
 
             //Fail!
             return false;
@@ -1188,7 +1179,7 @@ class BBMatch extends BBModel {
      * returns null if you've met / exceeded the best_of setting for this match's round
      *      Check $match->round->best_of if you're not sure
      * 
-     * @param BBMatchGame|int   $winner
+     * @param BBTeam|int        $winner
      * @param int               $match_winner_score     Optionally define the match winner's score for this game
      * @param int               $match_loser_score      Optionally define the match loser's score for this game
      * @return BBMatchGame|null
@@ -1202,9 +1193,9 @@ class BBMatch extends BBModel {
         $game_number = sizeof($this->games);
 
         //Make sure game_number is within bounds of best_of (only if able to determine round format)
-        if(!is_null($round = &$this->round())) {
-            if($game_number >= $round->best_of) {
-                $this->set_error("Attempted to set details for game " . ($game_number+1) . " in a best of {$round->best_of} series");
+        if(!is_null($format = &$this->round_format())) {
+            if($game_number >= $format->best_of) {
+                $this->set_error("Attempted to set details for game " . ($game_number+1) . " in a best of {$format->best_of} series");
                 return $this->bb->ref(null);
             }
         }
@@ -1232,8 +1223,9 @@ class BBMatch extends BBModel {
 
     /**
      * Remove a child class from this team - like a BBMatchGame
-     * @param BBModel $child
-     * @param type $children
+     *
+     * @ignore
+     * {@inheritdoc}
      */
     public function remove_child(BBModel &$child, $preserve = false) {
         if($child instanceof BBMatchGame) {
