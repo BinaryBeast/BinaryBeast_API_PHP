@@ -51,6 +51,7 @@ class BBMatchTest extends BBTest {
     /**
      * Calling set_winner after reporting should not be allowed
      * @covers BBMatch::winner
+     * @group fail
      */
     public function test_winner_after_report() {
         $winner = $this->object->team2();
@@ -200,10 +201,10 @@ class BBMatchTest extends BBTest {
         $this->assertTrue($this->object->draw);
     }
     /**
-     * @covers BBMatch::round
+     * @covers BBMatch::round_format()
      */
-    public function test_round() {
-        $this->assertInstanceOf('BBRound', $this->object->round);
+    public function test_round_format() {
+        $this->assertInstanceOf('BBRound', $this->object->round_format);
     }
     /**
      * Test team_in_match, using a valid team BBTeam object
@@ -251,10 +252,10 @@ class BBMatchTest extends BBTest {
     }
     /**
      * BBMatch should throw a fit when we try to create more games than the round's best_of allows
-     * @covers BBMatch::game
+     * @covers BBMatch::game()
      */
     public function test_game_beyond_best_of() {
-        $round = $this->object->round();
+        $round = $this->object->round_format();
         for($x = 0; $x < $round->best_of + 5; $x++) {
             if($x < $round->best_of)    $this->assertInstanceOf('BBMatchGame', $this->object->game());
             else                        $this->assertNull($this->object->game());
@@ -470,8 +471,8 @@ class BBMatchTest extends BBTest {
         $loser = $this->object->loser();
 
         //Make sure it's BO3 - so we can also test strict mode
-        $this->object->round->best_of = 3;
-        $this->assertEquals(2, $this->object->round->wins_needed);
+        $this->object->round_format->best_of = 3;
+        $this->assertEquals(2, $this->object->round_format->wins_needed);
 
         //Should not validate yet - but at least it works even without any games set
         $this->assertFalse($this->object->validate_winner_games());
@@ -509,7 +510,7 @@ class BBMatchTest extends BBTest {
      */
     public function test_report_with_unsaved_round() {
         //Easy enough to trigger a change - just increment the best_of
-        $this->object->round->best_of += 3;
+        $this->object->round_format->best_of += 3;
 
         //Make sure the match has a winner - to guarantee it would otherwise report successfully
         $this->object->set_winner($this->object->team());
@@ -517,7 +518,7 @@ class BBMatchTest extends BBTest {
         $this->assertFalse($this->object->report());
         
         //Clean up
-        $this->object->round->reset();
+        $this->object->round_format->reset();
     }
     /**
      * Report a match in elimination brackets
@@ -594,8 +595,8 @@ class BBMatchTest extends BBTest {
         $this->assertInstanceOf('BBMatch', $match2 = $this->tournament->open_matches[1]);
 
         //Make sure best_of is 3 for both matches
-        $match1->round->best_of = 3;
-        $match2->round->best_of = 3;
+        $match1->round_format->best_of = 3;
+        $match2->round_format->best_of = 3;
         $this->assertTrue($match1->tournament->save_rounds());
 
         //Define winners
@@ -632,8 +633,8 @@ class BBMatchTest extends BBTest {
      * Report a match in elimination brackets - in strict mode (winner has to have exactly enough game wins)
      */
     public function test_report_brackets_strict() {
-        $this->object->round->best_of = 3;
-        $this->assertTrue($this->object->round->save());
+        $this->object->round_format->best_of = 3;
+        $this->assertTrue($this->object->round_format->save());
         //
         $this->assertInstanceOf('BBTeam', $winner = &$this->object->opponent());
         $this->assertInstanceOf('BBTeam', $loser = &$this->object->team());
@@ -668,8 +669,8 @@ class BBMatchTest extends BBTest {
         $winner = &$this->object->winner();
 
         //Make sure it's BO3
-        $this->object->round->best_of = 3;
-        $this->assertTrue($this->object->round->save());
+        $this->object->round_format->best_of = 3;
+        $this->assertTrue($this->object->round_format->save());
 
         //Add 3 games - match winner wins all 3 - invalid if reporting strict
         $this->assertInstanceOf('BBMatchGame', $this->object->game($winner));
@@ -768,7 +769,7 @@ class BBMatchTest extends BBTest {
         //Our object should not have changed - should still see itself as in group rounds
         $this->assertInstanceOf('BBMatch', $this->object);
         $this->assertEquals(0, $this->object->bracket);
-        $this->assertEquals($this->object->bracket, $this->object->round->bracket);
+        $this->assertEquals($this->object->bracket, $this->object->round_format->bracket);
 
         //The match should no longer be part of the tournament, and that the match we have in $match hasn't changed
         $this->assertArrayNotContains($this->tournament->open_matches(), $this->object);

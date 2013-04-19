@@ -123,7 +123,7 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
     }
 
     public static function assertServiceIsObject($svc, $msg = 'Service result is not an object!') {
-        return self::assertTrue(is_object($svc), $msg);
+        self::assertTrue(is_object($svc), $msg);
     }
 
     /**
