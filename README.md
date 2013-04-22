@@ -50,7 +50,7 @@ You can view a full log of your recent API activity, including what arguments we
 
 ```php
 
-require('BinaryBeast.com');
+require('BinaryBeast.php');
 $bb = new BinaryBeast();
 
 $tournament = $bb->tournament();
@@ -67,7 +67,7 @@ else {
 
 ```php
 	
-require('BinaryBeast.com');
+require('BinaryBeast.php');
 $bb = new BinaryBeast();
 
 $tournament = $bb->tournament('my_tournament_id');
