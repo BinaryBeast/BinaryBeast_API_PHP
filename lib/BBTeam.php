@@ -79,13 +79,36 @@
  * <b>Where to find the country codes:</b><br />
  * Wikipedia: {@link http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3}<br />
  * BinaryBeast API: {@link BBCountry::search()}<br />
- * 
+ *
+ * @property-read string $country
+ * <b>Read Only</b><br />
+ * The full country name that corresponds with the team's <var>$country_code</var> value
+ *
+ * @property string|int $race
+ * This value is different based on whether your'e <b>reading</b> or <b>writing</b><br /><br />
+ * <b>Acceptable values if Writing:</b><br />
+ * - Race id <b>integer</b> (Use {@link BBRace::game_list()} to find this)
+ * - Race name <b>string</b>
+ *
+ * <br /><br />
+ * <b>If Reading:</b>
+ * If reading, this value will simply be the race name string
+ * The match winner's race - can be the race_id integer, or a custom race name string<br />
+ *
+ * @property-read int $race_id
+ * <b>Read Only</b><br />
+ * Corresponding race_id based on the value provided of {@link $race}
+ *
+ * @property-read string $race_icon
+ * <b>Read Only</b><br />
+ * URL of the race's 20x20 icon, hosted by BinaryBeast.com
+ *
  * @property int $status
  *  <b>Default: 1 (confirmed)</b><br />
- *      The status of this team - Unconfirmed, Confirmed, and Banned<br />
+ *  The status of this team - Unconfirmed, Confirmed, and Banned<br />
  * 
  * <b>Friendly translation:</b><br />
- *  Use the BBHelper library: {@link BBHelper::translate_team_status()}<br /><br />
+ * Use the BBHelper library: {@link BBHelper::translate_team_status()}<br /><br />
  * 
  * <b>Values found from BinaryBeast constants:</b>
  * <ul>
@@ -159,45 +182,61 @@
  *  <b>FALSE return means the team has not yet been eliminated</b>
  * 
  * @todo add callbacks
+ * @todo add examples for races
  * 
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.4
- * @date 2013-04-05
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @version 3.0.5
+ * @date    2013-04-26
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBTeam extends BBModel {
 
-    //Service names for the parent class to use for common tasks
+    //<editor-fold defaultstate="collapsed" desc="Service name constants">
     const SERVICE_LOAD   = 'Tourney.TourneyLoad.Team';
     const SERVICE_CREATE = 'Tourney.TourneyTeam.Insert';
     const SERVICE_UPDATE = 'Tourney.TourneyTeam.Update';
     const SERVICE_DELETE = 'Tourney.TourneyTeam.Delete';
-	//
-	const SERVICE_CONFIRM		= 'Tourney.TourneyTeam.Confirm';
-	const SERVICE_UNCONFIRM		= 'Tourney.TourneyTeam.Confirm';
+    /**
+     * API Service name for confirming a team
+     * @var string
+     */
+    const SERVICE_CONFIRM		= 'Tourney.TourneyTeam.Confirm';
+    /**
+     * API Service name for unconfirming a team
+     * @var string
+     */
+	const SERVICE_UNCONFIRM		= 'Tourney.TourneyTeam.UnConfirm';
+    /**
+     * API Service name for banning a team
+     * @var string
+     */
 	const SERVICE_BAN			= 'Tourney.TourneyTeam.Ban';
-	//
+    /**
+     * API Service name for loading the team's last match result
+     * @var string
+     */
 	const SERVICE_GET_LAST_MATCH    = 'Tourney.TourneyTeam.LoadLastMatch';
     //
 	const SERVICE_GET_OPPONENT		= 'Tourney.TourneyTeam.GetOTourneyTeamID';
 	const SERVICE_LIST_OPPONENTS	= 'Tourney.TourneyTeam.GetOpponentsRemaining';
+    //</editor-fold>
 
-    //Cache setup (cache for 10 minutes)
+    //<editor-fold defaultstate="collapsed" desc="Cache settings">
     const CACHE_OBJECT_TYPE		= BBCache::TYPE_TEAM;
     const CACHE_TTL_LIST        = 10;
     const CACHE_TTL_LOAD        = 10;
-	const CACHE_TTL_OPPONENTS	= 20;
-
     /**
-     * Keep a reference to the tournament that instantiated this class
-     * @var BBTournament
+     * Cache TTL for loading the team's current opponent
+     * @var int
      */
-    private $tournament;
+    const CACHE_TTL_OPPONENTS	= 20;
+    //</editor-fold>
 
+    //<editor-fold defaultstate="collapsed" desc="BBModel implementations">
     //This Team's ID, using BinaryBeast's naming convention
     public $tourney_team_id;
 
@@ -206,34 +245,6 @@ class BBTeam extends BBModel {
 
     //Helps BBModal know how to extract the team data from the API result
     protected $data_extraction_key = 'team_info';
-
-    /**
-     * The BBTeam of this team's current opponent
-     * @var BBTeam
-     */
-    protected $opponent;
-
-    /**
-     * For group rounds, this team may currently have several opponents available to play against
-     * @var array
-     */
-    private $opponents;
-
-	/**
-	 * This team's current / unreported match
-	 * @var BBMatch
-	 */
-	protected $match;
-	/**
-	 * This team's previous match
-	 * @var BBMatch
-	 */
-	protected $last_match;
-	/**
-	 * If eliminated, store the team that eliminated us here
-	 * @var BBTeam
-	 */
-	protected $eliminated_by;
 
     /**
      * Default values for a new team
@@ -248,7 +259,43 @@ class BBTeam extends BBModel {
     );
 
     //Values that developers aren't allowed to change
-    protected $read_only = array('players', 'losses', 'draws', 'position');
+    protected $read_only = array('players', 'losses', 'draws', 'position', 'race_id', 'race_icon');
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="Internal properties / children arrays">
+    /**
+     * Keep a reference to the tournament that instantiated this class
+     * @var BBTournament
+     */
+    private $tournament;
+
+    /**
+     * The BBTeam of this team's current opponent
+     * @var BBTeam
+     */
+    private $opponent;
+
+    /**
+     * For group rounds, this team may currently have several opponents available to play against
+     * @var BBTeam[]
+     */
+    private $opponents;
+
+    /**
+     * This team's current / unreported match
+     * @var BBMatch
+     */
+    protected $match;
+    /**
+     * This team's previous match
+     * @var BBMatch
+     */
+    protected $last_match;
+    /**
+     * If eliminated, store the team that eliminated us here
+     * @var BBTeam
+     */
+    protected $eliminated_by;
 
     /**
      * Array of players within this team (only for tours with team_mode > 1, aka only for team games)
@@ -257,10 +304,11 @@ class BBTeam extends BBModel {
      *  so no point in releasing code that will break in a few months
      */
     //private $players;
+    //</editor-fold>
 
     /**
-     * Since PHP doens't allow overloading the constructor with a different paramater list,
-     * we'll simply use a psuedo-constructor and call it init()
+     * Since PHP doesn't allow overloading the constructor with a different parameter list,
+     * we'll simply use a pseudo-constructor and call it init()
      * 
      * @param BBTournament $tournament
      * @param boolean $add_to_parent        True by default, try to add ourselves to the parent BBTournament
@@ -281,12 +329,13 @@ class BBTeam extends BBModel {
             }
         }
     }
-    
+
     /**
      * Overloaded to allow setting the status value - so we can intercept with the appropriate
      *  status method (confirm() unconfirm() ban())
-     * @param string $name
-     * @param mixed $value
+     *
+     * @ignore
+     * {@inheritdoc}
      */
     public function __set($name, $value) {
         if($name == 'status') {
@@ -294,17 +343,39 @@ class BBTeam extends BBModel {
             if($value == 0)     return $this->unconfirm();
             if($value == 1)     return $this->confirm();
         }
+
         //Don't allow changing wins during active-groups, only during brackets
         if($name == 'wins') {
             if(BBHelper::tournament_in_group_rounds($this->tournament())) {
                 return;
             }
         }
+
+        //Special handling for setting race value - he could be changing it by ID or by Name
+        if($name == 'race') {
+            //Don't bother if we've already saved a value in new_data
+            if(!isset($this->new_data['race'])) {
+                //Treat it as an attempt to define by race id integer
+                if(is_numeric($value)) {
+                    //The value is not new, don't save
+                    if($value == $this->race_id) {
+                        return;
+                    }
+                }
+
+                //Treat as an attempt to define by race name
+                else if($value == $this->race) {
+                    return;
+                }
+            }
+        }
+
         parent::__set($name, $value);
     }
 
 	/**
-	 * Overrides BBModel::save() so we can return false if trying to save an oprhaned team
+	 * Overrides BBModel::save() so we can return false if trying to save an orphaned team
+     * {@inheritdoc}
 	 */
 	public function save($return_result = false, $child_args = null) {
 		//Tournament must be saved first
@@ -322,6 +393,9 @@ class BBTeam extends BBModel {
             }
         }
 
+        //If the race was changed, flag a reload
+        $flag_reload = isset($this->new_data['race']);
+
 		//Let BBModel handle the rest
 		if(! ($save_result = parent::save($return_result, array('tourney_id' => $this->tournament->id))) ) {
             return false;
@@ -332,6 +406,11 @@ class BBTeam extends BBModel {
             $this->tournament->clear_id_cache();
             $this->reset_opponents();
             $this->tournament->open_matches(true);
+        }
+
+        //If the race changed, flag a reload so that we download the race name, id, and icon values
+        if($flag_reload) {
+            $this->flag_reload();
         }
 
         //Success!
