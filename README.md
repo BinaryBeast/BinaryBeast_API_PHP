@@ -176,3 +176,11 @@ Coming soon
 These were just a few quick examples, visit BinaryBeast.com for more examples, and full documentation of the library
 
 ### [http://binarybeast.com/content/api/docs/php/class-BinaryBeast.html](http://binarybeast.com/content/api/docs/php/class-BinaryBeast.html "Official Documentation")
+
+
+----------
+
+
+# Development / Issue Tracking #
+
+Public development and issue tracking is available through our [public trello board](https://trello.com/board/public-development-board/516c69726403c70869000735) thatfor 
