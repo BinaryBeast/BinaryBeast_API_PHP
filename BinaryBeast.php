@@ -191,8 +191,8 @@
  * 
  * @package BinaryBeast
  * 
- * @version 3.0.6
- * @date    2013-04-19
+ * @version 3.0.8
+ * @date    2013-04-26
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -236,11 +236,11 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.0.6';
+    const API_VERSION = '3.0.8';
 
     //<editor-fold defaultstate="collapsed" desc="Private Properties">
     /**
-     * Base path to the binarybeast library folder
+     * Base path to the BinaryBeast library folder
      * @var string
      */
     private $lib_path;
@@ -331,25 +331,25 @@ class BinaryBeast {
      */
     const BRACKET_GROUPS    = 0;
     /**
-     * Each bracket is idenetifed by a number,
+     * Each bracket is identified by a number,
      * 1 indicates winners' bracket
      * @var int
      */
     const BRACKET_WINNERS   = 1;
     /**
-     * Each bracket is idenetifed by a number,
+     * Each bracket is identified by a number,
      * 2 indicates loser' bracket
      * @var int
      */
     const BRACKET_LOSERS    = 2;
     /**
-     * Each bracket is idenetifed by a number,
+     * Each bracket is identified by a number,
      * 3 indicates grand finals
      * @var int
      */
     const BRACKET_FINALS    = 3;
     /**
-     * Each bracket is idenetifed by a number,
+     * Each bracket is identified by a number,
      * 4 indicates bronze / 3rd place decider
      * @var int
      */
@@ -647,7 +647,7 @@ class BinaryBeast {
     }
 
     /**
-     * Psuedo-static constructor, this method only once,
+     * Pseudo-static constructor, this method only once,
      * only the first time this class is instantiated
      * 
      * It's used to pre-load some of the core library classes that
@@ -1027,7 +1027,7 @@ class BinaryBeast {
 	 *	without a tournament associated with it
 	 * 
 	 * If you DO however know the match id, you can use this to load the match,
-	 *	and then to load it's touranment by accessing $match->tournament or $match->tournament()
+	 *	and then to load it's tournament by accessing $match->tournament or $match->tournament()
 	 * 
 	 * @param int|object $match_data
 	 * @return BBMatch

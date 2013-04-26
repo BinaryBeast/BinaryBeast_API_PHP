@@ -1,5 +1,5 @@
 # BinaryBeast API PHP Library
-#### Version 3.0.6 (2013-04-19)
+#### Version 3.0.8 (2013-04-26)
 
 ----------
 
@@ -144,6 +144,16 @@ Coming soon
 
 
 ## Recent Changes
+
+### Version 3.0.8 (2013-04-26)
+* Added support for loading and setting participant races in [BBTeam](lib/BBTeam.php)
+
+
+### Version 3.0.7 (2013-04-25)
+* Fixed a bug that caused `BBMatch::$winner` to return NULL from existing match objects
+	* 	The issue was actually in [BBModel::__get()](lib/BBModel.php)
+* Added / Fixed some of the documentation
+
 
 ### Version 3.0.6 (2013-04-19)
 * Renamed BBMatch::$round and BBMatch::round()
