@@ -30,15 +30,15 @@
  * 
  * @property string $date
  *  A description of when this round should start<br />
- *  For the moment this is a simple unformated string, it does not even validate the format
+ *  For the moment this is a simple string, it does not even validate the format
  * 
  * 
  * @package BinaryBeast
  * @subpackage Model
  * 
  * 
- * @version 3.0.1
- * @date    2013-04-13
+ * @version 3.0.3
+ * @date    2013-04-26
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -82,7 +82,7 @@ class BBRound extends BBModel {
     );
 
     /**
-     * Since PHP doens't allow overloading the constructor with a different paramater list,
+     * Since PHP doesn't allow overloading the constructor with a different parameter list,
      * we'll simply use a pseudo-constructor and call it init()
      * 
      * @param BBTournament $tournament

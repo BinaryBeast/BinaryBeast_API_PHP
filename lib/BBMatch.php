@@ -41,7 +41,7 @@
  * 
  * 
  * 
- * ## Defining the Winner
+ * ## Defining the Winner .[#example-define_winner]
  * 
  * The first step to reporting a match result, is to define the winner
  * 
@@ -275,13 +275,20 @@
  * 
  * 
  * @property-read string $tourney_id
+ * <b>Read Only</b><br />
  * The id of the tournament this match is in
  * 
  * @property int $tourney_team_id
- * The ID of the match's overall winner
+ * The ID of the match's overall winner<br /><br />
+ * This is a magic property that can be read and written to<br /><br />
+ * Note however that <b>attempts to set this value</b> are handled by {@link set_winner()}<br /><br />
+ * It is <b>NOT</b> recommend that you set the value this way, as there is easy way to capture errors<br />
  * 
  * @property int $o_tourney_team_id
- * The ID of the match's overall loser
+ * The ID of the match's overall loser<br /><br />
+ * This is a magic property that can be read and written to<br /><br />
+ * Note however that <b>attempts to set this value</b> are handled by {@link set_loser()}<br /><br />
+ * It is <b>NOT</b> recommend that you set the value this way, as there is easy way to capture errors<br />
  * 
  * @property-read int $bracket
  * <b>Read Only</b><br />
@@ -301,8 +308,14 @@
  * 
  * @property boolean $draw
  * <b>Group Rounds Only</b><br />
- * Simple boolean to indicate whether or not this match resulted in a draw
- * 
+ * Simple boolean to indicate whether or not this match resulted in a draw<br /><br />
+ * This is a magic property that can be read and written to<br /><br />
+ * Note however that <b>attempts to set this value</b> are handled by {@link set_draw()}<br /><br />
+ * It is <b>NOT</b> recommend that you set the value this way, as there is easy way to capture errors<br /><br />
+ * <b>Warning:</b> The only value you can set for this is <var>(bool)true</var>!<br />
+ * You <b>can't set this property to false to define the match a non-draw</b>, you have to define a winner instead,<br />
+ * Using {@link set_winner()}, {@link set_loser()}, or by setting {@link $winner}, {@link $loser}, {@link $tourney_team_id}, or {@link $o_tourney_team_id}
+ *
  * @property BBMatchGame[] $games
  * <b>Alias for {@link BBMatch::games()}</b><br />
  * an array of games in this match
@@ -310,50 +323,55 @@
  * @property-read int $round
  * The round this match is played in
  *
- * @property BBRound $round_format
+ * @property BBRoundObject|BBRound $round_format
  * <b>Alias for {@link BBMatch::round_format()}</b><br />
- * The BBRound object defining the format for this match<br />
+ * The {@link BBRound} object defining the format for this match<br />
  * <b>NULL return:</b> unable to determine which round this match was in
  * 
- * @property BBTeam $team
+ * @property-read BBTeam $team
+ * <b>Read-Only</b><br />
  * <b>Alias for {@link BBMatch::team()}</b><br />
- * BBTeam object for the first player in this match
+ * BB{@link BBTeam} object for the first player in this match
  * 
- * @property BBTeam $team2
+ * @property-read BBTeam $team2
+ * <b>Read-Only</b><br />
  * <b>Alias for {@link BBMatch::opponent()}</b><br />
- * BBTeam object for the second player in this match
+ * BB{@link BBTeam} object for the second player in this match
  * 
- * @property BBTeam $opponent
+ * @property-read BBTeam $opponent
+ * <b>Read-Only</b><br />
  * <b>Alias for {@link BBMatch::opponent()}</b><br />
- * BBTeam object for the second player in this match
+ * {@link BBTeam} object for the second player in this match
  * 
  * @property BBTeam $winner
- * <b>When Reading: </b> alias for {@link BBMatch::winner()}<br />
- * <b>When Assigning: </b> alias for {@link BBMatch::set_winner()}<br />
- * BBTeam object for the winner of the match<br />
+ * {@link BBTeam} object for the winner of the match<br />
  * <b>Returns NULL if set_winner hasn't been called</b><br />
- * <b>Returns FALSE if match was a draw</b>
+ * <b>Returns FALSE if match was a draw</b><br /><br />
+ * Note that <b>attempts to set this value</b> are handled by {@link set_winner()}<br /><br />
+ * It is <b>NOT</b> recommend that you define the loser/winner this way, as there is easy way to capture errors<br />
  *
- * @property-read BBTeam $loser
- * <b>When Reading: </b>alias for {@link BBMatch::loser()}<br />
- * <b>When Writing: </b>alias for {@link BBMatch::set_loser()}<br />
- * BBTeam object for the loser of the match<br />
+ * @property BBTeam $loser
+ * {@link BBTeam} object for the loser of the match<br />
  * <b>Returns NULL if set_winner hasn't been called</b><br />
- * <b>Returns FALSE if match was a draw</b>
+ * <b>Returns FALSE if match was a draw</b><br /><br />
+ * Note that <b>attempts to set this value</b> are handled by {@link set_loser()}<br /><br />
+ * It is <b>NOT</b> recommend that you define the loser/winner this way, as there is easy way to capture errors<br />
  * 
- * @property BBTournament $tournament
- *  <b>Alias for {@link BBMatch::tournament()}</b><br />
- *  The tournament this match is in
+ * @property-read BBTournament $tournament
+ * <b>Read-Only</b><br />
+ * <b>Alias for {@link BBMatch::tournament()}</b><br />
+ * The tournament this match is in
  *
  * 
- * @todo add callbacks
+ * @todo Add callbacks
+ * @todo Create a legend, like the one in {@link BBTournament}
  * 
  * 
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.6
- * @date    2013-04-14
+ * @version 3.0.7
+ * @date    2013-04-26
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -449,9 +467,9 @@ class BBMatch extends BBModel {
     public $tourney_match_id;
 
     /**
-     * Import parent tournament class
+     * Associate the provided {@link BBTournament} object as the parent tournament model object
      * 
-     * @param BBTournament  $tournament
+     * @param BBTournament $tournament
      * @return void
      */
     public function init(BBTournament &$tournament) {
@@ -461,12 +479,14 @@ class BBMatch extends BBModel {
         $this->parent = &$this->tournament;
 
 		//Update any games we may have (necessary to allow directly loaded matches ($match = $bb->match(id) without calling init())
-		foreach($this->games as &$game) $game->init($this->tournament, $this);
+		foreach($this->games as &$game) {
+            $game->init($this->tournament, $this);
+        }
     }
     
     /**
-     * Delete the match - can only be done if this match hasn't been reported
-     * 
+     * Delete the match - <b>Only if {@link report()} hasn't been called yet!</b>
+     *
      * If you wish to delete a match that has already been reported, please see {@link BBMatch::unreport()}
      * 
      * {@inheritdoc}
@@ -510,27 +530,56 @@ class BBMatch extends BBModel {
      * {@inheritdoc}
      */
     public function &__get($name) {
+        //If appropriate, return the number of individual game wins for score and o_score
         if($name == 'score' || $name == 'o_score') {
+            //Only applicable a winner has been defined
             if($this->winner_set) {
+                //Only possible if we have game details saved
                 if(sizeof($this->games()) > 0) {
-                    return $this->bb->ref( $this->get_game_wins($name == 'score' ? $this->team() : $this->opponent()) );
+                    //A reference is expected
+                    return $this->bb->ref(
+                        //use get_game_wins for $team for 'score', and $opponent for 'o_score
+                        $this->get_game_wins($name == 'score'
+                            ? $this->team()
+                            : $this->opponent()
+                        )
+                    );
                 }
             }
         }
+
+        //Fall back on the default {@link BBModel::__get()}
         return parent::__get($name);
     }
 
     /**
-     * Overload BBModel's __set so we can handle setting team ids, and draw manually
+     * Overload {@link BBModel::__set()} so we can handle setting team ids, and draw manually
+     *
+     * Supports setting the following properties:
+     * - tourney_team_id (calls @link set_winner())
+     * - winner (calls @link set_winner())
+     * - o_tourney_team_id (calls @link set_loser())
+     * - loser (calls @link set_loser())
+     * - draw (calls @link set_draw())
      *
      * @ignore
      * {@inheritdoc}
      */
     public function __set($name, $value) {
-        if($name == 'tourney_team_id')      return $this->set_winner($value);
-        if($name == 'o_tourney_team_id')    return $this->set_loser($value);
+        //set_winner()
+        if($name == 'tourney_team_id' || $name == 'winner') {
+            return $this->set_winner($value);
+        }
+        //set_loser()
+        if($name == 'o_tourney_team_id' || $name == 'loser') {
+            return $this->set_loser($value);
+        }
+        //set_draw()
         if($name == 'draw') {
-            if($value != false) return $this->set_draw();
+            //Can only used to ENABLE draw, can't be used to disable it
+            if($value != false) {
+                return $this->set_draw();
+            }
             return;
         }
         parent::__set($name, $value);
@@ -601,12 +650,12 @@ class BBMatch extends BBModel {
      * Load the match details
      *
      * Overrides {@link BBModel::load} so we can specify certain
-     *  arguments required by the API for this object
+     *  arguments required by the API for the Tourney.TourneyMatch.Load service
      *
      * {@inheritdoc}
      */
     public function &load($id = null, $args = array(), $skip_cache = false) {
-        //Let BBModal handle this, just pass it extra paramater
+        //Let BBModal handle this, just pass it extra parameter
 		$result = &parent::load($id, array_merge(array('get_round' => true), $args), $skip_cache );
 		if(!$result) return $result;
 
@@ -635,7 +684,7 @@ class BBMatch extends BBModel {
         if(!is_null($this->team)) return $this->team;
 
         //Use the internal get_team method for this, using the team property
-        $this->team = &$this->get_team('team');
+        $this->team = &$this->get_team('team', 'tourney_team_id');
         return $this->team;
     }
     /**
@@ -650,8 +699,8 @@ class BBMatch extends BBModel {
         //Already set
         if(!is_null($this->opponent)) return $this->opponent;
 
-        //Use the internal get_team method for this, using the team property
-        $this->opponent = &$this->get_team('opponent');
+        //Use the internal get_team method for this, using the opponent property
+        $this->opponent = &$this->get_team('opponent', 'o_tourney_team_id');
         return $this->opponent;
     }
     /**
@@ -691,40 +740,62 @@ class BBMatch extends BBModel {
      *  for teams in this match from our BBTournament
      * 
      * @ignore
-     * @param string $property      Which value to use for the team_id (tourney_team_id, o_tourney_team_id)
-     * @return BBTournament
+     *
+     * @param string $property      Which value to use for the team_id (team, opponent, tourney_team_id, o_tourney_team_id)
+     * @param string $alt_property  An alternative property / key to use in case $property wasn't provided by the API
+     * @return BBTournament|null
      */
-    private function &get_team($property) {
+    private function &get_team($property, $alt_property) {
 		//Try loading first
 		if(!is_null($this->id)) $this->load();
 
-        //Try to load it using $property provided
-        if(!is_null($team = $this->current_data[$property])) {
-            //let BBTournament::team() handle setting any errors, we can return it directly
-            return $this->tournament->team($team->tourney_team_id);
+        //The team_id we'll be using with BBTournament::team - we'll complain later if it's still null
+        $tourney_team_id = null;
+
+        //Value for $property!
+        if(isset($this->current_data[$property])) {
+            //The $property is a valid object! extract the id integer
+            if(is_object($this->current_data[$property])) {
+                $tourney_team_id = $this->current_data[$property]->tourney_team_id;
+            }
         }
 
-        //OH NOES!
-        $this->set_error('Match does not have any value set for ' . $property . ', unable to figure out which teams are in this match');
-        return $this->bb->ref(null);
+        //$property failed, try the alternate
+        if(is_null($tourney_team_id)) {
+            //Found the alternate value
+            if (isset($this->current_data[$alt_property])) {
+                //We have a valid team_id!
+                if(is_numeric($this->current_data[$alt_property])) {
+                    $tourney_team_id = $this->current_data[$alt_property];
+                }
+            }
+        }
+
+        //Failure!
+        if(is_null($tourney_team_id)) {
+            $this->set_error('Match does not have a valid value for ' . $property . ' or ' . $alt_property . ', determining participants is impossible');
+            return $this->bb->ref(null);
+        }
+
+        //Use BBTournament::team() to verify the value and to return a reference an existing child team object
+        return $this->tournament->team($tourney_team_id);
     }
 
     /**
-     * Alias for team()
-     * 
-     * Return the BBTeam object of this match's winning team
-     * 
-     * returns null if the match hasn't been reported
-     * 
-     * @return BBTeam|false
-     *      NULL if no team yet defined
-     *      FALSE if this match is a draw
+     * Fetch the {@link BBTeam} object of the winner of the match
+     *
+     * @return BBTeam|null|boolean
+     * <ul>
+     *  <li>{@link BBTeam} object: The winner of the match</li>
+     *  <li><b>null</b>: No winner defined, see {@link set_winner()} or {@link set_loser()}</li>
+     *  <li><b>false</b>: The match is a draw</li>
+     * </ul>
      */
     public function &winner() {
         //Draw - return false
         if($this->is_draw()) return $this->bb->ref(false);
 
-        //For new matches, only return the winner if it has been specifcally set, using set_winner
+        //For new matches, only return the winner if it has been specifically set, using set_winner
         if(is_null($this->id)) {
             if($this->winner_set) return $this->team();
 
@@ -735,17 +806,20 @@ class BBMatch extends BBModel {
         return $this->team();
     }
     /**
-     * Return the BBTeam object of this match's losing team
-     * 
-     * @return BBTeam|false
-     *      NULL if no team yet defined
-     *      FALSE if this match is a draw
+     * Fetch the {@link BBTeam} object of the loser of the match
+     *
+     * @return BBTeam|null|boolean
+     * <ul>
+     *  <li>{@link BBTeam} object: The loser of the match</li>
+     *  <li><b>null</b>: No winner defined, see {@link set_winner()} or {@link set_loser()}</li>
+     *  <li><b>false</b>: The match is a draw</li>
+     * </ul>
      */
     public function &loser() {
         //Draw - return false
         if($this->is_draw()) return $this->bb->ref(false);
 
-        //For new matches, only return the winner if it has been specifcally set, using set_winner
+        //For new matches, only return the winner if it has been specifically set, using set_winner
         if(is_null($this->id)) {
             if($this->winner_set) return $this->opponent();
 
@@ -756,8 +830,9 @@ class BBMatch extends BBModel {
         return $this->opponent();
     }
     /**
-     * Returns a simple boolean to indicate wheter or not 
+     * Returns a simple boolean to indicate whether or not
      *  this match was considered a draw
+     * @return boolean
      */
     public function is_draw() {
         return $this->data['draw'] == true;
@@ -794,49 +869,60 @@ class BBMatch extends BBModel {
 
     /**
      * Specify which team won the match
+     *
+     * <br />
+     * There's a <b>full example</b> available in the {@link http://binarybeast.com/content/api/docs/php/class-BBMatch.html#example-define_winner documentation above}
      * 
-     * 
+     *
      * <br /><br />
-     * You can provide either the {@link BBTeam} object, or the {@link BBTeam::id} integer
-     * 
+     * <b>Warning:</b> you <b>CAN NOT</b> use this method to <b>change the outcome of an existing match!</b><br /><br />
+     *
+     * If <b>you need to change the winner</b>, please refer to {@link unreport()}
+     *
      * <br /><br />
-     * <b>Note:</b> You can't change winners of matches that have already been reported, to do that please refer to {@link unreport()}
-	 * 
+     *
+     * @param BBTeam|integer|boolean|null $winner<br />
+     * <b>The winning team</b><br />
+     * <b>Acceptable values:</b><br />
+     * <ul>
+     *  <li>{@link BBTeam} object</li>
+     *  <li>Team id <b>integer</b></li>
+     *  <li><b>NULL:</b> To indicate a draw</li>
+     *  <li><b>FALSE:</b> To indicate a draw</li>
+     * </ul>
+     *
+	 * @param int $winner_score<br />
+     * <b>Please use {@link BBMatch::game()} instead!</b><br /><br />
+     * Quick way of defining the winner's score<br />
+     * Only used if you don't define any {@link BBMatchGame} objects
      * 
-     * <br /><br />
-     * You CAN define the score of each team, but for more granular results, please use {@link BBMatch::game()}
-	 * 
-     * 
-     * <br /><br />
-     * <b>Warning: </b> If you define values for <var>$winner_score</var> or <var>$loser_score</var> they will be overwritten / unused if {@link BBMatch::game()} is called
-     * 
-     * @param BBTeam|int|false|null $winner
-     *  The winning team<br />
-     *  Can be either the {@link BBTeam} object, or the {@link BBTeam::id} integer
-     *  <br /><br />
-     *  Provide <b>NULL</b> or <b>FALSE</b> to declare this match as a <b>Draw</b>
-     * 
-	 * @param int $winner_score
-     *  Quick way of defining the winneer's score<br />
-     *  Overwritten if {@link BBMatch::game()} is called
-     * 
-	 * @param int $loser_score
-     *  Quick way of defining the loser's score<br />
-     *  Overwritten if {@link BBMatch::game()} is called
+	 * @param int $loser_score<br />
+     * <b>Please use {@link BBMatch::game()} instead!</b><br /><br />
+     * Quick way of defining the loser's score<br />
+     * Only used if you don't define any {@link BBMatchGame} objects
      * 
      * @return boolean
+     * <ul>
+     *  <li>
+     *      <b>False:</b> Either the <var>$winner</var> was invalid, or the match has already been reported<br />
+     *      See {@link BinaryBeast::last_error} for details
+     *  </li>
+     *  <li>
+     *      <b>True:</b> Winner successfully defined
+     *  </li>
+     * </ul>
      */
     public function set_winner($winner, $winner_score = null, $loser_score = null) {
         //Only appropriate for new matches
         if(!is_null($this->id)) return $this->set_error('Can\'t use set_winner to change the results of a match, you must unreport() first');
 
-		//$winner = null means setting a draw, use set_draw()
-		if(is_null($winner) || $winner === false) return $this->set_draw();
+        //$winner = null|false means setting a draw, use set_draw()
+        if(is_null($winner) || $winner === false) return $this->set_draw();
 
         //Use team_in_match to both make sure we have a BBTeam, and to make sure it's part of this match
         if(($winner = &$this->team_in_match($winner)) == false) {
-			return $this->set_error("Error setting winner to the provided team, team does not seem to be part of this match!");
-		}
+            return $this->set_error("Error setting winner to the provided team, team does not seem to be part of this match!");
+        }
 
         //If we need to swap the team / opponent, do so now
         if($winner == $this->opponent()) {
@@ -847,21 +933,40 @@ class BBMatch extends BBModel {
         $this->team         = &$winner;
         $this->winner_set   = true;
 
-		//Set the team_ids now, the values that the API will be looking for
-		$this->set_new_data('tourney_team_id',		$this->team->id);
-		$this->set_new_data('o_tourney_team_id',	$this->opponent->id);
+        //Set the team_ids now, the values that the API will be looking for
+        $this->set_new_data('tourney_team_id',      $this->team->id);
+        $this->set_new_data('o_tourney_team_id',    $this->opponent->id);
         $this->set_new_data('draw', false);
-		if(!is_null($winner_score)) $this->set_new_data('score', $winner_score);
-		if(!is_null($loser_score))	$this->set_new_data('o_score', $loser_score);
+
+        //Define score values
+        if(!is_null($winner_score)) $this->set_new_data('score', $winner_score);
+        if(!is_null($loser_score))  $this->set_new_data('o_score', $loser_score);
 
         return true;
     }
     /**
      * Define which team lost this match - uses set_win for the actual work, after "toggling" the team
+     *
+     * <br /><br />
+     * Please review the documentation of {@link set_winner()} for more details,<br />
+     * as the parameter list is identical
      * 
-     * @param BBTeam|int $loser      tourney_team_id of the loser (null or false to indicat a draw)
-	 * @param int $winner_score
-	 * @param int $loser_score
+     * @param BBTeam|integer|boolean|null $loser<br />
+     * <b>The losing team</b><br />
+     * <b>Acceptable values:</b><br />
+     * <ul>
+     *  <li>{@link BBTeam} object</li>
+     *  <li>Team id <b>integer</b></li>
+     *  <li><b>NULL:</b> To indicate a draw</li>
+     *  <li><b>FALSE:</b> To indicate a draw</li>
+     * </ul>
+     *
+	 * @param int $winner_score<br />
+     * See {@link set_winner()} for details
+     *
+	 * @param int $loser_score<br />
+     * See {@link set_winner()} for details
+     *
      * @return boolean
      */
     public function set_loser($loser, $winner_score = null, $loser_score = null) {
@@ -896,7 +1001,7 @@ class BBMatch extends BBModel {
 		if(!is_null($winner_score)) $this->set_new_data('score', $winner_score);
 		if(!is_null($loser_score))	$this->set_new_data('o_score', $loser_score);
 
-		//So report() doens't complain about not having a winner
+		//So report() doesn't complain about not having a winner
 		$this->winner_set = true;
 
 		//Success!
@@ -1245,9 +1350,9 @@ class BBMatch extends BBModel {
      * If it's NOT part of this team, false is returned
      *
      * @param BBTeam|int $team
-     * @return BBTeam|false
+     * @return BBTeam|boolean
      *      <b>false</b> If not part of the match
-     *      <b>BBTeam</b> If it IS part of the match
+     *      <b>{@link BBTeam} object</b> If it IS part of the match
      */
     public function &team_in_match($team) {
 

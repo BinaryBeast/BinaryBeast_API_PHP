@@ -145,7 +145,8 @@ class BBSimpleModel {
      * @ignore
      * 
      * @param array|string $error
-     * @return false
+     * @return boolean<br />
+     * Always returns <b>false</b>
      */
     protected function set_error($error) {
         //Send to the main BinaryBeast API Library, and locally save whatever is sent back (a standardized format)

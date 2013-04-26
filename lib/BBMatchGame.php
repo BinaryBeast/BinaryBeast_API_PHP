@@ -181,11 +181,12 @@
  * @property string|int $race
  * The match winner's race - can be the race_id integer, or a custom race name string<br />
  * Use {@link BBRace::game_list()} for race_ids values<br /><br />
- * 
+ *
  * {@link http://binarybeast.com/content/api/docs/php/class-BBMatchGame.html#example-races Check out the example}
  *
  * @property-read int $race_id
- * <b>Read-only</b> race_id value, derived from the value provided for {@link $race}
+ * <b>Read-only</b><br />
+ * Corresponding race_id based on the value provided of {@link $race}
  *
  * @property-read int $o_race_id
  * <b>Read-only</b> o_race_id value, derived from the value provided for {@link $o_race}
@@ -224,8 +225,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.2
- * @date    2013-04-13
+ * @version 3.0.3
+ * @date    2013-04-26
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -397,7 +398,7 @@ class BBMatchGame extends BBModel {
         //Now that we have a winner, use match::toggle_team to determine the loser
         $this->loser = &$this->match->toggle_team($this->winner);
 
-        //If null or false, I dont' want it returned by reference - wrap it in ref()
+        //If null or false, I don't want it returned by reference - wrap it in ref()
         if(is_null($this->winner) || $this->winner === false) return $this->bb->ref($this->winner);
         return $this->winner;
     }
@@ -413,7 +414,7 @@ class BBMatchGame extends BBModel {
         //Let winner() figure it out for us
         $this->winner();
 
-        //If null or false, I dont' want it returned by reference - wrap it in ref()
+        //If null or false, I don't want it returned by reference - wrap it in ref()
         if(is_null($this->loser) || $this->loser === false) return $this->bb->ref($this->loser);
         return $this->loser;
     }
