@@ -1,11 +1,26 @@
 <?php
+/**
+ * Test suite bootstrap file
+ *
+ * Runs before any PHPUnit tests are run,
+ *  sets up a global $bb instance, and defines
+ *  a base test class with a several custom bb-specific assertions
+ *
+ * @global BBTournament$bb
+ *
+ * @version 1.0.5
+ * @date    2013-04-24
+ * @author  Brandon Simmons <brandon@binarybeast.com>
+ */
 
 require_once('PHPUnit/Autoload.php');
 require_once 'PHPUnit/Framework/Assert.php';
 
+//Change the working directly to the root of BinaryBeast.php
 $path = str_replace('\\', '/', dirname(__DIR__ ));
 chdir($path);
 
+//Create a global BinaryBeast instance, and disable ssl verification for debugging and development purposes
 require_once('BinaryBeast.php');
 $bb = new BinaryBeast();
 $bb->disable_ssl_verification();
@@ -14,11 +29,15 @@ $bb->disable_ssl_verification();
 /**
  * Base line for all tests - defines custom asserts, and imports $bb, and has methods
  *  for creating / storing tournaments with certain conditions
+ *
+ * @version 1.0.5
+ * @date    2013-04-24
+ * @author  Brandon Simmons <brandon@binarybeast.com>
  */
 abstract class BBTest extends PHPUnit_Framework_TestCase {
-
     /** @var BinaryBeast */
     protected $bb;
+
     /** @var BinaryBeast */
     protected static $bb_static;
 
@@ -28,6 +47,14 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
     /** var BBTournament[] */
     private static $tournaments = array();
 
+    //<editor-fold defaultstate="collapsed" desc="Private / Internal methods and properties">
+    /**
+     * Test suite class constructor
+     *
+     * Sets up the local {@link BinaryBeast} (<var>$bb</var>) instance
+     *
+     * {@inheritdoc}
+     */
     function __construct($name = NULL, array $data = array(), $dataName = '') {
         global $bb;
         $this->bb = &$bb;
@@ -36,6 +63,12 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         parent::__construct($name, $data, $dataName);
     }
 
+    /**
+     * When the instance is deleted, attempt to delete
+     *  any tournaments that were created
+     *
+     * @return void
+     */
     function __destruct() {
         foreach(self::$tournaments as $tournament) {
             if($tournament instanceof BBTournament) {
@@ -44,23 +77,42 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         }
     }
 
+    /**
+     * Quickly performs a var_dump with of all recent errors and API results in the BinaryBeast class
+     *
+     * @return void
+     */
     protected function dump_history() {
         var_dump(array('errors' => $this->bb->error_history, 'results' => $this->bb->result_history));
     }
+
+    /**
+     * Quickly performs a var_dump with all recent error messages in the BinaryBeast class
+     *
+     * @return void
+     */
     protected function dump_errors() {
         var_dump(array('errors' => $this->bb->error_history));
     }
+
+    /**
+     * Quickly performs a var_dump with of all recent API result values from the BinaryBeast class
+     *
+     * @return void
+     */
     protected function dump_results() {
         var_dump(array('history' => $this->bb->result_history));
     }
+    //</editor-fold>
 
+    //<editor-fold defaultstate="collapsed" desc="API Object/List result assertions">
     /**
      * Check against a returned list to verify that each object in the array has the 
      *  specified attributes
      * 
-     * Each value in $keys can either be a string, to simply check for the existance of a property, 
+     * Each value in $keys can either be a string, to simply check for the existence of a property,
      * or it can be a key => value pair with any of the following values, to check the property type:
-     *      'numeric', 'int', 'float', 'string', 'array', 'object', 'boolen', 'null'
+     *      'numeric', 'int', 'float', 'string', 'array', 'object', 'boolean', 'null'
      */
     public static function assertListFormat($list, $keys = array()) {
         self::assertTrue(is_array($list), 'provided value is not an array');
@@ -121,9 +173,14 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         }
         self::assertTrue($valid, 'Provided list did not have any objects with ' . $key . ' equal to ' . $value);
     }
+    //</editor-fold>
 
-    public static function assertServiceIsObject($svc, $msg = 'Service result is not an object!') {
-        self::assertTrue(is_object($svc), $msg);
+    //<editor-fold defaultstate="collapsed" desc="Service result assertions">
+    /**
+     * Assert that the given service result value is an object
+     */
+    public static function assertServiceIsObject($svc) {
+        self::assertTrue(is_object($svc), 'Service result is not a ' . gettype($svc) . ', object expected!');
     }
 
     /**
@@ -165,10 +222,23 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         self::assertServiceSuccessful($result);
         self::assertTrue(!isset($result->from_cache));
     }
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="Save() result and ID format assertions">
+    /**
+     * Assert that the given value is a valid Tournament ID formatted string
+     */
     public static function assertTourneyID($value) {
         self::assertTrue(is_string($value), 'provided value is not a string, it\'s a ' . gettype($value));
         self::assertStringStartsWith('x', $value);
     }
+
+    /**
+     * Assert the return value of a save() result
+     *
+     * The result should either be a TRUE boolean, or a
+     *  tournament ID if it's a string
+     */
     public static function assertSave($value) {
         //Boolean
         if(is_bool($value)) {
@@ -183,6 +253,12 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         //Invalid value 
         self::fail('save() result type (' . gettype($value) . ') invalid ' . $value);
     }
+
+    /**
+     * Assert that the given value is a valid ID
+     * It can either be a number greater than zero,
+     * or if it's a string it must be a valid tourney_id
+     */
     public static function assertID($value) {
         //Treat it as a normal integer id
         if(is_numeric($value)) {
@@ -196,24 +272,52 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
 
         self::fail('id value type (' . gettype($value) . ') invalid');
     }
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="Array assertions">
+    /**
+     * Asserts that the provided value is:
+     * A) Is an array
+     * B) Has a specific number of elements
+     */
     public static function assertArraySize($array, $size) {
         self::assertTrue(is_array($array));
         self::assertTrue(sizeof($array) == $size, "Array size $size expected, " . sizeof($array) . ' found');
     }
+
+    /**
+     * Asserts that the input value is a valid array, and that each element is an instance of the given $class
+     */
     public static function assertChildrenArray($array, $class) {
         self::assertTrue(is_array($array));
         self::assertTrue(sizeof($array) > 0);
         foreach($array as $child) self::assertInstanceOf($class, $child);
     }
+
+    /**
+     * Asserts that the given array contains a specific element
+     */
     public static function assertArrayContains($array, $search) {
         self::assertTrue(is_array($array));
         self::assertTrue(in_array($search, $array));
     }
+
+    /**
+     * Asserts that the given array does NOT contain a specific element
+     */
     public static function assertArrayNotContains($array, $search) {
         self::assertTrue(is_array($array));
         self::assertFalse(in_array($search, $array));
     }
+    //</editor-fold>
 
+    //<editor-fold defaultstate="collapsed" desc="External assertions">
+    /**
+     * Asserts the value of a team, but firsts loads the team externally
+     *
+     * This eliminates ANY chance of contaminated results, it loads a new
+     * BBTeam directly from the API, and asserts the provided key=>value pair
+     */
     public static function AssertTeamValueExternally($team, $key, $value) {
         if($team instanceof BBTeam) $team = $team->id;
         self::assertInstanceOf('BBTeam', $team = self::$bb_static->team($team));
@@ -221,6 +325,13 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         if(is_null($value)) self::assertNull($team->$key);
         else                self::assertEquals($value, $team->$key);
     }
+
+    /**
+     * Asserts the value of a team, but firsts loads the tournament externally
+     *
+     * This eliminates ANY chance of contaminated results, it loads a new
+     * BBTournament directly from the API, and asserts the provided key=>value pair
+     */
     public static function AssertTournamentValueExternally($tourney, $key, $value) {
         if($tourney instanceof BBTournament) $tourney = $tourney->id;
         self::assertInstanceOf('BBTournament', $tourney = self::$bb_static->tournament($tourney));
@@ -228,6 +339,13 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         if(is_null($value)) self::assertNull($tourney->$key);
         else                self::assertEquals($value, $tourney->$key);
     }
+
+    /**
+     * Asserts the value of a match result, but firsts loads the match externally
+     *
+     * This eliminates ANY chance of contaminated results, it loads a new
+     * BBMatch directly from the API, and asserts the provided key=>value pair
+     */
     public static function AssertMatchValueExternally($match, $key, $value) {
         if($match instanceof BBMatch) $match = $match->id;
         self::assertInstanceOf('BBMatch', $match = self::$bb_static->match($match));
@@ -235,22 +353,23 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
         if(is_null($value)) self::assertNull($match->$key);
         else                self::assertEquals($value, $match->$key);
     }
+    //</editor-fold>
 
-
-
-
-
+    //<editor-fold defaultstate="collapsed" desc="Tournament creation/configuration helpers">
     /**
      * Configures tournament reference settings and saves
-     * 
+     *
+     * @ignore
+     *
      * @param BBTournament $tournament
      * @param bool $groups
      * @param bool $double_elimination
      * @param bool $save
+     * @return void
      */
     private function configure_tournament(BBTournament &$tournament, $groups = false, $double_elimination = false, $save = true) {
         //Settings
-        $tournament->title = $groups ? 'PHP API library 3.0.0 BBMatch (Groups) Unit Test' : 'PHP API library 3.0.0 BBMatch Unit Test';
+        $tournament->title = $groups ? 'PHP API library ' . BinaryBeast::API_VERSION . ' BBMatch (Groups) Unit Test' : 'PHP API library ' . BinaryBeast::API_VERSION . ' BBMatch Unit Test';
         $tournament->description = 'New tournament for PHPUnit testing';
         $tournament->elimination = $double_elimination ? 2 : 1;
         $tournament->bronze = true;
@@ -265,9 +384,9 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
     }
     /**
      * Configure BO3 for all rounds in the given tournament, and BO5 for the finals or bronze
-     * 
+     *
      * @param BBTournament $tournament
-     * @param boolean $groups
+     * @param boolean $double_elimination
      * @param boolean $save
      * @return void
      */
@@ -291,7 +410,8 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
     }
     /**
      * Adds 8 confirmed teams to the tournament reference
-     * @param BBTournament $tournament
+     * @param BBTournament  $tournament
+     * @param boolean       $save
      */
     protected function add_tournament_teams(BBTournament &$tournament, $save = true) {
         //Must start with an ID
@@ -320,8 +440,9 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
     }
     /**
      * Returns a saved inactive tournament - aka hasn't started, no teams added - rounds have been setup though
-     * @param boolean $groups
-     * @param boolean $double_elimination
+     * @param boolean   $groups
+     * @param boolean   $double_elimination
+     * @param boolean   $save
      * @return BBTournament
      */
     protected function get_tournament_inactive($groups = false, $double_elimination = false, $save = true) {
@@ -358,6 +479,7 @@ abstract class BBTest extends PHPUnit_Framework_TestCase {
 
         return $this->tournament = $tournament;
     }
+    //</editor-fold>
 }
 
 ?>

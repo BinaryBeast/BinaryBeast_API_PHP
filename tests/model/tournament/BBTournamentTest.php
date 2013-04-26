@@ -707,6 +707,28 @@ class BBTournamentTest extends BBTest {
         //The original match object should have updated itself
         $this->assertEquals($match->id, $groups->a[0][0]->match->id);
     }
+
+    /**
+     * A pseudo test that is used to clean up any stray test tournaments
+     *
+     * It deletes all tournaments with titles that contain the phrase "API Demo", or "Unit Test"
+     *
+     * @group cleanup_tournament_tests
+     */
+    public function test_clean_test_tournaments() {
+        $count = 0;
+
+        foreach($this->bb->tournament->list_my('API Demo') as $tournament) {
+            $tournament->delete();
+            ++$count;
+        }
+        foreach($this->bb->tournament->list_my('Unit Test') as $tournament) {
+            $tournament->delete();
+            ++$count;
+        }
+
+        var_dump(['Tournaments Cleaned' => $count]);
+    }
 }
 
 ?>

@@ -330,6 +330,59 @@ class BBTeamTest extends BBTest {
         //Changing the wins should have triggered a reset of opponent / match properties
         $this->assertNull($this->object->match());
     }
+
+    /**
+     * Test setting the team's race by the race ID
+     */
+    public function test_set_race_id() {
+        $this->assertNull($this->object->race);
+        $this->assertNull($this->object->race_id);
+
+        //HotS race: 10-Zerg 13-Terran 12-Random 11-Protoss
+        $this->object->race = 10;
+        $this->assertSave($this->object->save());
+
+        $this->assertEquals('Zerg', $this->object->race);
+        $this->assertEquals(10, $this->object->race_id);
+    }
+
+    /**
+     * Test setting the team's race by the race name string
+     * @covers BBTeam::$race
+     */
+    public function test_set_race_name() {
+        $this->assertNull($this->object->race);
+        $this->assertNull($this->object->race_id);
+
+        //HotS race: 10-Zerg 13-Terran 12-Random 11-Protoss
+        $this->object->race = 'Terran';
+        $this->assertSave($this->object->save());
+
+        $this->assertEquals('Terran', $this->object->race);
+        $this->assertEquals(13, $this->object->race_id);
+    }
+
+    /**
+     * Tests setting the race value for multiple teams at once
+     */
+    public function test_set_race_id_batch() {
+        $teams = array();
+
+        for($x = 0; $x < 6; $x++) {
+            $team = &$this->object->tournament->team();
+            $team->race = $x % 2 == 0 ? 12 : 'Random';
+
+            $teams[] = &$team;
+        }
+        $this->assertSave($this->object->tournament->save_teams());
+
+        //Each new team should have an ID, and should have random race id + race
+        foreach($teams as &$team) {
+            $this->assertID($team->id);
+            $this->assertEquals('Random', $team->race);
+            $this->assertEquals(12, $team->race_id);
+        }
+    }
 }
 
 ?>

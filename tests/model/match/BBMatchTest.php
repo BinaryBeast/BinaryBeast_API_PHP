@@ -14,7 +14,7 @@ class BBMatchTest extends BBTest {
     /**
      * Runs before each test - grab a tournament with some open untouched matches, and 
      *  save one of them to our local $object property
-    */
+     */
     protected function setUp() {
         $this->set_object();
         parent::setUp();
@@ -49,18 +49,24 @@ class BBMatchTest extends BBTest {
         $this->assertEquals($winner, $this->object->winner());
     }
     /**
-     * Calling set_winner after reporting should not be allowed
+     * Tests to make sure winner() still works after reporting the match
      * @covers BBMatch::winner
-     * @group fail
      */
     public function test_winner_after_report() {
         $winner = $this->object->team2();
-        $loser  = $this->object->team();
         $this->assertTrue($this->object->set_winner($winner));
         $this->assertEquals($winner, $this->object->winner());
-        $this->assertSave($this->object->save());
-        //
-        $this->assertFalse($this->object->set_winner($loser));
+
+        //Report it
+        $this->assertSave($id = $this->object->report());
+
+        //Assert directly
+        $this->assertEquals($winner, $this->object->winner);
+        $this->assertEquals($winner, $this->object->winner());
+
+        //Assert externally - wrap $winner through BBTournament::team to make sure we have an up-to-date team object
+        $external = $this->bb->match($id);
+        $this->assertEquals($winner->id, $external->winner->id);
     }
     /**
      * Tests to make sure that winner() returns the right team after calling set_winner twice to change the expected value
@@ -87,6 +93,7 @@ class BBMatchTest extends BBTest {
     }
     /**
      * @covers BBMatch::team
+     * @group fail
      */
     public function test_team() {
         $this->assertInstanceOf('BBTeam', $this->object->team());
