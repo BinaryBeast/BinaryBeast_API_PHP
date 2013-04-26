@@ -53,7 +53,7 @@
  * <b>Example: Load list of tournaments created by your account:</b>
  *
  * Includes any tournaments you've marked as private {@link BBTournament::public},
- * as defined in the 3rd paramater
+ * as defined in the 3rd parameter
  * <code>
  *  $tournaments = $bb->tournament->list_my(null, 100, true);
  *  foreach($tournaments as $tournament) {
@@ -63,7 +63,7 @@
  *
  * <b>Example: Load a filtered list of your tournaments, using the keyword 'starleague':</b>
  *
- * Note: since we didn't define the 3rd paramater, private tournaments will NOT be included {@link BBTournament::public}
+ * Note: since we didn't define the 3rd parameter, private tournaments will NOT be included {@link BBTournament::public}
  * <code>
  *  $tournaments = $bb->tournament->list_my('starleague');
  *  foreach($tournaments as $tournament) {
@@ -299,10 +299,10 @@
  * you may have to call {@link BBTeam::reload} to insure it has the latest values
  * <code>
  *  if($team7->position != 0) {
- *      var_dump(array('Team 7 position exptected to be 7!', 'position' => $team7->position));
+ *      var_dump(array('Team 7 position expected to be 7!', 'position' => $team7->position));
  *  }
  *  if($team2->position != 1) {
- *      var_dump(array('Team 2 position exptected to be 7!', 'position' => $team7->position));
+ *      var_dump(array('Team 2 position expected to be 7!', 'position' => $team7->position));
  *  }
  * </code>
  * etc etc...
@@ -706,12 +706,15 @@
  * <b>Alias for {@link groups()}</b><br />
  * The data object containing group rounds matches and results
  *
+ * @todo consider allowing developers to set values for any custom properties, and save them in $notes
+ *
+ * @todo Instead of flagging reloads when the race is changed, import the new values (may require update to the svc itself)
  *
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.6
- * @date    2013-04-19
+ * @version 3.0.7
+ * @date    2013-04-26
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -920,12 +923,7 @@ class BBTournament extends BBModel {
     private $groups;
     //</editor-fold>
 
-    /**
-     * This tournament's ID, using BinaryBeast's naming convention
-     * @var string
-     */
-    public $tourney_id;
-
+    //<editor-fold defaultstate="collapsed" desc="BBModel implementations">
     /**
      * Default values for a new tournament
      * @var array
@@ -951,7 +949,13 @@ class BBTournament extends BBModel {
     protected $read_only = array('status', 'tourney_id');
     protected $id_property = 'tourney_id';
     protected $data_extraction_key = 'tourney_info';
+    //</editor-fold>
 
+    /**
+     * This tournament's ID, using BinaryBeast's naming convention
+     * @var string
+     */
+    public $tourney_id;
 
     /**
      * Overloads {@link BBModel::__set()} so we can prevent setting the type_id of an active tournament
@@ -982,7 +986,7 @@ class BBTournament extends BBModel {
      *      }
      * 
      * @param boolean   $ids set true to return array of ids only
-     * @param array     $args   any additonal arguments to send with the API call
+     * @param array     $args   any additional arguments to send with the API call
      * 
      * @return BBTeam[]|null
      *      Null is returned if there was an error with the API request
@@ -1399,7 +1403,7 @@ class BBTournament extends BBModel {
     /**
      * Update all teams/participants etc that have had any values changed in one go
      * 
-     * You can either call this directly (if for some reason you don't yet want touranmetn changes saved)
+     * You can either call this directly (if for some reason you don't yet want tournaments changes saved)
      * or call save(), which will save EVERYTHING, including tour data, teams, and rounds
      * 
      * @return boolean
@@ -1460,15 +1464,21 @@ class BBTournament extends BBModel {
 		$this->iterating = true;
         foreach($teams as &$team) {
 
-            //Tell the tournament to merge all unsaved changed into $data
+            //Flag a reload if the race changed
+            $flag_reload = array_key_exists('race', $team->get_changed_values());
+
+            //Tell the team to merge all unsaved changed into $data
             $team->sync_changes();
 
-            /**
-             * For new tournaments, make sure they get the new team_id
-             */
+            //For new tournaments, make sure they get the new team_id
             if(is_null($team->id)) {
                 $team->set_id($result->team_ids[$new_id_index]);
                 ++$new_id_index;
+            }
+
+            //Flag reload if the race was set
+            if($flag_reload) {
+                $team->flag_reload();
             }
         }
 		$this->iterating = false;
@@ -2090,7 +2100,7 @@ class BBTournament extends BBModel {
         if($team1 instanceof BBMatch) {
             return $this->get_child($team1, $this->open_matches());
         }
-        
+
         //Try to find the match with these two teams
         if(!is_null($team1) && !is_null($team2)) {
             foreach($this->open_matches() as $key => $match) {
@@ -2492,8 +2502,8 @@ class BBTournament extends BBModel {
         /*
          * Convert participants into {@link BBTeam} models
          * 
-         * We'll use {@link team()} for this.. beacuse if team() can't find an existing model for us..
-         * then something's gone terribly wrong
+         * We'll use {@link team()} for this.. because if team() can't find an existing model for us..
+         * then something has gone terribly wrong
          */
         if(!is_null($match_object->team)) {
             $match_object->team = $this->team($match_object->team->tourney_team_id);
@@ -2516,8 +2526,8 @@ class BBTournament extends BBModel {
                 $match_object->match = $this->open_match($match_object->team, $match_object->opponent);
             }
         }
-        
-        //Default null
+
+        //Create null values for unset properties, for consistency with the {@link BBMatchObject} "schema"
         if(!isset($match_object->team))     $match_object->team = null;
         if(!isset($match_object->opponent)) $match_object->opponent = null;
         if(!isset($match_object->match))    $match_object->match = null;
