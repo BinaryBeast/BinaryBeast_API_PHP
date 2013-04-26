@@ -1,17 +1,17 @@
 <?php
 
 /**
- * Base class for all manipulatable/CRUD model objects
+ * Base class for all manipulable/CRUD model objects
  * 
  * Extends the functionality defined in the SimpleModel class.  Simple model provides most
  *      functionality for error handling / result storage / API interaction etc, 
  *      while this function provides logic for data manipulation + synchronizing the changes with BinaryBeast
- * 
+ *
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.5
- * @date    2013-04-13
+ * @version 3.0.6
+ * @date    2013-04-26
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -215,7 +215,7 @@ abstract class BBModel extends BBSimpleModel {
         $this->flag_changed();
     }
     /**
-     * Update a current value without flagging changes, just direclty change it
+     * Update a current value without flagging changes, just directly change it
      * 
      * @ignore
      * 
@@ -269,7 +269,17 @@ abstract class BBModel extends BBSimpleModel {
      * @return mixed
      */
     public function &__get($name) {
-        
+
+        /**
+         * The very first step is to call load() for existing objects
+         */
+        if (!is_null($this->id)) {
+            if (sizeof($this->current_data) === 0 || $this->reload) {
+                $this->load();
+                return $this->__get($name);
+            }
+        }
+
         /**
          * If a method exists with this name, execute it now and return the result
          * Nice for a few reasons - but most importantly, child classes
@@ -292,19 +302,6 @@ abstract class BBModel extends BBSimpleModel {
          */
         if(isset($this->data[$name]) && !$this->reload) {
             return $this->data[$name];
-        }
-
-        /**
-         * Next thing to try depends on whether this is a new tournament yet to be created,
-         *  or an existing one
-         * 
-         * It exists, do we need to call the load() method to get the current values?
-         */
-        if(!is_null($this->id)) {
-            if(sizeof($this->current_data) === 0 || $this->reload) {
-                $this->load();
-                return $this->__get($name);
-            }
         }
 
         //Invalid property, simply return null
@@ -475,23 +472,22 @@ abstract class BBModel extends BBSimpleModel {
      * calling the load method within that, which returns itself (as long as nothing went wrong)
      * 
      * @param mixed     $id             If you did not provide an ID in the instantiation, they can provide one now
-     * @param array     $child_args     Allow child classes to define additional paramaters to send to the API (for example the primary key of an object may consist of multiple values)
+     * @param array     $child_args     Allow child classes to define additional parameters to send to the API (for example the primary key of an object may consist of multiple values)
      * @param boolean   $skip_cache     Disabled by default - set true to NOT try loading from local cache
      * 
-     * @return BBModel|self|false
-     * 
-     *  <b>FALSE return</b> indicates something went wrong when loading from the API - look at {@link BinaryBeast::last_error} for details
-     * 
-     * 
-     *  <br /><br />
-     *  If successful, the it return itself to allow you to chain
-     * 
-     *  <b>Example:</b>
+     * @return BBModel|self|boolean
+     * <ul>
+     *  <li><b>False: </b> Indicates an error with loading from the API (see {@link BinaryBeast::last_error} for details)
+     *  <li><b>Self: </b> If successful, the current object is returned, allowing you to chain
+     * </ul>
+     *
+     * <br />
+     * <b>Example:</b>
      *  
-     *  Create a new {@link BBTournament}, and automatically load it in a single line
-     *  <code>
+     * Create a new {@link BBTournament}, and automatically load it in a single line
+     * <code>
      *      $tournament = $bb->tournament->load('x12345');
-     *  </code>
+     * </code>
      */
     public function &load($id = null, $child_args = array(), $skip_cache = false) {
         
@@ -645,7 +641,7 @@ abstract class BBModel extends BBSimpleModel {
             $svc = $this->get_service('CREATE');
         }
 
-        //If child defined additonal arguments, merge them in now
+        //If child defined additional arguments, merge them in now
         if(is_array($child_args)) $args = array_merge($args, $child_args);
 
         //GOGOGO
@@ -654,6 +650,9 @@ abstract class BBModel extends BBSimpleModel {
         /*
          * Saved successfully - update some local values and return true
          */
+        if(!isset($result->result)) {
+            var_dump(['result' => $result, 'svc' => $svc, 'args' => $args]); die();
+        }
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
 
 			//Clear cache for this svc
@@ -868,7 +867,7 @@ abstract class BBModel extends BBSimpleModel {
      * Attempts to return the matching child within the provided
      *  array of child BBModel instances
      * 
-     * @todo don't initalize $ids unless its needed
+     * @todo don't initialize $ids array unless its needed
      * 
      * @ignore
      * 
@@ -883,7 +882,7 @@ abstract class BBModel extends BBSimpleModel {
 
         //If given a BBModel directly, try searching for it in the array
         if($child instanceof BBModel) {
-            //See if the object itself is in our aray
+            //See if the object itself is in our array
             if(($key = array_search($child, $children)) === false) {
                 //We have no matching instance, try comparing ids in case our local teams have changed (but only if we HAVE an ID)
                 if(!is_null($child->id)) {
@@ -898,7 +897,7 @@ abstract class BBModel extends BBSimpleModel {
         //Success!
         if($key !== false) return $children[$key];
 
-        //Team is not in thie tournament
+        //The $children array does not contain the provided $child
         return $this->bb->ref(null);
     }
 
