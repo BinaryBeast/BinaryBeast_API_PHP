@@ -24,36 +24,49 @@
  * You can define this as the map_id integer, or any map name string<br />
  * Using a map_id is recommended over a simple map string - which may or may not be resolved as a map_id
  * 
- * @property-read int $map_id
+ * @property-read int|null $map_id
  * <b>Read Only</b><br />
  * Value set when loading the round - the unique int id for the value of $map
+ *
+ * @property-read string|null $map_icon
+ * URL of an icon of the map
+ *
+ * @property-read string|null $map_image
+ * URL of a full image of the map
+ *
+ * @property string $game_code
+ * Game code of the map if applicable
  * 
  * @property string $date
  *  A description of when this round should start<br />
  *  For the moment this is a simple string, it does not even validate the format
- * 
- * 
+ *
+ *
  * @package BinaryBeast
  * @subpackage Model
  * 
  * 
- * @version 3.0.3
- * @date    2013-04-26
+ * @version 3.0.4
+ * @date    2013-05-03
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBRound extends BBModel {
 
+    //<editor-fold defaultstate="collapsed" desc="API service names">
     const SERVICE_CREATE = 'Tourney.TourneyRound.Update';
     const SERVICE_UPDATE = 'Tourney.TourneyRound.Update';
     const SERVICE_DELETE = 'Tourney.TourneyRound.Delete';
+    //</editor-fold>
 
-    //Cache setup (cache for 10 minutes)
+    //<editor-fold defaultstate="collapsed" desc="Cache settings">
     const CACHE_OBJECT_TYPE     = BBCache::TYPE_TOURNAMENT;
     const CACHE_TTL_LIST        = 10;
     const CACHE_TTL_LOAD        = 10;
+    //</editor-fold>
 
+    //<editor-fold defaultstate="collapsed" desc="Private properties / children arrays">
     /**
      * Keep a reference to the tournament that instantiated this class
      * @var BBTournament
@@ -62,24 +75,31 @@ class BBRound extends BBModel {
 
     /**
      * The bracket this round belongs to
+     *
+     * @todo this shouldn't be public...
      * 
      * @var int
      */
     public $bracket;
     /**
      * The round number this object represents with $bracket
+     *
+     * @todo this shouldn't be public...
      * 
      * @var int
      */
     public $round;
+    //</editor-fold>
 
-
+    //<editor-fold defaultstate="collapsed" desc="BBModel implementations">
     protected $default_values = array(
         'best_of'           => 1,
         'map_id'            => null,
         'map'               => null,
         'date'              => null,
     );
+    protected $read_only = array('map_id', 'game_code', 'map_icon', 'map_image');
+    //</editor-fold>
 
     /**
      * Since PHP doesn't allow overloading the constructor with a different parameter list,
@@ -163,8 +183,8 @@ class BBRound extends BBModel {
     }
     /**
      * Since we don't have an id, and we don't create rounds
-     *  one at a time, we handle this flag differently than BBmodel
-     * 
+     *  one at a time, we handle this flag differently than BBModel
+     *
      * @return boolean
      */
     public function is_new() {
