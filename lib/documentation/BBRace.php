@@ -15,13 +15,16 @@
  * 
  * @property-read string $race_icon
  *  The URL of the icon hosted by BinaryBeast if available
+ *
+ * @property-read string[] $games
+ *  Array of game codes of the games allowed to use this map
  * 
  * 
  * @package BinaryBeast
  * @subpackage SimpleModel_ObjectStructure
  *
- * @version 1.0.1
- * @date    2013-04-13
+ * @version 1.0.2
+ * @date    2013-05-03
  * @author  Brandon Simmons <contact@binarybeast.com
  */
 abstract class BBRaceObject {

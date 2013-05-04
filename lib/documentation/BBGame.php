@@ -6,16 +6,72 @@
  * This class is never used, it solely exists for documentation
  * 
  * @property-read string $game
- *  The game title
+ * The game title
  * 
  * @property-read string $game_code
- *  The unique identifier for this game<br />
- *  Used by {@link BBTournament::game_code} to associate a tournament with a specific game
+ * The unique identifier for this game<br />
+ * Used by {@link BBTournament::game_code} to associate a tournament with a specific game
+ *
+ * @property-read string|null $parent_id
+ * Game game_code of the parent game
+ * Used by expansiosn to define which game they are expanding
+ *
+ * @property-read string|null $default_child
+ * For games with multiple expansions, this defines the newest / latest
+ *  child / expansion that should be used
+ *
+ * For example for StarCraft 2, the default expansion would be Heart of the Swarm
+ *
+ * @property-read boolean $force_child
+ * If true, it means this game should not be used directly,
+ * You should use child games
+ *
+ * An example would be StarCraft 2, you should use WoL or HotS
+ *
+ * @property boolean $inherit_maps
+ * Specifies if this game inherits maps from its parent game
+ *
+ * @property boolean $inherit_races
+ * Specifies if this game inherits races from its parent game
+ *
+ * @property boolean $inherit_networks
+ * Specifies if this game inherits networks from its parent game
+ *
+ * @property boolean $inherit_platforms
+ * Specifies if this game inherits platforms from its parent game
+ *
+ * @property boolean $inherit_regions
+ * Specifies if this game inherits network-regions from its parent game
+ *
+ * @property boolean $maps
+ * Game setting: does this game allow / support a list of maps?
+ *
+ * @property boolean $races
+ * Game setting: does this game allow / support a list of races?
+ *
+ * @property int|null $network_id
+ * Default network id
+ *
+ * @property string|null $network
+ * Name of the default network
+ *
+ * @property-read string|null $description
+ * Full game description
+ *
+ * @property-read int $creation_count
+ * Total number of times an event has been created for this game
  * 
- * @property-read string $game_style
- *  If available, the type of game this is<br />
+ * @property-read string|null $genre
+ * Game style
+ * Example: Real-Time Strategy
+ *
+ * @property-read int|null $genre_id
+ * The genre's ID
+ *
+ * @property-read string|null $genre_abbreviation
+ * Short form of <var>$genre</var>
  *  examples are RTS, FPS, MMORPG, etc
- * 
+ *
  * @property-read string $race_label
  *  If applicable, this game may have races / factions associated with it<br />
  *  the race_label simply indicates how the races referred to - whether they are races, or characters, factions, etc
@@ -27,8 +83,8 @@
  * @package BinaryBeast
  * @subpackage SimpleModel_ObjectStructure
  *
- * @version 1.0.1
- * @date    2013-04-13
+ * @version 1.0.2
+ * @date    2013-05-03
  * @author  Brandon Simmons <contact@binarybeast.com
  */
 abstract class BBGameObject {
