@@ -93,7 +93,6 @@ class BBMatchTest extends BBTest {
     }
     /**
      * @covers BBMatch::team
-     * @group fail
      */
     public function test_team() {
         $this->assertInstanceOf('BBTeam', $this->object->team());
@@ -307,6 +306,30 @@ class BBMatchTest extends BBTest {
         //Scores should reset to 1-0
         $this->assertEquals(1, $this->object->score);
         $this->assertEquals(0, $this->object->o_score);
+    }
+
+    /**
+     * Tests the value of score and o_score on a minimal match report
+     */
+    public function test_default_scores() {
+        $this->object->round_format->best_of = 3;
+        $this->assertSave($this->object->round_format->save());
+
+        $this->assertTrue( $this->object->set_winner($this->object->team()) );
+
+        //Assert before
+        $this->assertEquals(1, $this->object->score);
+        $this->assertEquals(0, $this->object->o_score);
+
+        $this->assertID($id = $this->object->report() );
+
+        //Assert after
+        $this->assertEquals(1, $this->object->score);
+        $this->assertEquals(0, $this->object->o_score);
+
+        //Asset externally
+        $this->AssertMatchValueExternally($id, 'score', 1);
+        $this->AssertMatchValueExternally($id, 'o_score', 0);
     }
 
     /**
