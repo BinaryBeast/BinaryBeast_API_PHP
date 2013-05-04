@@ -1,3 +1,18 @@
+## BinaryBeast API PHP Library 3.0.9 (2013-05-03) ##
+Documented some fields that the API recently exposed to the public API
+
+**Classes Affected:**
+
+* [BBRound](lib/BBRound.php)
+	* Adds `map_icon`, `map_icon`, and `game_code`
+* [BBGame](lib/BBGame.php)
+	* Notable additions: `genre`, `genre_abbreviation`, `parent_id`, and some new setting values
+* [BBMap](lib/BBMap.php)
+	* Adds `games`, an array of games associated with the map (includes games that inherit the map)
+* [BBRace](lib/BBRace.php)
+	* Adds `games`, an array of games associated with the race (includes games that inherit the race)
+
+
 ## BinaryBeast API PHP Library 3.0.8 (2013-04-26) ##
 * Added support for loading and setting participant races in [BBTeam](lib/BBTeam.php)
 

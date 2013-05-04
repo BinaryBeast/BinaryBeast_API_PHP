@@ -191,8 +191,8 @@
  * 
  * @package BinaryBeast
  * 
- * @version 3.0.8
- * @date    2013-04-26
+ * @version 3.0.9
+ * @date    2013-05-03
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
