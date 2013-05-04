@@ -236,7 +236,7 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.0.8';
+    const API_VERSION = '3.0.9';
 
     //<editor-fold defaultstate="collapsed" desc="Private Properties">
     /**
