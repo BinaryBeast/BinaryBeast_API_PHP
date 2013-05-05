@@ -2,7 +2,7 @@
 
 /**
  * Model object for a BinaryBeast Tournament
- * 
+ *
  * It can be used to <b>create</b>, <b>manipulate</b>, <b>delete</b>, and <b>list</b> BinaryBeast tournaments
  *
  *
@@ -13,6 +13,7 @@
  *
  * <br />
  * <b>Tutorials:</b>
+ * - {@link http://binarybeast.com/content/api/docs/php/class-BBTournament.html#listing Listing Tournaments}
  * - {@link http://binarybeast.com/content/api/docs/php/class-BBTournament.html#create Create a New Tournament}
  * - {@link http://binarybeast.com/content/api/docs/php/class-BBTournament.html#round-format Configure Round Format}
  * - {@link http://binarybeast.com/content/api/docs/php/class-BBTournament.html#adding-teams Adding Teams}
@@ -29,26 +30,8 @@
  * - {@link http://binarybeast.com/content/api/docs/php/class-BBTournament.html#drawing Accessing Groups/Brackets Data}
  * - {@link http://binarybeast.com/content/api/docs/php/class-BBTournament.html#deleting Deleting the Tournament}
  *
- * ## Create a New Tournament .[#create]
- * 
- * Let's run through a quick example of how to create a new tournament using the {@link BinaryBeast::touranment()} factory method
- * 
- * Be sure to check out the available properties ({@see m#agicProperties}), they won't be covered in the example
- * 
- * The code below will create a 1v1 single elimination tournament, with the bronze / 3rd place round enabled
- * <code>
- *  $tournament                 = $bb->tournament();
- *  $tournament->title          = 'Hello world!';
- *  $tournament->elimination    = BinaryBeast::ELIMINATION_SINGLE;
- *  $tournament->bronze         = true;
- *  if(!$tournament->save()) {
- *      var_dump($bb->last_error);
- *  }
- * </code>
  *
- *
- *
- * ## Listing .[#listing]
+ * ## Listing Tournaments .[#listing]
  *
  * <b>Example: Load list of tournaments created by your account:</b>
  *
@@ -86,6 +69,25 @@
  *      echo '<a href="' . $tournament->url . '">' . $tournament->title . '</a>';
  *  }
  * </code>
+ *
+ *
+ * ## Create a New Tournament .[#create]
+ * 
+ * Let's run through a quick example of how to create a new tournament using the {@link BinaryBeast::touranment()} factory method
+ * 
+ * Be sure to check out the available properties ({@see m#agicProperties}), they won't be covered in the example
+ * 
+ * The code below will create a 1v1 single elimination tournament, with the bronze / 3rd place round enabled
+ * <code>
+ *  $tournament                 = $bb->tournament();
+ *  $tournament->title          = 'Hello world!';
+ *  $tournament->elimination    = BinaryBeast::ELIMINATION_SINGLE;
+ *  $tournament->bronze         = true;
+ *  if(!$tournament->save()) {
+ *      var_dump($bb->last_error);
+ *  }
+ * </code>
+ *
  *
  * ## Configure Round Format .[#round-format]
  * 
