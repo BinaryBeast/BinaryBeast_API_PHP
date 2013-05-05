@@ -1,5 +1,5 @@
 # BinaryBeast API PHP Library
-#### Version 3.0.8 (2013-04-26)
+#### Version 3.1.0 (2013-05-05)
 
 ----------
 
@@ -144,6 +144,10 @@ Coming soon
 
 
 ## Recent Changes
+
+### Version 3.1.0 (2013-05-05)
+Removed some debugging output in BBModel that happened to have php 5.4-only syntax
+
 
 ### Version 3.0.9 (2013-05-03)
 Documented some fields that the API recently exposed to the public API
