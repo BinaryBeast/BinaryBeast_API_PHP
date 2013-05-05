@@ -43,12 +43,6 @@
  * @property boolean $inherit_regions
  * Specifies if this game inherits network-regions from its parent game
  *
- * @property boolean $maps
- * Game setting: does this game allow / support a list of maps?
- *
- * @property boolean $races
- * Game setting: does this game allow / support a list of races?
- *
  * @property int|null $network_id
  * Default network id
  *
@@ -72,10 +66,24 @@
  * Short form of <var>$genre</var>
  *  examples are RTS, FPS, MMORPG, etc
  *
+ * @property boolean $maps
+ * Game setting: does this game allow / support a list of maps?
+ *
+ * @property boolean $races
+ * Game setting: does this game allow / support a list of races?
+ *
+ * @property boolean $divisions
+ * Game setting: does this game allow / support a divisions?
+ *
  * @property-read string $race_label
- *  If applicable, this game may have races / factions associated with it<br />
- *  the race_label simply indicates how the races referred to - whether they are races, or characters, factions, etc
- * 
+ * If applicable, this game may have races / factions associated with it<br />
+ * the race_label simply indicates how the races referred to - whether they are races, or characters, factions, etc
+ *
+ * @property-read string $map_label
+ * How maps are referred to in this game
+ * <b>Default:</b> 'Map'
+ * Needed for games that may refer to a map as a 'Stage' for example
+ *
  * @property-read string $game_icon
  *  The URL of the 20x20 icon hosted on BinaryBeast.com for this game
  * 
@@ -83,12 +91,10 @@
  * @package BinaryBeast
  * @subpackage SimpleModel_ObjectStructure
  *
- * @version 1.0.2
- * @date    2013-05-03
+ * @version 1.0.3
+ * @date    2013-05-05
  * @author  Brandon Simmons <contact@binarybeast.com
  */
 abstract class BBGameObject {
     //Nothing here - used for documentation only
 }
-
-?>
