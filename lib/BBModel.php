@@ -10,8 +10,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.6
- * @date    2013-04-26
+ * @version 3.0.7
+ * @date    2013-05-05
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -650,9 +650,6 @@ abstract class BBModel extends BBSimpleModel {
         /*
          * Saved successfully - update some local values and return true
          */
-        if(!isset($result->result)) {
-            var_dump(['result' => $result, 'svc' => $svc, 'args' => $args]); die();
-        }
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
 
 			//Clear cache for this svc
