@@ -3,7 +3,7 @@
 /**
  * Configuration for the BinaryBeast API Library
  * 
- * This is stored in a seperate file to make it easier to pull changes to the library, without losing
+ * This is stored in a separate file to make it easier to pull changes to the library, without losing
  *  any configuration values
  * 
  * @package BinaryBeast
@@ -64,19 +64,19 @@ final class BBConfiguration {
      * Database name
      * @var string
      */
-    public $cache_db_database = 'test';
+    public $cache_db_database = null;//'test';
 
     /**
      * Name of the table to use
      *      This class will create the table, since we expect it to be in a certain format
      * @var string
      */
-    public $cache_db_table = 'bb_api_cache';
+    public $cache_db_table = null;//'bb_api_cache';
     /**
      * Username for logging into the database
      * @var string
      */
-    public $cache_db_username = 'test_user';
+    public $cache_db_username = null;//'test_user';
     /**
      * Password for logging into the database
      * @var string
