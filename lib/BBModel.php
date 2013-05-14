@@ -10,8 +10,9 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.8
+ * @version 3.0.9
  * @date    2013-05-14
+ * @since   2012-09-17
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -496,11 +497,10 @@ abstract class BBModel extends BBSimpleModel {
          * completely wipe everything that may have changed, and THEN load it
          */
         if(!is_null($id) && $id != $this->id) {
-            //Already loaded, simply return as if the load was successful
+            //Can't load from a different id an ID is already set, and we've already loaded
             if($this->loaded) {
-                //Removed for php 5.2 compatability
-                //$this->set_error('Data has already been set for this ' . get_called_class() . ' object, you cannot load() using a different id');
-                return $this->bb->ref($this);
+                $this->set_error('Data has already been set for this ' . $this->get_class_name() . ' object, you cannot load() using a different id');
+                return $this->bb->ref(false);
             }
             //Make sure that if any values have been updated for any reason, that they don't stick around to muddy up the values from the API response
             $this->reset();
@@ -525,9 +525,7 @@ abstract class BBModel extends BBSimpleModel {
         $svc = $this->get_service('LOAD');
         if(is_null($svc)) {
             return $this->bb->ref(
-                //PHP 5.2 compatibility
-                //$this->set_error(get_called_class() . 'does not seem to have defined a loading service, BBModel::save expects a constant value for SERVICE_LOAD')
-                $this->set_error('No SERVICE_LOAD defined in this model class')
+                $this->set_error($this->get_class_name() . 'does not seem to have defined a loading service, BBModel::save expects a constant value for SERVICE_LOAD')
             );
         }
 
@@ -1105,6 +1103,7 @@ abstract class BBModel extends BBSimpleModel {
 		if(is_null($this->id)) return null;
 		return $this->bb->callback->load_list($event_id, $this->id, $url);
 	}
+
 }
 
 ?>

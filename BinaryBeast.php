@@ -190,7 +190,7 @@
  * @todo Add development mode option
  * 
  * @package BinaryBeast
- * g
+ * 
  * @version 3.1.1
  * @date    2013-05-14
  * @since   2013-02-10
@@ -857,11 +857,6 @@ class BinaryBeast {
 
         //Either store it into a new array, or add some values to the input
         if(!is_null($error)) {
-            //Removed for php 5.2 compatibility
-            //(object)array('class' => $class);
-            //Use default values if not provided
-            //if(is_null($class)) $class = get_called_class();
-
             //Compile an array using the input
             $details = new stdClass();
 

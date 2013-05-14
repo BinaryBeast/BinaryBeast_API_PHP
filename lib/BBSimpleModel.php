@@ -18,11 +18,12 @@
  *      while BBModel is used for full manipulable objects for creating/creating/updating - like BBTournament
  *  
  * 
- * @package BinaryBeast
- * @subpackage Library
+ * @package     BinaryBeast
+ * @subpackage  Library
  * 
- * @version 3.0.3
+ * @version 3.0.2
  * @date    2013-05-14
+ * @since   2013-02-08
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -150,8 +151,7 @@ class BBSimpleModel {
      */
     protected function set_error($error) {
         //Send to the main BinaryBeast API Library, and locally save whatever is sent back (a standardized format)
-        //Removed get_called_class for PHP 5.2 compatibility
-        $this->last_error = $this->bb->set_error($error);//, get_called_class());
+        $this->last_error = $this->bb->set_error($error, $this->get_class_name());
 
         //Allows return this directly to return false, saves a line of code - don't have to set_error then return false
         return false;
@@ -183,7 +183,7 @@ class BBSimpleModel {
      * @return string
      */
     protected function get_service($svc) {
-        return constant(get_called_class() . '::' . 'SERVICE_' . strtoupper($svc));
+        return constant($this->get_class_name() . '::' . 'SERVICE_' . strtoupper($svc));
     }
     /**
      * Looks for a class constant for cache settings, and falls back on
@@ -196,8 +196,8 @@ class BBSimpleModel {
      */
     protected function get_cache_setting($setting) {
         $setting = strtoupper($setting);
-		if(defined(get_called_class() . '::CACHE_' . $setting)) {
-			return constant(get_called_class() . '::CACHE_' . $setting);
+		if(defined($this->get_class_name() . '::CACHE_' . $setting)) {
+			return constant($this->get_class_name() . '::CACHE_' . $setting);
 		}
 		if(defined('self::CACHE_' . $setting)) {
 			return constant('self::CACHE_' . $setting);
@@ -229,7 +229,7 @@ class BBSimpleModel {
     protected function wrap_list($list, $class = null) {
         //Determine which class to instantiate if not provided
         if(is_null($class)) {
-            $class = get_called_class();
+            $class = $this->get_class_name();
         }
 
         //Add instantiated modals of each element into a new output array
@@ -337,6 +337,19 @@ class BBSimpleModel {
     public function clear_object_cache() {
         $object_type = $this->get_cache_setting('object_type');
         if(!is_null($object_type)) $this->bb->clear_cache(null, $object_type);
+    }
+
+    /**
+     * PHP 5.2 compatibility solution, allows us
+     *  to get the class name of class implementations, as
+     *  long as they overload this method
+     *
+     * @ignore
+     * @since 2013-05-14
+     * @return string
+     */
+    protected function get_class_name() {
+        return get_class($this);
     }
 }
 
