@@ -21,8 +21,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.2
- * @date    2013-04-13
+ * @version 3.0.3
+ * @date    2013-05-14
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -150,7 +150,8 @@ class BBSimpleModel {
      */
     protected function set_error($error) {
         //Send to the main BinaryBeast API Library, and locally save whatever is sent back (a standardized format)
-        $this->last_error = $this->bb->set_error($error, get_called_class());
+        //Removed get_called_class for PHP 5.2 compatibility
+        $this->last_error = $this->bb->set_error($error);//, get_called_class());
 
         //Allows return this directly to return false, saves a line of code - don't have to set_error then return false
         return false;

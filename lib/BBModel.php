@@ -10,8 +10,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.7
- * @date    2013-05-05
+ * @version 3.0.8
+ * @date    2013-05-14
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -496,10 +496,11 @@ abstract class BBModel extends BBSimpleModel {
          * completely wipe everything that may have changed, and THEN load it
          */
         if(!is_null($id) && $id != $this->id) {
-            //Can't load from a different id an ID is already set, and we've already loaded
+            //Already loaded, simply return as if the load was successful
             if($this->loaded) {
-                $this->set_error('Data has already been set for this ' . get_called_class() . ' object, you cannot load() using a different id');
-                return $this->bb->ref(false);
+                //Removed for php 5.2 compatability
+                //$this->set_error('Data has already been set for this ' . get_called_class() . ' object, you cannot load() using a different id');
+                return $this->bb->ref($this);
             }
             //Make sure that if any values have been updated for any reason, that they don't stick around to muddy up the values from the API response
             $this->reset();
@@ -520,11 +521,13 @@ abstract class BBModel extends BBSimpleModel {
             return $this;
         }
 
-        //Determine which sevice to use, return false if the child failed to define one
+        //Determine which service to use, return false if the child failed to define one
         $svc = $this->get_service('LOAD');
         if(is_null($svc)) {
             return $this->bb->ref(
-                $this->set_error(get_called_class() . 'does not seem to have defined a loading service, BBModel::save expects a constant value for SERVICE_LOAD')
+                //PHP 5.2 compatibility
+                //$this->set_error(get_called_class() . 'does not seem to have defined a loading service, BBModel::save expects a constant value for SERVICE_LOAD')
+                $this->set_error('No SERVICE_LOAD defined in this model class')
             );
         }
 

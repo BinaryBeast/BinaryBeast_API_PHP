@@ -190,9 +190,9 @@
  * @todo Add development mode option
  * 
  * @package BinaryBeast
- * 
- * @version 3.1.0
- * @date    2013-05-03
+ * g
+ * @version 3.1.1
+ * @date    2013-05-14
  * @since   2013-02-10
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -237,7 +237,7 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.1.0';
+    const API_VERSION = '3.1.1';
 
     //<editor-fold defaultstate="collapsed" desc="Private Properties">
     /**
@@ -857,11 +857,18 @@ class BinaryBeast {
 
         //Either store it into a new array, or add some values to the input
         if(!is_null($error)) {
+            //Removed for php 5.2 compatibility
+            //(object)array('class' => $class);
             //Use default values if not provided
-            if(is_null($class)) $class = get_called_class();
+            //if(is_null($class)) $class = get_called_class();
 
             //Compile an array using the input
-            $details = (object)array('class' => $class);
+            $details = new stdClass();
+
+            //Add the class name if provided
+            if(!is_null($class)) {
+                $details->class = $class;
+            }
 
             //For existing objects, simply add our details
             if(is_object($error)) $error = (object)array_merge((array)$details, (array)$error);
