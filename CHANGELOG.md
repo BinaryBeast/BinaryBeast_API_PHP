@@ -1,3 +1,11 @@
+## BinaryBeast API PHP Library 3.1.1 (2013-05-15)
+Replaced `get_called_class()` with `get_class($this)`
+
+* This was done in order to make the library compatible with `PHP 5.2`
+
+## BinaryBeast API PHP Library 3.1.0 (2013-05-05)
+Removed some debugging output in BBModel that happened to have php 5.4-only syntax
+
 ## BinaryBeast API PHP Library 3.0.9 (2013-05-03) ##
 Documented some fields that the API recently exposed to the public API
 

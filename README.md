@@ -1,5 +1,5 @@
 # BinaryBeast API PHP Library
-#### Version 3.1.0 (2013-05-05)
+#### Version 3.1.1 (2013-05-14)
 
 ----------
 
@@ -144,6 +144,11 @@ Coming soon
 
 
 ## Recent Changes
+
+### Version 3.1.1 (2013-05-15)
+Replaced `get_called_class()` with `get_class($this)`
+
+* This was done in order to make the library compatible with `PHP 5.2`
 
 ### Version 3.1.0 (2013-05-05)
 Removed some debugging output in BBModel that happened to have php 5.4-only syntax
