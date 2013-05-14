@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Libray class used to register new event callbacks with the API
+ * Library class used to register new event callbacks with the API
  * 
  * When you register a callback, BinaryBeast will POST or GET the specified URL when that specific event is triggered
  * 
@@ -68,8 +68,9 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.3
- * @date    2013-04-13
+ * @version 3.0.4
+ * @date    2013-05-14
+ * @since   2013-03-29
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -360,7 +361,7 @@ class BBCallback {
 		}
 
 		//Failure!
-		return $this->bb->set_error('API returned an error from svc "' . self::SERVICE_REGISTER . '", result code ' . $result->result);
+		return $this->bb->set_error('API returned an error from svc "' . self::SERVICE_REGISTER . '", result code ' . $result->result, 'BBCallback');
 	}
 
 	/**
@@ -377,7 +378,7 @@ class BBCallback {
 
 		//Failure!
 		if($result->result != BinaryBeast::RESULT_SUCCESS) {
-			return $this->bb->set_error('Error deleting callback id "' . $id . '", check $bb->result_history for deatils');
+			return $this->bb->set_error('Error deleting callback id "' . $id . '", check $bb->result_history for details', 'BBCallback');
 		}
 
 		//Success - Clear all callback cache and return true
@@ -410,7 +411,7 @@ class BBCallback {
 
 		//Failure!
 		if($result->result != BinaryBeast::RESULT_SUCCESS) {
-			return $this->bb->set_error('Error fetch the callback list, please refer to $bb->result_history for details');
+			return $this->bb->set_error('Error fetch the callback list, please refer to $bb->result_history for details', 'BBCallback');
 		}
 
 		//Success!
@@ -513,7 +514,7 @@ class BBCallback {
 		$keys = array('callback_id', 'event_id', 'event_description', 'event_utc_date');
 		foreach($keys as $key) {
 			if(!isset($request[$key])) {
-				return $this->bb->set_error('Unable to locate a "' . $key . '" value, unable to process this as a valid callback');
+				return $this->bb->set_error('Unable to locate a "' . $key . '" value, unable to process this as a valid callback', 'BBCallback');
 			}
 			$data->$key = $request[$key];
 		}
