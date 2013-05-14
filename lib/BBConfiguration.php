@@ -23,7 +23,7 @@ final class BBConfiguration {
      * 
      * Extended models must reside in /lib/custom/{new_class_name}.php
      * 
-     * For exmaple, if you override BBTournament with LocalTournament, you must save it in 
+     * For example, if you override BBTournament with LocalTournament, you must save it in
      *      in lib/custom/LocalTournament.php
      * 
      * @var string[]
