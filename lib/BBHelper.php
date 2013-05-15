@@ -42,7 +42,7 @@ class BBHelper {
      */
     public static $result_codes = array(
         '200'               => 'Success',
-        '401'               => 'Login Failed',
+        '401'               => 'Login Failed. Please insure that you have an api_key defined in lib/BBConfiguration.php.  Note that any values passed to the BinaryBeast() constructor will be treated as an api_key',
         '403'               => 'Authentication error - you are not allowed to delete / update that object',
         '404'               => 'Generic not found error - Either an invalid *_id or invalid service name (service name being Tourney.TourneyCreate.Create for example)',
         '405'               => 'Your account is not permitted to call that particular service',
