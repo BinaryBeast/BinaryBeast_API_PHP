@@ -52,6 +52,7 @@ class BBCallbackTest extends BBTest {
 	/**
 	 * Load a list of registered callbacks
 	 * @covers BBCallback::load_list
+     * @group fail
 	 */
 	public function test_list() {
 		$this->assertID($this->object->register(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id, 'http://binarybeast.com/callback/test/' . uniqid()));
@@ -64,6 +65,7 @@ class BBCallbackTest extends BBTest {
 	/**
 	 * Load a list of registered callbacks - filtered by event_id for this tournament
 	 * @covers BBCallback::load_list
+     * @group fail
 	 */
 	public function test_list_event() {
         //Get a fresh touranment, so we know it starts with 0 callbacks
@@ -81,6 +83,7 @@ class BBCallbackTest extends BBTest {
 	/**
 	 * BinaryBeast.com/callback/test allows us to test the tester heh
 	 * @covers BBCallback::test
+     * @group fail
 	 */
 	public function test_test() {
 		$response = $this->object->test(null, BBCallback::EVENT_TOURNAMENT_MATCH_REPORTED, 'xMyTourney!',
@@ -95,6 +98,7 @@ class BBCallbackTest extends BBTest {
 	/**
 	 * BinaryBeast.com/callback/test allows us to test the tester heh
 	 * @covers BBCallback::test
+     * @group fail
 	 */
 	public function test_custom_args() {
 		$response = $this->object->test(null, BBCallback::EVENT_TOURNAMENT_MATCH_REPORTED, 'xMyTourney!',
@@ -118,6 +122,7 @@ class BBCallbackTest extends BBTest {
 	/**
 	 * Test tournament's on_change callback wrapper
 	 * @covers BBTournament::on_change
+     * @group fail
 	 */
 	public function test_tournament_on_change() {
 		//First, create a real tournament

@@ -15,8 +15,13 @@ class BBCacheTest extends BBTest {
         $this->object = &$this->bb;
     }
 
+    /**
+     *
+     */
     public function test_list_tournaments() {
         $result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
+        var_dump($result);
+        var_dump($this->bb->error_history);
         $this->assertServiceListSuccessful($result, 'list');
         //
         $result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);

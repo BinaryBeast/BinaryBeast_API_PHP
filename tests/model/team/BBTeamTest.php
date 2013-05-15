@@ -333,6 +333,7 @@ class BBTeamTest extends BBTest {
 
     /**
      * Test setting the team's race by the race ID
+     * @group fail
      */
     public function test_set_race_id() {
         $this->assertNull($this->object->race);
@@ -349,6 +350,7 @@ class BBTeamTest extends BBTest {
     /**
      * Test setting the team's race by the race name string
      * @covers BBTeam::$race
+     * @group fail
      */
     public function test_set_race_name() {
         $this->assertNull($this->object->race);
@@ -364,6 +366,7 @@ class BBTeamTest extends BBTest {
 
     /**
      * Tests setting the race value for multiple teams at once
+     * @group fail
      */
     public function test_set_race_id_batch() {
         $teams = array();
