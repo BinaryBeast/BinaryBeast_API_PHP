@@ -21,7 +21,7 @@
  * @package     BinaryBeast
  * @subpackage  Library
  * 
- * @version 3.0.2
+ * @version 3.0.3
  * @date    2013-05-14
  * @since   2013-02-08
  * @author  Brandon Simmons <contact@binarybeast.com>
@@ -128,7 +128,7 @@ class BBSimpleModel {
         //Use BinaryBeast library to make the actual call
         $response = $this->bb->call($svc, $args, $ttl, $object_type, $object_id);
 
-        //Finallly, return the response
+        //Finally, return the response
         return $response;
     }
 
