@@ -16,7 +16,9 @@
 $path = str_replace('\\', '/', dirname(__FILE__)) . '/../../../BinaryBeast.php';
 require_once($path);
 $bb = new BinaryBeast();
+$bb->enable_dev_mode();
 $bb->disable_ssl_verification();
+
 
 $tournaments = $bb->tournament->list_popular();
 
