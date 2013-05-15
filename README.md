@@ -1,5 +1,5 @@
 # BinaryBeast API PHP Library
-#### Version 3.1.1 (2013-05-14)
+#### Version 3.1.2 (2013-05-14)
 
 ----------
 
@@ -144,6 +144,13 @@ Coming soon
 
 
 ## Recent Changes
+
+### Version 3.1.2 (2013-05-15)
+Adds **Development Mode**
+
+* Call `$bb->enable_dev_mode()` to enable
+	* `$bb->disable_dev_mode()` to disable, as you may have guessed
+* Automatically displays binarybeast-related errors
 
 ### Version 3.1.1 (2013-05-15)
 Replaced `get_called_class()` with `get_class($this)`
