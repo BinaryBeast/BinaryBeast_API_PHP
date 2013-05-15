@@ -37,12 +37,19 @@
  * 
  *  $bb = new BinaryBeast($config);
  * </code>
+ *
+ *
+ *
+ *
+ * ### Debugging ###
+ * We recommend {@link enable_dev_mode()} when developing, as it will
+ *  automatically display errors for you
+ *
+ * <br /><br />
+ * You may refer to {@link $last_error} and {@link $error_history} at any time to try to view recent errors
+ *
  * 
- * 
- * ********
- * Next step: models
- * 
- * 
+ *
  * ### Models ### .[#models]
  * 
  * Model objects are the heart and soul of this library, ***most of your work will be with model objects***
@@ -108,7 +115,7 @@
  * You can use this page to view a full log your recent API requests, and the response you were given: {@link http://binarybeast.com/user/settings/api_history}
  * 
  * 
- * ### Backwards Compatability
+ * ### Backwards Compatibility
  * 
  * If your application is currently using an older version of this library, it will still work with this one
  * 
@@ -134,7 +141,10 @@
  * 
  * ### Extending the Model Classes
  * 
- * Coming soon... 
+ * Coming soon...
+ *
+ *
+ * @todo Debug failed callback tests
  * 
  * 
  * @property BBTournament $tournament
@@ -187,11 +197,9 @@
  * <b>NULL</b> if your settings in {@link BBConfiguration} are invalid / not set
  * 
  * 
- * @todo Add development mode option
- * 
  * @package BinaryBeast
  * 
- * @version 3.1.1
+ * @version 3.1.2
  * @date    2013-05-14
  * @since   2013-02-10
  * @author  Brandon Simmons <contact@binarybeast.com>
@@ -237,7 +245,7 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.1.1';
+    const API_VERSION = '3.1.2';
 
     //<editor-fold defaultstate="collapsed" desc="Private Properties">
     /**
@@ -303,7 +311,7 @@ class BinaryBeast {
     /**
      * List of dependent models to auto-load when we load
      * a library that needs them
-     * @var string[]
+     * @var array[]
      */
     private static $auto_load_libraries = array(
         'BBTournament'  => array('BBTeam', 'BBRound', 'BBMatch'),
@@ -322,6 +330,12 @@ class BinaryBeast {
      * @var BBConfiguration
      */
     private $config;
+
+    /**
+     * Flag development: enabled / disabled
+     * @var bool
+     */
+    private  $dev_mode = false;
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Tournament constants">
@@ -666,6 +680,7 @@ class BinaryBeast {
         $bb->load_library('BBModel');
         $bb->load_library('BBCache');
         $bb->load_library('BBCallback');
+        $bb->load_library('BBDev');
 
         //Next instantiation will know not to call this method
         self::$first = false;
@@ -702,7 +717,7 @@ class BinaryBeast {
     }
 
     /**
-     * Determines wether or not the provided api_key or email/password
+     * Determines whether or not the provided api_key or email/password
      * are valid
      * 
      * It calls the Ping.Ping.Ping service, which is NOT
@@ -769,7 +784,7 @@ class BinaryBeast {
     public function call_raw($svc, $args = null, $return_type = null) {
         //This server isn't ready for processing API requests
         if (!self::$server_ready) {
-            return self::get_server_ready_error();
+            return $this->get_server_ready_error();
         }
 
         //Add the service to the arguments, and the return type
@@ -814,7 +829,7 @@ class BinaryBeast {
     public function call($svc, $args = null, $ttl = null, $object_type = null, $object_id = null) {
         //This server does not support curl or fopen
         if (!self::$server_ready) {
-            return self::get_server_ready_error();
+            return $this->get_server_ready_error();
         }
 
         //Cache?
@@ -848,22 +863,25 @@ class BinaryBeast {
      * 
      * @param mixed     $error          Error value to save
      * @param string    $class          Name of the class setting this error
+     * @param string    $error_title
+     * @param boolean   $warning
+     * @param boolean   $fatal
      * @return object
      */
-    public function set_error($error = null, $class = null) {
+    public function set_error($error = null, $class = null, $error_title = null, $warning = false, $fatal = false) {
 
         //Convert arrays into objects
         if(is_array($error)) $error = (object)$error;
 
         //Either store it into a new array, or add some values to the input
         if(!is_null($error)) {
-            //Compile an array using the input
-            $details = new stdClass();
-
-            //Add the class name if provided
-            if(!is_null($class)) {
-                $details->class = $class;
+            //Default to BinaryBeast.php if class name not provided
+            if(is_null($class)) {
+                $class = 'BinaryBeast.php';
             }
+
+            //Compile an array using the input
+            $details = (object)array('class' => $class);
 
             //For existing objects, simply add our details
             if(is_object($error)) $error = (object)array_merge((array)$details, (array)$error);
@@ -877,6 +895,9 @@ class BinaryBeast {
 
         //Add it to our error history log
         if(!is_null($error)) $this->error_history[] = $this->last_error;
+
+        //Print it
+        BBDev::print_error($this, $this->last_error, $error_title, debug_backtrace(), $warning, $fatal);
 
         //Return the new value we came up with so that models store it the same way we did here
         return $this->last_error;
@@ -904,8 +925,17 @@ class BinaryBeast {
         $this->last_result = isset($result->result) ? $result->result : false;
         $this->last_friendly_result = BBHelper::translate_result($this->last_result);
 
+        //Parse into an object for storage / dumping
+        $result_history = (object)array('result' => $this->last_result, 'friendly' => $this->last_friendly_result, 'svc' => $svc, 'args' => $args);
+
         //Store it in the result history array too
-        $this->result_history[] = (object)array('result' => $this->last_result, 'friendly' => $this->last_friendly_result, 'svc' => $svc, 'args' => $args);
+        $this->result_history[] = $result_history;
+
+        //Dump failed calls
+        if($this->last_result != 200) {
+            $title = 'API Failure (' . $this->last_friendly_result . ')';
+            BBDev::print_error($this, $this->last_result, $title, debug_backtrace());
+        }
     }
 
     /**
@@ -913,7 +943,14 @@ class BinaryBeast {
      *
      * @return object {int result, string Message}
      */
-    private static function get_server_ready_error() {
+    private function get_server_ready_error() {
+        $data = (object)array(
+            'message'                           => 'Your server must support both json_decode, and curl!',
+            'function_exists: json_decode'      => function_exists('json_decode'),
+            'function_exists: curl'             => function_exists('curl_version')
+        );
+        BBDev::print_error($this, $data, 'Server Configuration Error', false, false, true);
+
         return (object)array('result' => false,
             'message' => 'Please verify that both cURL and json are enabled your server!'
         );
@@ -1303,7 +1340,7 @@ class BinaryBeast {
 	
 	/**
 	 * Attempt to clear cache (keyed by any combination of service name[s], object_type, and object_id)
-	 *	without having to worry about wether or not BBCache is setup
+	 *	without having to worry about whether or not BBCache is setup
 	 * 
 	 * @param string|array $svc
 	 * @param string		$object_type
@@ -1327,13 +1364,50 @@ class BinaryBeast {
      * @return boolean
      */
     public function clear_expired_cache() {
-		//BBCache not configured
-		if(is_null($this->cache())) return false;
+        //BBCache not configured
+        if(is_null($this->cache())) return false;
         if($this->cache === false) return false;
 
         //Delegate!
         return $this->cache->clear_expired();
     }
+
+    //<editor-fold defaultstate="collapsed" desc="Development Mode">
+    /**
+     * Returns the current dev_mode value
+     *
+     * @since 2013-05-14
+     * @return boolean
+     */
+    public function dev_mode() {
+        return $this->dev_mode;
+    }
+    /**
+     * Enable development mode
+     *
+     * <b>Warning:</b> Dev mode is configured <b>per-instance!</b>
+     *
+     * In development mode, all errors / warnings are
+     *  printed to the screen at the very end of the script
+     *
+     * @since 2013-05-14
+     */
+    public function enable_dev_mode() {
+        $this->dev_mode = true;
+        BBDev::enable();
+    }
+
+    /**
+     * Disable development mode
+     *
+     * <b>Warning:</b> Dev mode is configured <b>per-instance!</b>
+     *
+     * @since 2013-05-14
+     */
+    public function disable_dev_mode() {
+        $this->dev_mode = false;
+    }
+    //</editor-fold>
 }
 
 ?>
