@@ -23,6 +23,16 @@ chdir($path);
 //Create a global BinaryBeast instance, and disable ssl verification for debugging and development purposes
 require_once('BinaryBeast.php');
 $bb = new BinaryBeast();
+
+//Cache configuration
+$config = new BBConfiguration();
+$config->cache_db_database      = 'test';
+$config->cache_db_password      = null;
+$config->cache_db_server        = 'localhost';
+$config->cache_db_table         = 'bb_api_cache';
+$config->cache_db_username      = 'test';
+
+$bb = new BinaryBeast($config);
 $bb->disable_ssl_verification();
 
 
