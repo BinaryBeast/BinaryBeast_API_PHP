@@ -146,6 +146,8 @@ Coming soon
 ## Recent Changes
 
 ### Version Library 3.1.3 (2013-05-24)
+* Adds `$bb->config` magic property
+	* Returns the current configuration object (`BBConfiguration`)
 * Adds `$bb->tournament->on_create('url here')` callback
 	* Triggered when tournaments are created the account associated with the api_key
 * Adds `BBCache::TTL_*` constants, simple TTL values for certain time periods
