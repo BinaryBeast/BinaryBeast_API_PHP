@@ -195,12 +195,16 @@
  * <b>Alias for {@link BinaryBeast::cache()}</b><br />
  * The {@link BBCache} class, which is used to save and retrieve API responses from a local database, to cut down on API calls<br />
  * <b>NULL</b> if your settings in {@link BBConfiguration} are invalid / not set
+ *
+ * @property BBConfiguration $config
+ * <b>Alias for {@link config()}</b><br />
+ * The current configuration object
  * 
  * 
  * @package BinaryBeast
  * 
- * @version 3.1.2
- * @date    2013-05-14
+ * @version 3.1.3
+ * @date    2013-05-24
  * @since   2013-02-10
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -245,7 +249,7 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.1.2';
+    const API_VERSION = '3.1.3';
 
     //<editor-fold defaultstate="collapsed" desc="Private Properties">
     /**
@@ -336,6 +340,22 @@ class BinaryBeast {
      * @var bool
      */
     private  $dev_mode = false;
+    //</editor-fold>
+
+    //<editor-fold desc="Service constants">
+    /**
+     * Service name used to log in using an API key,
+     *  which will return account information
+     * @var string
+     */
+    const SERVICE_API_KEY_LOGIN = 'User.UserLogin.APIKey';
+    /**
+     * Service name used to simply ping the API,
+     *  used to test communication and configuration,
+     *  as it would fail if called anonymously (aka your api_key must be valid)
+     * @var string
+     */
+    const SERVICE_PING = 'Ping.Ping.Ping';
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Tournament constants">
@@ -733,7 +753,7 @@ class BinaryBeast {
      * @return boolean
      */
     public function test_login($get_code = false) {
-        $result = $this->call('Ping.Ping.Ping');
+        $result = $this->call(self::SERVICE_PING);
         return $get_code ? $result->result : $result->result == 200;
     }
 
@@ -1019,7 +1039,7 @@ class BinaryBeast {
      */
     public function &__get($name) {
         //Define a list of acceptable methods that are allowed to be called as property
-        if(in_array($name, array('tournament', 'team', 'round', 'match', 'match_game', 'map', 'country', 'game', 'race', 'legacy', 'cache', 'callback'))) {
+        if(in_array($name, array('tournament', 'team', 'round', 'match', 'match_game', 'map', 'country', 'game', 'race', 'legacy', 'cache', 'callback', 'config'))) {
             return $this->{$name}();
         }
 
@@ -1149,28 +1169,9 @@ class BinaryBeast {
         //Make sure that BBLegacy.php is included
         $this->load_library('BBCallback');
 
-        //Return a reference to a newly instantated BBLegacy class
+        //Return a reference to a newly instantiated BBLegacy class
         $this->callback = new BBCallback($this);
         return $this->callback;
-    }
-
-    /**
-     * Returns a cached instance of BBCache
-     *  returns null if BBCache could not connect to the database, or had
-     *  any authentication ererors
-     * 
-     * @return BBCache|false
-     */
-    public function &cache() {
-        //Already instantiated
-        if(!is_null($this->cache) || $this->cache === false) return $this->cache;
-
-        //Instantiate a new BBCache objec into $this->cache (will automatically try to connect)
-        $this->cache = new BBCache($this, $this->config);
-
-        //If BBCache can't connect, simply set it to false
-        if(!$this->cache->connected()) $this->cache = false;
-        return $this->cache;
     }
 
     /**
@@ -1313,7 +1314,7 @@ class BinaryBeast {
 
         /**
          * This method exists in BBLegacy, call it, store the result code,
-         * then return the result direclty
+         * then return the result directly
          */
         if(method_exists($legacy, $name)) {
             $result = call_user_func_array(array($legacy, $name), $args);
@@ -1337,7 +1338,42 @@ class BinaryBeast {
         $ref = $value;
         return $ref;
     }
-	
+
+    /**
+     * Returns the current configuration object
+     *
+     * <b>Warning:</b> This returns a reference and therefore can
+     *  be used to change the configuration on-the-fly
+     *
+     * @since 2013-05-24
+     *
+     * @return BBConfiguration
+     */
+    public function &config() {
+        return $this->config;
+    }
+
+    //<editor-fold desc="Caching">
+    /**
+     * Returns a cached instance of BBCache
+     *  returns null if BBCache could not connect to the database, or had
+     *  any authentication errors
+     *
+     * @return BBCache|boolean
+     * - false if unable to connect based on the values in {@link $config}
+     */
+    public function &cache() {
+        //Already instantiated
+        if(!is_null($this->cache) || $this->cache === false) return $this->cache;
+
+        //Instantiate a new BBCache object into $this->cache (will automatically try to connect)
+        $this->cache = new BBCache($this, $this->config);
+
+        //If BBCache can't connect, simply set it to false
+        if(!$this->cache->connected()) $this->cache = false;
+        return $this->cache;
+    }
+
 	/**
 	 * Attempt to clear cache (keyed by any combination of service name[s], object_type, and object_id)
 	 *	without having to worry about whether or not BBCache is setup
@@ -1371,6 +1407,7 @@ class BinaryBeast {
         //Delegate!
         return $this->cache->clear_expired();
     }
+    //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Development Mode">
     /**
@@ -1409,5 +1446,3 @@ class BinaryBeast {
     }
     //</editor-fold>
 }
-
-?>
