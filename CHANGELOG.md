@@ -1,6 +1,8 @@
 ## BinaryBeast API PHP Library 3.1.3 (2013-05-24)
 * Adds `$bb->tournament->on_create('url here')` callback
 	* Triggered when tournaments are created the account associated with the api_key
+* Adds `$bb->config` magic property
+	* Returns the current configuration object (`BBConfiguration`)
 * Adds `BBCache::TTL_*` constants, simple TTL values for certain time periods
 	* For example, `BBCache::TTL_WEEK` can be used to cache an API response for 1 week
 
