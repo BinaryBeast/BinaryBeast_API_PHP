@@ -20,14 +20,16 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.4
- * @date 2013-04-13
- * @author Brandon Simmons <contact@binarybeast.com>
+ * @version 3.0.5
+ * @date    2013-05-24
+ * @since   2013-02-12
+ * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
  */
 class BBCache {
 
+    //<editor-fold defaultstate="collapsed" desc="Private properties">
     /**
      * @ignore
      * @var PDO
@@ -71,7 +73,9 @@ class BBCache {
      * @ignore
      */
     private $pdo_options = array('mysql' => array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8'), 'pgsql' => array());
+    //</editor-fold>
 
+    //<editor-fold defaultstate="collapsed" desc="Cache type constants">
     /**
      * ID for associating cached responses with a tournament
      * @var int
@@ -107,6 +111,30 @@ class BBCache {
      * @var int
      */
     const TYPE_CALLBACK				= 6;
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="TTL Duration Helper Constants">
+    /**
+     * TTL value for caching a result for 1 hour
+     * @var int
+     */
+    const TTL_HOUR = 60;
+    /**
+     * TTL value for caching a result for 1 day
+     * @var int
+     */
+    const TTL_DAY = 1440;
+    /**
+     * TTL value for caching a result for 1 week
+     * @var int
+     */
+    const TTL_WEEK = 10080;
+    /**
+     * TTL value for caching a result for 30 days
+     * @var int
+     */
+    const TTL_MONTH = 43200;
+    //</editor-fold>
 
     /**
      * Constructor
@@ -130,8 +158,16 @@ class BBCache {
     }
 
     /**
+     * @ignore
+     */
+	function __sleep() {
+		return array('type', 'server', 'database', 'table');
+	}
+
+    //<editor-fold defaultstate="collapsed" desc="Private validation / data preparation methods">
+    /**
      * Simply returns a boolean to indicate whether or not
-     *  all required values have been defined, becauase we'll
+     *  all required values have been defined, because we'll
      *  simply fail silently if not configured
      * 
      * @ignore
@@ -149,8 +185,31 @@ class BBCache {
     }
 
     /**
+     * Compress a value to save into the database
+     * Allows us to save large API result sets directly into the database,
+     *  without having to worry too much about taking up too much space
+     *
+     * @ignore
+     * @param array     object to compress
+     * @return string
+     */
+    private function compress($result) {
+		//First, JSON encode the array / object into a string
+		return json_encode($result);
+    }
+    /**
+     * Decompress a value fetched from the database
+     * @ignore
+     */
+    private function decompress($text) {
+		//json
+		return json_decode($text);
+    }
+    //</editor-fold>
+
+    /**
      * Attempt to connect to the database
-     * If any errors encounted while connecting, we will return 
+     * If any errors encounter while connecting, we will return
      *  the error message,
      *  otherwise if we're successful, we return true
      * 
@@ -202,6 +261,7 @@ class BBCache {
         return true;
     }
 
+    //<editor-fold defaultstate="collapsed" desc="SQL / Schema / Data manipulation methods">
     /**
      * Check to see if our $table exists in the database
      * @ignore
@@ -234,13 +294,75 @@ class BBCache {
     }
 
     /**
-     * Checks to see if this class has successfully connected and logged in yet
+     * Used by call() to update an existing record
+     *
+     * @ignore
+     *
+     * @param int $id
+     * @param int $ttl
+     * @param string $result
      * @return boolean
      */
-    public function connected() {
-        return $this->connected;
+    private function update($id, $result, $ttl) {
+        $statement = $this->db->prepare("
+            UPDATE {$this->config->cache_db_table}
+            SET result = :result, expires = DATE_ADD(UTC_TIMESTAMP(), INTERVAL '$ttl' MINUTE)
+            WHERE id = $id
+        ");
+        return $statement->execute(array(':result' => $result));
+    }
+    /**
+     * Used by call() to create a new cache record
+     *
+     * @ignore
+     *
+     * @param string $svc
+     * @param int $object_type
+     * @param mixed $object_id
+     * @param int $ttl
+     * @param string $result
+     * @return boolean
+     */
+    private function insert($svc, $object_type, $object_id, $ttl, $result) {
+        $statement = $this->db->prepare("
+            INSERT INTO {$this->config->cache_db_table}
+            (service, object_type, object_id, result, expires)
+            VALUES('$svc', $object_type, $object_id, :result, DATE_ADD(UTC_TIMESTAMP(), INTERVAL '$ttl' MINUTE))
+        ");
+        return $statement->execute(array(':result' => $result));
     }
 
+    /**
+     * Build the WHERE clause for our queries, based on the provided
+     *  service name, object type, object id, and any combination of
+     *
+     * Note that the 'WHERE' keyword IS returned
+     *
+     * @ignore
+     *
+     * @param string $svc
+     * @param int $object_type
+     * @param mixed $object_id
+     * @return string
+     */
+    private function build_where($svc = null, $object_type = null, $object_id = null) {
+        $where = '';
+		//can ben an array, or a single service name
+        if(!is_null($svc)) {
+			if(is_array($svc)) {
+				$where = 'WHERE `service` IN(';
+				foreach($svc as $x => $service) $where .= ($x == 0 ? '':', ') . "'$service'";
+				$where .= ')';
+			}
+			else $where .= ($where ? ' AND ' : 'WHERE ') . "`service` = '$svc'";
+		}
+        if(!is_null($object_type))  $where .= ($where ? ' AND ' : 'WHERE ') . "`object_type` = '$object_type'";
+        if(!is_null($object_id))    $where .= ($where ? ' AND ' : 'WHERE ') . "`object_id` = '$object_id'";
+        return $where;
+    }
+    //</editor-fold>
+
+    //<editor-fold defaultstate="collapsed" desc="Cache clearing methods">
     /**
      * As the name indicates, this method will delete any records that have expired, forcing new API calls when requested again
      * @return boolean
@@ -270,6 +392,15 @@ class BBCache {
         return $this->db->exec("
             DELETE FROM {$this->config->cache_db_table} $where
         ") !== false;
+    }
+    //</editor-fold>
+
+    /**
+     * Checks to see if this class has successfully connected and logged in yet
+     * @return boolean
+     */
+    public function connected() {
+        return $this->connected;
     }
 
     /**
@@ -331,103 +462,4 @@ class BBCache {
         //Return the direct result from $bb
         return $api_result;
     }
-    
-    /**
-     * Used by call() to update an existing record
-     * 
-     * @ignore
-     * 
-     * @param int $id
-     * @param int $ttl
-     * @param string $result
-     * @return boolean
-     */
-    private function update($id, $result, $ttl) {
-        $statement = $this->db->prepare("
-            UPDATE {$this->config->cache_db_table}
-            SET result = :result, expires = DATE_ADD(UTC_TIMESTAMP(), INTERVAL '$ttl' MINUTE)
-            WHERE id = $id
-        ");
-        return $statement->execute(array(':result' => $result));
-    }
-    /**
-     * Used by call() to create a new cache record
-     * 
-     * @ignore
-     * 
-     * @param string $svc
-     * @param int $object_type
-     * @param mixed $object_id
-     * @param int $ttl
-     * @param string $result
-     * @return boolean
-     */
-    private function insert($svc, $object_type, $object_id, $ttl, $result) {
-        $statement = $this->db->prepare("
-            INSERT INTO {$this->config->cache_db_table}
-            (service, object_type, object_id, result, expires)
-            VALUES('$svc', $object_type, $object_id, :result, DATE_ADD(UTC_TIMESTAMP(), INTERVAL '$ttl' MINUTE))
-        ");
-        return $statement->execute(array(':result' => $result));
-    }
-
-    /**
-     * Compress a value to save into the database
-     * Allows us to save large API result sets directly into the database,
-     *  without having to worry too much about taking up too much space
-     * 
-     * @ignore
-     * @param array     object to compress
-     * @return string
-     */
-    private function compress($result) {
-		//First, JSON encode the array / object into a string
-		return json_encode($result);
-    }
-    /**
-     * Decompress a value fetched from the database
-     * @ignore
-     */
-    private function decompress($text) {
-		//json
-		return json_decode($text);
-    }
-
-    /**
-     * Build the WHERE clause for our queries, based on the provided
-     *  service name, object type, object id, and any combination of
-     * 
-     * Note that the 'WHERE' keyword IS returned
-     * 
-     * @ignore
-     * 
-     * @param string $svc
-     * @param int $object_type
-     * @param mixed $object_id
-     * @return string
-     */
-    private function build_where($svc = null, $object_type = null, $object_id = null) {
-        $where = '';
-		//can ben an array, or a single service name
-        if(!is_null($svc)) {
-			if(is_array($svc)) {
-				$where = 'WHERE `service` IN(';
-				foreach($svc as $x => $service) $where .= ($x == 0 ? '':', ') . "'$service'";
-				$where .= ')';
-			}
-			else $where .= ($where ? ' AND ' : 'WHERE ') . "`service` = '$svc'";
-		}
-        if(!is_null($object_type))  $where .= ($where ? ' AND ' : 'WHERE ') . "`object_type` = '$object_type'";
-        if(!is_null($object_id))    $where .= ($where ? ' AND ' : 'WHERE ') . "`object_id` = '$object_id'";
-        return $where;
-    }
-
-    /**
-     * @ignore
-     */
-	function __sleep() {
-		return array('type', 'server', 'database', 'table');
-	}
 }
-
-?>
