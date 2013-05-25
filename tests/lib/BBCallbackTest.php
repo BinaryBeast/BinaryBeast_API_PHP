@@ -144,6 +144,22 @@ class BBCallbackTest extends BBTest {
         $this->assertEquals($decoded->trigger_id, $this->tournament->id);
         $this->assertEquals($decoded->callback_id, $id);
 	}
+
+    /**
+     * Test the on_create tournament callback
+     * @group new
+     */
+    public function test_tournament_on_create() {
+        $id = $this->tournament->on_create('http://binarybeast.com/callback/test');
+        $this->assertID($id);
+
+        //Now, invoke it!
+        $response = $this->object->test($id);
+
+        //Success!
+        $this->assertTrue(is_string($response));
+        $this->assertObjectFormat($decoded = json_decode($response), array('callback_id', 'trigger_id', 'event_description'));
+    }
 }
 
 ?>
