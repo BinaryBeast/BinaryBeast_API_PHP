@@ -470,6 +470,7 @@
  * Thanks to the {@link BBCallback} library class, you can register URLs for BinaryBeast to call whenever a certain event is triggered
  * 
  * Here is a list of callbacks currently available for a tournament:
+ * - {@link on_create()}: Triggered when a new tournament is created
  * - {@link on_change()}: Very generic, triggered by just about everything
  * - {@link on_complete()}: The final match is reported
  * - {@link on_delete()}: Tournament has been deleted
@@ -723,7 +724,6 @@
  */
 class BBTournament extends BBModel {
 
-
     //<editor-fold defaultstate="collapsed" desc="API svc name constants">
     const SERVICE_LOAD                      = 'Tourney.TourneyLoad.Info';
     const SERVICE_CREATE                    = 'Tourney.TourneyCreate.Create';
@@ -850,6 +850,11 @@ class BBTournament extends BBModel {
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Callback event_id constants">
+    /**
+     * Callback event id for when a new tournament is created
+     * @var int
+     */
+    const CALLBACK_CREATED = 12;
     /**
      * Callback event id for when a match has been reported
      * @var int
@@ -2165,20 +2170,69 @@ class BBTournament extends BBModel {
     public function embed_groups($width = 800, $height = 600, $class = 'binarybeast') {
         return $this->embed(true, $width, $height, $class);
     }
-	
-	/**
+
+    //<editor-fold defaulstate="collapsed" desc="Callbacks">
+    /**
 	 * Used by event-specific methods (like on_change and on_complete), to register callbacks
 	 *	while handling errors in a DRY manner
 	 */
-	private function register_callback($event_id, $url, $action = 'post', $recurrent = true, $args = null) {
-		//Can't register callbacks if the tournament doesn't exist yet
-		if(is_null($this->id)) {
-			return $this->set_error('Cannot register callbacks for the tournament before it exists on BinaryBeast - call save() first');
-		}
+	private function register_callback($event_id, $url, $action = 'post', $recurrent = true, $args = null, $trigger_id = null) {
+        //Default to current tournament id unless otherwise specified
+        if(is_null($trigger_id)) {
+            //Can't register callbacks if the tournament doesn't exist yet
+            if(is_null($this->id)) {
+                return $this->set_error('Cannot register callbacks for the tournament before it exists on BinaryBeast - call save() first');
+            }
+            $trigger_id = $this->id;
+        }
 
 		//Register through the BBCallback class
-		return $this->bb->callback->register($event_id, $this->id, $url, $action, $recurrent, $args);
+		return $this->bb->callback->register($event_id, $trigger_id, $url, $action, $recurrent, $args);
 	}
+
+    /**
+   	 * Register a callback / hook, triggered when a new tournament is created
+   	 *
+   	 * Review the {@link BBCallback} documentation for examples of how to handle a callback
+   	 *
+   	 * @param string $url
+   	 *	URL called by BinaryBeast when the event is triggered
+     *
+     * @param int|null
+     *  <b>Default:</b> The account associated with the current api_key<br />
+     *  Which user to receive notifications of new tournaments
+   	 *
+   	 * @param string $action
+   	 *	How to call your <var>$url</var><br />
+   	 *	Must be <b>post</b> or <b>get</b>
+   	 *
+   	 * @param boolean $recurrent
+   	 * True by default - if false, the callback is deleted after the first time it is triggered
+   	 *
+   	 * @param array $args
+   	 *	Optionally array of custom arguments you'd like BinaryBeast to send when it calls your <var>$url</var>
+   	 *
+   	 * @return int|boolean
+   	 *	Returns the callback id, false if there was an error registering the callback
+   	 */
+   	public function on_create($url, $user_id = null, $action = 'post', $recurrent = true, $args = null) {
+        //Fetch the current user id so we can use it as
+        if(is_null($user_id)) {
+            //Call the api login service so we can fetch the user id - cache for a week
+            $result = $this->call(BinaryBeast::SERVICE_API_KEY_LOGIN, array('api_key' => $this->bb->config->api_key),
+                BBCache::TTL_WEEK);
+
+            //Can't continue without the user id
+            if($result->result != BinaryBeast::RESULT_SUCCESS) {
+                return $this->set_error('Unable to determine the account\'s user_id, which is mandatory fo registering callbacks for this type of event');
+            }
+
+            //Extract the user id
+            $user_id = $result->player_data->user_id;
+        }
+
+   		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_CREATED, $url, $action, $recurrent, $args, $user_id);
+   	}
 
 	/**
 	 * Register a callback / hook, triggered anytime this tournament changes
@@ -2201,7 +2255,7 @@ class BBTournament extends BBModel {
 	 * @return int|boolean
 	 *	Returns the callback id, false if there was an error registering the callback
 	 */
-	public function on_change($url, $action = 'post', $recurrent = false, $args = null) {
+	public function on_change($url, $action = 'post', $recurrent = true, $args = null) {
 		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_CHANGED, $url, $action, $recurrent, $args);
 	}
 
@@ -2257,7 +2311,7 @@ class BBTournament extends BBModel {
 	}
 
 	/**
-	 * Register a callback / hook, triggered when a team is added to the tournamnet
+	 * Register a callback / hook, triggered when a team is added to the tournament
 	 * 
 	 * Please review the callback documentation here in {@link BBCallback::EVENT_TOURNAMENT_TEAM_ADDED}
 	 * 
@@ -2275,7 +2329,7 @@ class BBTournament extends BBModel {
 	}
 
 	/**
-	 * Register a callback / hook, triggered when a team is removed to the tournamnet
+	 * Register a callback / hook, triggered when a team is removed to the tournament
 	 * 
 	 * Please review the callback documentation here in {@link BBCallback::EVENT_TOURNAMENT_TEAM_REMOVED}
 	 * 
@@ -2381,9 +2435,10 @@ class BBTournament extends BBModel {
 	public function on_settings($url, $action = 'post', $recurrent = true, $args = null) {
 		return $this->register_callback(BBCallback::EVENT_TOURNAMENT_SETTINGS_CHANGED, $url, $action, $recurrent, $args);
 	}
+    //</editor-fold>
     
     /**
-     * Fetch the data object that determines the elimination bracket participiants and results
+     * Fetch the data object that determines the elimination bracket participants and results
      * 
      * @todo implement the $bracket filter
      * 
@@ -2443,7 +2498,7 @@ class BBTournament extends BBModel {
     }
 
     /**
-     * Fetch the data object that determines the group round matchups and results directly
+     * Fetch the data object that determines the group round matchups / fixtures and results directly
      * 
      * @return BBGroupsObject|boolean
      * Returns false if tournament has no groups to draw
@@ -2538,5 +2593,3 @@ class BBTournament extends BBModel {
         return $match_object;
     }
 }
-
-?>

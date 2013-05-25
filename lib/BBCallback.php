@@ -64,12 +64,12 @@
  * </code>
  * 
  * 
- *	
+ *
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.4
- * @date    2013-05-14
+ * @version 3.0.5
+ * @date    2013-05-24
  * @since   2013-03-29
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -118,10 +118,18 @@ class BBCallback {
 
 
     /**
-     * Triggered when the group rounds start in a tournament
+     * Triggered when a tournament is created
      * 
      * <b>Recurrent: </b>Yes
      * 
+     * @var int
+     */
+    const EVENT_TOURNAMENT_CREATED = 12;
+    /**
+     * Triggered when the group rounds start in a tournament
+     *
+     * <b>Recurrent: </b>Yes
+     *
      * @var int
      */
     const EVENT_TOURNAMENT_START_GROUPS = 1;
@@ -334,7 +342,7 @@ class BBCallback {
 	 * 
 	 * @return int|boolean
 	 *	- <b>integer</b> The callback id, which you can later use to delete if necessary<br />
-	 *	- <b>false</b> An error occured, and was most likely due to a duplicate $event_id / $trigger_id pair.  Use {@link BinaryBeast::$last_error} for details
+	 *	- <b>false</b> An error occurred, and was most likely due to a duplicate $event_id / $trigger_id pair.  Use {@link BinaryBeast::$last_error} for details
 	 * 
 	 */
 	public function register($event_id, $trigger_id, $url, $action = 'post', $recurrent = false, $args = null) {
@@ -356,7 +364,7 @@ class BBCallback {
 			//Clear ALL callback cache
 			$this->bb->clear_cache(null, self::CACHE_OBJECT_TYPE);
 
-			//Return the new callback's id
+			//Return the new callback id
 			return $result->id;
 		}
 
