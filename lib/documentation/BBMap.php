@@ -30,12 +30,18 @@
  *
  * @property-read string[] $games
  *  Array of game codes of the games allowed to use this map
+ *
+ * @property-read string $game_icon
+ *  icon URL for this map's game
+ *
+ * @property-read string $map_image
+ *  URL of this map's image
  * 
  * @package BinaryBeast
  * @subpackage SimpleModel_ObjectStructure
  *
  * @version 1.0.2
- * @date    2013-05-03
+ * @date    2013-05-27
  * @author  Brandon Simmons <contact@binarybeast.com
  */
 abstract class BBMapObject {
