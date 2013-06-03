@@ -203,7 +203,7 @@
  * 
  * @package BinaryBeast
  * 
- * @version 3.1.3
+ * @version 3.1.4
  * @date    2013-05-24
  * @since   2013-02-10
  * @author  Brandon Simmons <contact@binarybeast.com>
@@ -249,7 +249,7 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.1.3';
+    const API_VERSION = '3.1.4';
 
     //<editor-fold defaultstate="collapsed" desc="Private Properties">
     /**

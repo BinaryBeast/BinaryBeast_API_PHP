@@ -666,9 +666,12 @@
  * Generic description of the tournament<br />
  * Plain text only - no html allowed
  * 
- * @property string $hidden
+ * @property mixed $hidden
  * Special hidden (as you may have guessed) values that you can use to store custom data<br />
  * The recommended use of this field, is to store a json_encoded string that contains your custom data
+ * <b>Note:</b> Can be set to an object / array, and it will be saved as a json_string,<br />
+ * and the encoding/decoding is <b>handled automatically</b> when the object is loaded and saved
+ *
  * 
  * @property string $player_password
  * <b>Strongly recommended</b><br />
@@ -716,8 +719,9 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.7
- * @date    2013-04-26
+ * @version 3.0.8
+ * @date    2013-06-02
+ * @since   2012-09-17
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -979,6 +983,27 @@ class BBTournament extends BBModel {
     }
 
     /**
+     * Overloads {@link BBModel::import_values} so we can handle 'hidden'
+     *
+     * {@inheritdoc}
+     */
+    public function import_values($data) {
+        //Let BBModel handle default functionality
+        parent::import_values($data);
+
+        //json 'hidden' custom values
+        if(array_key_exists('hidden', $this->data)) {
+            $hidden = $this->data['hidden'];
+            if(is_string($hidden)) {
+                if(!is_null($hidden = json_decode($hidden))) {
+                    $this->set_current_data('hidden', $hidden);
+                }
+            }
+        }
+    }
+
+
+    /**
      * Returns an array of players/teams/participants within this tournament
      * 
      * This method takes advantage of BBModel's __get, which allows us to emulate public values that we can
@@ -1196,12 +1221,12 @@ class BBTournament extends BBModel {
 		//Initialize the rounds object, use BBHelper to give us the available brackets for this tournament
 		$this->rounds = (object)BBHelper::get_available_brackets($this, true, true);
 
-        //Initialize each returned round, and store it into local propeties
+        //Initialize each returned round, and store it into local properties
         foreach($result->rounds as $bracket => &$rounds) {
             //key each round by the round label
             $bracket_label = BBHelper::get_bracket_label($bracket, true);
 
-			//Only import rounds for relevent brackets
+			//Only import rounds for relevant brackets
 			if(!isset($this->rounds->$bracket_label)) continue;
 
             //Save each new BBRound after initializing it
@@ -1251,6 +1276,15 @@ class BBTournament extends BBModel {
      * Either returns the tournament id string, or false to indicate an error
      */
     public function save_settings($settings_only = true) {
+        //json notes
+        $hidden = null;
+        if(array_key_exists('hidden', $this->new_data)) {
+            $hidden = $this->new_data['hidden'];
+            if(is_object($hidden) || is_array($hidden)) {
+                $this->new_data['hidden'] = json_encode($hidden);
+            }
+        }
+
         //If saving a new tournament, pass control to save_new
         if(is_null($this->id)) {
             return $this->save_new($settings_only);
