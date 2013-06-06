@@ -1080,8 +1080,9 @@ class BBTournament extends BBModel {
             //Success!
             return $teams;
         }
-        
+
         //Load from the API
+        if(!is_array($args)) $args = array();
         $result = $this->call(self::SERVICE_LOAD_TEAMS, array_merge($args, array(
                 'tourney_id' => $this->tourney_id,
                 'full' => true
@@ -1711,7 +1712,7 @@ class BBTournament extends BBModel {
     /**
      * Remove a child class from this team - like a BBTeam
      * 
-     * For BBTeam, we pass it thorugh $team() to avoid any mistakes caused by reloading / changed data, we base the 
+     * For BBTeam, we pass it through $team() to avoid any mistakes caused by reloading / changed data, we base the
      *  search purely on tourney_team_id
      *
      * @ignore
@@ -1721,8 +1722,9 @@ class BBTournament extends BBModel {
         if($child instanceof BBTeam) {
             //Rely on team() to insure that even if changed, that we at LEAST get the correct reference using team_id
             if(!is_null($team = &$this->team($child))) {
-                if($this->remove_child_from_list($team, $this->teams(), $preserve)) {
-                    return $this->remove_child_from_list($team, $this->freewins(), $preserve);
+                //If it's not in $teams, fallback on $freewins
+                if(!$this->remove_child_from_list($team, $this->teams, $preserve)) {
+                    return $this->remove_child_from_list($team, $this->freewins, $preserve);
                 }
                 else return true;
             }
@@ -1861,7 +1863,10 @@ class BBTournament extends BBModel {
 			}
 		}
         //If it's a new object, allow developers to add teams before save(), so we need to make sure $teams is initialized
-		else if(is_null($this->teams)) $this->teams = array();
+		else if(is_null($this->teams)) {
+            $this->teams = array();
+            $this->freewins = array();
+        }
 
         /**
          * Team() can be used to validate a team input, and we rely on 
@@ -1889,7 +1894,7 @@ class BBTournament extends BBModel {
     }
 
     /**
-     * If you plan to allow players to join externaly from BinaryBeast.com, 
+     * If you plan to allow players to join externally from BinaryBeast.com,
      *  you can use this method to allow them to start confirming their positions
      * 
      * Note that only confirmed players are included in the brackets / groups once the tournament starts
