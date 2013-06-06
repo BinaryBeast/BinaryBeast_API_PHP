@@ -144,8 +144,10 @@
  *  <b>Elimination Brackets Only</b><br />
  *      The team's starting position in the winner brackets
  * 
- * @property string $notes
+ * @property mixed $notes
  *  Special hidden value that you can use to store custom data<br /><br />
+ *  <b>Note:</b> Can be set to an object / array, and it will be saved as a json_string,<br />
+  * and the encoding/decoding is <b>handled automatically</b> when the object is loaded and saved
  * 
  *  The recommended use is to store a json_encoded string that contains a local user_id, or similiar data
  * 
@@ -187,8 +189,9 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.5
- * @date    2013-04-26
+ * @version 3.0.6
+ * @date    2013-06-05
+ * @since   2012-09-17
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -373,6 +376,26 @@ class BBTeam extends BBModel {
         parent::__set($name, $value);
     }
 
+    /**
+     * Overloads {@link BBModel::import_values} so we can handle 'hidden'
+     *
+     * {@inheritdoc}
+     */
+    public function import_values($data) {
+        //Let BBModel handle default functionality
+        parent::import_values($data);
+
+        //json 'hidden' custom values
+        if(array_key_exists('notes', $this->data)) {
+            $notes = $this->data['notes'];
+            if(is_string($notes)) {
+                if(!is_null($notes = json_decode($notes))) {
+                    $this->set_current_data('notes', $notes);
+                }
+            }
+        }
+    }
+
 	/**
 	 * Overrides BBModel::save() so we can return false if trying to save an orphaned team
      * {@inheritdoc}
@@ -395,6 +418,15 @@ class BBTeam extends BBModel {
 
         //If the race was changed, flag a reload
         $flag_reload = isset($this->new_data['race']);
+
+        //json notes
+        $notes = null;
+        if(array_key_exists('notes', $this->new_data)) {
+            $notes = $this->new_data['notes'];
+            if(is_object($notes) || is_array($notes)) {
+                $this->new_data['notes'] = json_encode($notes);
+            }
+        }
 
 		//Let BBModel handle the rest
 		if(! ($save_result = parent::save($return_result, array('tourney_id' => $this->tournament->id))) ) {
