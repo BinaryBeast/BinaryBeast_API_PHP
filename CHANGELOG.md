@@ -1,3 +1,19 @@
+## BinaryBeast API PHP Library 3.1.5 (2013-06-06)
+* `result` table for api cache is now created as longtext
+* `BBDev` now extracts data before dumping objects (to avoid fatal serialization errors)
+* `save()` and `delete()` now clear list and id cache
+	* Resolves issue of stale list results
+* Model list results now honor custom classes defined in `BBConfiguration`
+* New method: `$tournament->count()`
+	* Returns the total number of tournaments created by your account
+* `$team->notes` now automatically automatically encoded and decoded as json\
+*  `$tournament->teams()` now returns FreeWins if you set the 3rd parameter (`$freewins`) to `true`
+*  Adds `BBSimpleModel::SERVICE_LIST` for consistency
+*  
+
+## BinaryBeast API PHP Library 3.1.4 (2013-06-03)
+* $tournament->hidden is now automatically automatically encoded and decoded as json
+
 ## BinaryBeast API PHP Library 3.1.3 (2013-05-24)
 * Adds `$bb->tournament->on_create('url here')` callback
 	* Triggered when tournaments are created the account associated with the api_key
