@@ -72,7 +72,7 @@ class BBTeamTest extends BBTest {
 
     /**
      * Test saving a single team
-     * 
+     *
      * @covers BBTeam::save
      */
     public function test_save() {
@@ -104,6 +104,7 @@ class BBTeamTest extends BBTest {
 
     /**
      * Test retrieving a team's opponent in elimination brackets
+     *
      * @covers BBTeam::opponent
      */
     public function test_opponent_elimination() {
@@ -333,47 +334,46 @@ class BBTeamTest extends BBTest {
 
     /**
      * Test setting the team's race by the race ID
-     * @group fail
      */
     public function test_set_race_id() {
         $this->assertNull($this->object->race);
         $this->assertNull($this->object->race_id);
 
-        //HotS race: 10-Zerg 13-Terran 12-Random 11-Protoss
-        $this->object->race = 10;
+        //HotS race: 1-Zerg 2-Terran 7-Random 3-Protoss
+        $this->object->race = 7;
         $this->assertSave($this->object->save());
 
-        $this->assertEquals('Zerg', $this->object->race);
-        $this->assertEquals(10, $this->object->race_id);
+        $this->assertEquals('Random', $this->object->race);
+        $this->assertEquals(7, $this->object->race_id);
     }
 
     /**
      * Test setting the team's race by the race name string
      * @covers BBTeam::$race
-     * @group fail
      */
     public function test_set_race_name() {
         $this->assertNull($this->object->race);
         $this->assertNull($this->object->race_id);
 
-        //HotS race: 10-Zerg 13-Terran 12-Random 11-Protoss
+        //HotS race: 1-Zerg 2-Terran 7-Random 3-Protoss
         $this->object->race = 'Terran';
         $this->assertSave($this->object->save());
 
         $this->assertEquals('Terran', $this->object->race);
-        $this->assertEquals(13, $this->object->race_id);
+        $this->assertEquals(2, $this->object->race_id);
     }
 
     /**
      * Tests setting the race value for multiple teams at once
-     * @group fail
      */
     public function test_set_race_id_batch() {
-        $teams = array();
+        $teams = array($this->object);
+
+        $this->object->race = 7;
 
         for($x = 0; $x < 6; $x++) {
             $team = &$this->object->tournament->team();
-            $team->race = $x % 2 == 0 ? 12 : 'Random';
+            $team->race = $x % 2 == 0 ? 7 : 'Random';
 
             $teams[] = &$team;
         }
@@ -383,7 +383,7 @@ class BBTeamTest extends BBTest {
         foreach($teams as &$team) {
             $this->assertID($team->id);
             $this->assertEquals('Random', $team->race);
-            $this->assertEquals(12, $team->race_id);
+            $this->assertEquals(7, $team->race_id);
         }
     }
 }

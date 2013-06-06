@@ -691,7 +691,7 @@ class BBMatchTest extends BBTest {
     /**
      * Make sure that deleted BBMatchGames are removed from the match and update
      *  the get_game_wins results correctly
-     * 
+     *
      * @group match_game
      */
     public function test_delete_game_plus_report_strict() {
@@ -749,6 +749,7 @@ class BBMatchTest extends BBTest {
     }
     /**
      * Test updating games in an existing match
+     *
      * @covers BBGame::save_games()
      */
     public function test_save_games() {
@@ -770,7 +771,7 @@ class BBMatchTest extends BBTest {
         $this->assertID($game3->id);
     }
     /**
-     * Test trying to call report() on an alaready reported match
+     * Test trying to call report() on an already reported match
      */
     public function test_double_report() {
         $this->assertTrue($this->object->is_new());
