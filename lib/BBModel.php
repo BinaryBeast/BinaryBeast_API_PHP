@@ -10,8 +10,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.9
- * @date    2013-05-14
+ * @version 3.1.0
+ * @date    2013-06-05
  * @since   2012-09-17
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -186,8 +186,8 @@ abstract class BBModel extends BBSimpleModel {
             $this->set_id($data);
         }
 
-		//For new objects, use default values for values
-		else {
+        //For new objects, use default values for values
+        else {
             $this->data = $this->default_values;
         }
     }
@@ -622,7 +622,7 @@ abstract class BBModel extends BBSimpleModel {
         if(!is_null($this->id) ) {
             //if they call save() with no changes, save a warning in BinaryBeast::error_history
             if(!$this->changed) {
-                $this->set_error('Warning: save() saved no changes, since nothing has changed');
+                //$this->set_error('Warning: save() saved no changes, since nothing has changed');
                 return $this->id;
             }
             //Changed is true but new_data is empty, which means that we have changed children - therefore just return true without an warning
@@ -654,7 +654,8 @@ abstract class BBModel extends BBSimpleModel {
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
 
 			//Clear cache for this svc
-			$this->clear_id_cache($this->get_service('load'));
+			$this->clear_id_cache();
+            $this->clear_list_cache();
 
             //For new objects just created, make sure we extract the id and save it locally
             if(is_null($this->id)) {
@@ -699,6 +700,10 @@ abstract class BBModel extends BBSimpleModel {
 
             //DELETED!!!
             if($result->result == BinaryBeast::RESULT_SUCCESS) {
+                //Clear cache
+                $this->clear_id_cache();
+                $this->clear_list_cache();
+
                 //Reset all local values and errors
                 $this->set_id(null);
                 $this->data = array();
@@ -745,7 +750,7 @@ abstract class BBModel extends BBSimpleModel {
 
     /**
      * Save the unique id of this instance, taking into consideration
-     * children clases definining the property name, (ie tournament -> tourney_team_id)
+     * children class defining the property name, (ie tournament -> tourney_team_id)
      * 
      * It also saves a reference in this->id for internal use, and it's nice to have a
      * standardized property name for ids, so any dev can use it if they wish
@@ -814,7 +819,7 @@ abstract class BBModel extends BBSimpleModel {
 		if($this->iterating) return;
 
 		//Figure out which array to use, based on the class of the provided child (also creates the array if it doesn't already exist)
-		$array = &$this->get_changed_children(get_class($child));
+		$array = &$this->get_changed_children($this->get_class_name($child, true));
 
         //If it isn't already being tracked, add it now and increment the changed_children counter
         if(!in_array($child, $array)) {
@@ -841,7 +846,7 @@ abstract class BBModel extends BBSimpleModel {
 		if($this->iterating) return;
 
 		//Figure out which array to use, based on the class of the provided child (also creates the array if it doesn't already exist)
-		$array = &$this->get_changed_children(get_class($child));
+		$array = &$this->get_changed_children($this->get_class_name($child, true));
 
         //Try to find the child's index within the changed_children array
         if(($key = array_search($child, $array)) !== false) {
@@ -1105,5 +1110,3 @@ abstract class BBModel extends BBSimpleModel {
 	}
 
 }
-
-?>
