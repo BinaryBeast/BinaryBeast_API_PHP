@@ -157,7 +157,7 @@
  * 
  * ## Reporting
  * 
- * Before you can report a match, you must explicitely define the winner
+ * Before you can report a match, you must explicitly define the winner
  * 
  * You can do so by using either {@link set_winner()}, or {@link set_loser()}
  * 
@@ -289,6 +289,10 @@
  * This is a magic property that can be read and written to<br /><br />
  * Note however that <b>attempts to set this value</b> are handled by {@link set_loser()}<br /><br />
  * It is <b>NOT</b> recommend that you set the value this way, as there is easy way to capture errors<br />
+ *
+ * @property string|null $date
+ * Date the match was reported if applicable
+ * YYYY-MM-DD HH:SS ({@link http://en.wikipedia.org/wiki/ISO_8601})
  * 
  * @property-read int $bracket
  * <b>Read Only</b><br />
@@ -370,8 +374,9 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.7
- * @date    2013-04-26
+ * @version 3.0.9
+ * @date    2013-06-05
+ * @since   2013-02-02
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -1024,7 +1029,7 @@ class BBMatch extends BBModel {
      *      only report if it validate_winner_games tells us that the match winner was given enough wins to satisfy
      *      this round's best_of setting
      * 
-     * @return int		returns the id if successfull, false otherwise
+     * @return int		returns the id if successfully, false otherwise
      */
     public function report($strict = false) {
         //Already reported
@@ -1380,5 +1385,3 @@ class BBMatch extends BBModel {
 		return $this->tournament;
 	}
 }
-
-?>
