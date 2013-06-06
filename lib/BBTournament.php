@@ -728,8 +728,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.9
- * @date    2013-06-05
+ * @version 3.1.0
+ * @date    2013-06-06
  * @since   2012-09-17
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -1190,9 +1190,11 @@ class BBTournament extends BBModel {
         $this->clear_id_cache();
 
         //Flag reloads for any existing teams, in case any stray references exist after removing child classes
-        if(is_array($this->teams)) {
+        if(is_array($this->teams(false, array(), true))) {
             foreach($this->teams as &$team) {
-                $team->flag_reload();
+                if($team instanceof BBTeam) {
+                    $team->flag_reload();
+                }
             }
         }
 
