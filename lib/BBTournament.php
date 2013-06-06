@@ -38,7 +38,7 @@
  * Includes any tournaments you've marked as private {@link BBTournament::public},
  * as defined in the 3rd parameter
  * <code>
- *  $tournaments = $bb->tournament->list_my(null, 100, true);
+ *  $tournaments = $bb->tournament->list_my(null, 300, true);
  *  foreach($tournaments as $tournament) {
  *      echo '<a href="/my/path/to/viewing/a/tournament?id=' . $tournament->id . '">' . $tournament->title . '</a>';
  *  }
@@ -606,6 +606,9 @@
  * <b>Default: HotS (StarCraft 2: Heart of the Swarm)</b><br />
  * Unique game identifier, <br />
  * Use {@link BBGame::search()} to search through our games list, and get the game_code values
+ *
+ * @property string $date_start
+ * YYYY-MM-DD HH:SS ({@link http://en.wikipedia.org/wiki/ISO_8601})
  * 
  * @property int $type_id
  * <b>Default: 0 (Elimination Brackets)</b><br />
@@ -693,6 +696,12 @@
  * @property BBTeam[] $banned_teams
  * <b>Alias for {@link BBTournament::banned_teams()}</b><br />
  * An array of banned teams in this tournament
+ *
+ * @property int $teams_confirmed_count
+ * Number of confirmed teams in the tournament
+ *
+ * @property int $teams_joined_count
+ * Number of teams in the tournament, regardless of status
  * 
  * @property BBRoundObject $rounds
  * <b>Alias for {@link BBTournament::rounds()}</b><br />
@@ -719,8 +728,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.8
- * @date    2013-06-02
+ * @version 3.0.9
+ * @date    2013-06-05
  * @since   2012-09-17
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -733,6 +742,11 @@ class BBTournament extends BBModel {
     const SERVICE_CREATE                    = 'Tourney.TourneyCreate.Create';
     const SERVICE_UPDATE                    = 'Tourney.TourneyUpdate.Settings';
     const SERVICE_DELETE                    = 'Tourney.TourneyDelete.Delete';
+    /**
+     * API svc name for fetching a tournament count
+     * @var string
+     */
+    const SERVICE_COUNT                     = 'Tourney.TourneyList.Count';
     /**
      * API svc name for starting a tournament
      * @var string
@@ -907,6 +921,11 @@ class BBTournament extends BBModel {
      * @var BBTeam[]
      */
     private $teams;
+    /**
+     * Array of freewin teams
+     * @var BBTeam[]
+     */
+    private $freewins;
 
     /**
      * Object containing format for each round
@@ -1019,24 +1038,47 @@ class BBTournament extends BBModel {
      * 
      * @param boolean   $ids set true to return array of ids only
      * @param array     $args   any additional arguments to send with the API call
+     *
+     * @param boolean   $freewins
+     * <b>Default: </b>false
+     * Set true to include fake FreeWins placeholder teams
      * 
      * @return BBTeam[]|null
      *      Null is returned if there was an error with the API request
      */
-    public function &teams($ids = false, $args = array()) {
+    public function &teams($ids = false, $args = array(), $freewins = false) {
 
         //Already instantiated
         if(!is_null($this->teams)) {
-            //Requested an array of ids
-            if($ids) {
-                $teams = array();
-                foreach($this->teams as $x => &$team) {
-                    $teams[$x] = $team->id;
+            //Compile the output
+            $teams = array();
+
+            //Main teams array
+            foreach($this->teams as $x => &$team) {
+                //id only
+                if($ids) {
+                    $teams[] = $team->id;
                 }
-                return $teams;
+                else {
+                    $teams[] = &$this->teams[$x];
+                }
             }
 
-            return $this->teams;
+            //Merge in Freewins
+            if($freewins) {
+                foreach($this->freewins as $x => &$team) {
+                    //id only
+                    if($ids) {
+                        $teams[] = $team->id;
+                    }
+                    else {
+                        $teams[] = &$this->freewins[$x];
+                    }
+                }
+            }
+
+            //Success!
+            return $teams;
         }
         
         //Load from the API
@@ -1052,44 +1094,58 @@ class BBTournament extends BBModel {
             return $this->bb->ref(null);
         }
 
-		//Cast each returned team as a BBTeam, and initalize
+		//Instantiate the results as BBTeam model objects
         $this->teams = array();
+        $this->freewins = array();
 		foreach($result->teams as $team) {
             $team = $this->bb->team($team);
             $team->init($this, false);
-            $this->teams[] = $team;
+
+            //FreeWins / Byes
+            $lower = strtolower($team->display_name);
+            if($lower == 'freewin' || $lower == 'bye') {
+                $this->freewins[] = $team;
+            }
+
+            //Normal team
+            else {
+                $this->teams[] = $team;
+            }
         }
 
-		//Success!
-		return $this->teams;
+		//Success! - now run again so we can apply the filters
+		return $this->teams($ids, null, $freewins);
     }
 
     /**
      * Returns an array of confirmed teams in this tournament
      * 
      * @param boolean   $ids        set true to return array of ids only
+     * @param boolean $freewins
      * @return BBTeam[]
      */
-    public function &confirmed_teams($ids = false) {
-        return $this->filter_teams_by_status($ids, 1);
+    public function &confirmed_teams($ids = false, $freewins = false) {
+        return $this->filter_teams_by_status($ids, 1, $freewins);
     }
     /**
      * Returns an array of unconfirmed teams in this tournament
      * 
      * @param boolean   $ids        set true to return array of ids only
+     * @param boolean $freewins
      * @return BBTeam[]
      */
-    public function &unconfirmed_teams($ids = false) {
-        return $this->filter_teams_by_status($ids, 0);
+    public function &unconfirmed_teams($ids = false, $freewins = false) {
+        return $this->filter_teams_by_status($ids, 0, $freewins);
     }
     /**
      * Returns an array of banned teams in this tournament
      * 
      * @param boolean   $ids        set true to return array of ids only
+     * @param boolean $freewins
      * @return BBTeam[]
      */
-    public function &banned_teams($ids = false) {
-        return $this->filter_teams_by_status($ids, -1);
+    public function &banned_teams($ids = false, $freewins = false) {
+        return $this->filter_teams_by_status($ids, -1, $freewins);
     }
     
     /**
@@ -1099,11 +1155,12 @@ class BBTournament extends BBModel {
      * @param boolean   $ids        Return just ids if true
      * @param int       $status     Status value to match
      *      Null to return ALL teams
+     * @param boolean $freewins
      * @return BBTeam[]
      */
-    private function &filter_teams_by_status($ids, $status) {
+    private function &filter_teams_by_status($ids, $status, $freewins) {
         //Use teams() to guarantee up to date values, and so we can return false if there are errors set by it
-        if(is_null($teams = &$this->teams())) return $this->bb->ref(false);
+        if(is_null($teams = &$this->teams(false, array(), $freewins))) return $this->bb->ref(false);
 
         //Initialize the output
         $filtered = array();
@@ -1141,6 +1198,7 @@ class BBTournament extends BBModel {
         //GOGOGO!
         $this->rounds       = null;
         $this->teams        = null;
+        $this->freewins     = null;
         $this->brackets     = null;
         $this->groups       = null;
         //$this->teams();
@@ -1313,21 +1371,32 @@ class BBTournament extends BBModel {
         //return_data => 2 asks BinaryBeast to include a full tourney_info dump in its response
         $args = array('return_data' => 2);
 
+        //Remember which teams to give out the new team_ids to
+        $team_ids = array();
+
         //If any teams have been added, include them too - the API can handle it
         if(!$settings_only) {
             $changed_teams = $this->get_changed_children('BBTeam');
             $teams = array();
             if(sizeof($changed_teams) > 0) {
-                foreach($changed_teams as $team) $teams[] = $team->data;
+                foreach($changed_teams as &$team) {
+                    $teams[] = $team->data;
+                    $team_ids = &$team;
+                }
             }
             if(sizeof($teams) > 0) $args['teams'] = $teams;
         }
 
-        //Let BBModel handle it from here - but ask for the api respnose to be returned instead of a generic boolean
+        //Let BBModel handle it from here - but ask for the api response to be returned instead of a generic boolean
         if(!$result = parent::save(true, $args)) return false;
 
         //OH NOES!
         if($result->result !== 200) return false;
+
+        //Clear list and count api cache
+        $this->clear_object_service_cache(array(
+            self::SERVICE_COUNT, self::SERVICE_LIST, self::SERVICE_LIST_POPULAR
+        ));
 
         /**
          * Import the new data, and save the ID
@@ -1341,10 +1410,20 @@ class BBTournament extends BBModel {
                 if(is_array($result->teams)) {
                     if(sizeof($result->teams) > 0) {
                         $this->iterating = true;
+                        /*
                         foreach($result->teams as $x => $team) {
                             $this->teams[$x]->import_values($team);
                             $this->teams[$x]->set_id($team->tourney_team_id);
                         }
+                        */
+
+                        foreach($result->teams as $x => $team_data) {
+                            $team = &$team_ids[$x];
+
+                            $team->import_values($team_data);
+                            $team->set_id($team_data);
+                        }
+
                         $this->iterating = false;
                     }
                 }
@@ -1439,6 +1518,7 @@ class BBTournament extends BBModel {
 
         //Now let BBModel remove any unsaved teams from $this->teams
         $this->remove_new_children($this->teams);
+        $this->remove_new_children($this->freewins);
     }
     
     /**
@@ -1450,12 +1530,20 @@ class BBTournament extends BBModel {
      * @return boolean
      */
     public function save_teams() {
-		
         //New tournaments must be saved before saving teams
         if(is_null($this->id)) return $this->set_error('Can\t save teams before saving the tournament!');
 
-        //Get a list of changed teams
+        /**
+         * List of teams with changes
+         * @var BBTeam[]
+         */
         $teams = &$this->get_changed_children('BBTeam');
+
+        /**
+         * Array of team object references that expect new ids
+         * @var BBTeam[]
+         */
+        $team_ids = array();
 
         //Nothing has changed, just return true
         if(sizeof($teams) == 0) return true;
@@ -1478,6 +1566,7 @@ class BBTournament extends BBModel {
              */
             if(is_null($team->id)) {
                 $new_teams[] = $team->data;
+                $team_ids[] = &$team;
             }
             /**
              * Existing team - get only values that are new, and key by team id
@@ -1499,23 +1588,22 @@ class BBTournament extends BBModel {
         }
 
         /**
-         * Tell all team instances to synchronize their settings
+         * Import new team ids
          */
-        $new_id_index = 0;
+        foreach($team_ids as $x => &$team) {
+            $team->set_id( $result->team_ids[$x] );
+        }
+
+        /**
+         * Synchronize team changes
+         */
 		$this->iterating = true;
         foreach($teams as &$team) {
-
             //Flag a reload if the race changed
             $flag_reload = array_key_exists('race', $team->get_changed_values());
 
             //Tell the team to merge all unsaved changed into $data
             $team->sync_changes();
-
-            //For new tournaments, make sure they get the new team_id
-            if(is_null($team->id)) {
-                $team->set_id($result->team_ids[$new_id_index]);
-                ++$new_id_index;
-            }
 
             //Flag reload if the race was set
             if($flag_reload) {
@@ -1588,6 +1676,9 @@ class BBTournament extends BBModel {
      * @return BBTournament[]
      */
     public function list_my($filter = null, $limit = 30, $private = true) {
+        /**
+         * Paginate to satisfy $limit
+         */
         return $this->get_list(self::SERVICE_LIST, array(
             'filter'    => $filter,
             'page_size' => $limit,
@@ -1630,7 +1721,10 @@ class BBTournament extends BBModel {
         if($child instanceof BBTeam) {
             //Rely on team() to insure that even if changed, that we at LEAST get the correct reference using team_id
             if(!is_null($team = &$this->team($child))) {
-                return $this->remove_child_from_list($team, $this->teams(), $preserve);
+                if($this->remove_child_from_list($team, $this->teams(), $preserve)) {
+                    return $this->remove_child_from_list($team, $this->freewins(), $preserve);
+                }
+                else return true;
             }
             return false;
         }
@@ -1688,7 +1782,7 @@ class BBTournament extends BBModel {
          * Derp - already part of this tournament, just return true
          * @todo this needs to return the index of the existing team
          */
-        if(in_array($team, $this->teams())) return true;
+        if(in_array($team, $this->teams(false, null, true))) return true;
 
         //Team already has an ID
         if(!is_null($team->id)) return $this->set_error('That team already has a tourney_team_id, it cannot be added to another tournament');
@@ -1760,13 +1854,13 @@ class BBTournament extends BBModel {
      */
     public function &team($id = null) {
 
-        //If validating an input, make sure the teams array is initalized
+        //If validating an input, make sure the teams array is initialized
 		if(!is_null($this->id)) {
 			if($this->teams() === false) {
 				return $this->bb->ref(null);
 			}
 		}
-        //If it's a new object, allow devs to add teams before save(), so we need to make sure $teams is initialized
+        //If it's a new object, allow developers to add teams before save(), so we need to make sure $teams is initialized
 		else if(is_null($this->teams)) $this->teams = array();
 
         /**
@@ -1969,10 +2063,10 @@ class BBTournament extends BBModel {
              * Any teams not specifically provided in $order will be random
              *  added to the end
              */
-            $confirmed_teams = $this->confirmed_teams(true);
+            $confirmed_teams = $this->confirmed_teams(true, true);
 
             //Start looping through each team provided, adding it to $teams only if it's in $confirmed_teams
-            foreach($order as &$team) {
+            foreach($order as $x => &$team) {
                 //If this is an actual BBTeam object, all we want is its id
                 if($team instanceof BBTeam) $team = $team->id;
 
@@ -1988,10 +2082,12 @@ class BBTournament extends BBModel {
                  */
                 $teams[] = $team;
                 unset($confirmed_teams[array_search($team, $confirmed_teams)]);
+
+
             }
 
-            /*
-             * If there are any teams left over, randomize them and add them to the end of the teams array
+            /**
+             * Randomly append remaining teams
              */
             if(sizeof($confirmed_teams) > 0) {
                 shuffle($teams);
@@ -2015,7 +2111,7 @@ class BBTournament extends BBModel {
 
         /**
          * Started successfully!
-         * Now we update our status value, and reload the teams arary
+         * Now we update our status value, and reload the teams array
          * 
          * Conveniently the API actually sends back the new status, so we'll use that to update our local values
          */
@@ -2056,9 +2152,12 @@ class BBTournament extends BBModel {
         if(!$result) return $this->bb->ref(false);
 
         //Cast each match into BBMatch, and call init() so it knows which tournament it belongs to
-        foreach($result->matches as $match) {
-            $match = $this->bb->match($match);
+        foreach($result->matches as $match_data) {
+            //Instantiate and initialize
+            $match = $this->bb->match($match_data);
             $match->init($this);
+
+            //queue it up!
             $this->open_matches[] = $match;
         }
 
@@ -2126,7 +2225,7 @@ class BBTournament extends BBModel {
 	}
 
 	/**
-     * Used to either verify that the given BBMatch is in this tournametns' open_match list, or to 
+     * Used to either verify that the given BBMatch is in this tournaments' open_match list, or to
      *  fetch the open match that contains the provided $team1 and $team2
      * 
 	 * 
@@ -2625,5 +2724,30 @@ class BBTournament extends BBModel {
 
         //Success!
         return $match_object;
+    }
+
+    /**
+     * Fetch a count of tournaments, optionally
+     *  using a filter term
+     *
+     * @param null $filter
+     * @param bool $private
+     *
+     * @return int
+     */
+    public function count($filter = null, $private = true) {
+        $result = $this->bb->call(self::SERVICE_COUNT, array(
+            'filter'    => $filter,
+            'private'   => $private
+        ), self::CACHE_TTL_LIST, self::CACHE_OBJECT_TYPE);
+
+        //Failure! Set an error and return 0
+        if($result->result != BinaryBeast::RESULT_SUCCESS) {
+            $this->set_error($result->result . ' result code returned from tournament count');
+            return 0;
+        }
+
+        //Success!
+        return $result->count;
     }
 }
