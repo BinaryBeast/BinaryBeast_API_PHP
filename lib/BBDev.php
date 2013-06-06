@@ -6,8 +6,8 @@
  * @package     BinaryBeast
  * @subpackage  Library
  *
- * @version 1.0.0
- * @date    2013-05-14
+ * @version 1.0.1
+ * @date    2013-06-05
  * @since   2013-05-14
  * @author  Brandon Simmons <brandon@binarybeast.com>
  */
@@ -91,7 +91,7 @@ class BBDev {
                  * Show / Hide trace debug details
                  */
                 $(function() {
-                    $('a.trace').click(function() {
+                    $('a.trace').not('.processed').addClass('processed').click(function() {
                         var $trace = $(this).next();
 
                         //Show
@@ -291,6 +291,9 @@ class BBDev {
             self::print_styles();
         }
 
+        //Extract data from class instances
+        $trace = self::parse_item($trace);
+
         ?>
             <div class="<?php echo $div_class; ?>">
                 <h1>
@@ -310,7 +313,7 @@ class BBDev {
                         <?php
                             $trace_content = print_r($trace_item, true);
                         ?>
-                        <a href="#" class="trace">Show</a>
+                        <a href="#" class="trace">+ Show</a>
                         <div class="trace hidden">
                             <pre class="content">
 <?php echo $trace_content; ?>
@@ -321,6 +324,43 @@ class BBDev {
             <?php endif; ?>
         <?php
     }
-}
 
-?>
+    /**
+     * Recursively parse track data so we can
+     *  extract values from class instances
+     *
+     * @param mixed
+     * @return mixed
+     */
+    public static function parse_item($data) {
+        //Objects and Instances
+        if(is_object($data)) {
+            //Try getting the class name
+            if($class = get_class($data)) {
+                //If it starts with 'BB', or extends BBSimpleModel / BinaryBeast, extract values only
+                if($data instanceof BBSimpleModel || $data instanceof BinaryBeast || (strpos($class, 'BB') === 0) ) {
+                    //Init replacement value, and add the class name
+                    $tmp = (object)array('class' => $class);
+                    foreach($data as $key => $value) {
+                        $tmp->{$key} = $value;
+                    }
+                    return self::parse_item($tmp);
+                }
+            }
+
+            //Standard object
+            foreach($data as $key => $value) {
+                $data->{$key} = self::parse_item($value);
+            }
+        }
+
+        //Arrays
+        else if(is_array($data)) {
+            foreach($data as $key => $value) {
+                $data[$key] = self::parse_item($value);
+            }
+        }
+
+        return $data;
+    }
+}
