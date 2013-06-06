@@ -20,8 +20,8 @@
  * @package BinaryBeast
  * @subpackage Library
  * 
- * @version 3.0.5
- * @date    2013-05-24
+ * @version 3.0.6
+ * @date    2013-06-05
  * @since   2013-02-12
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -161,7 +161,7 @@ class BBCache {
      * @ignore
      */
 	function __sleep() {
-		return array('type', 'server', 'database', 'table');
+		return array('connected', 'config');
 	}
 
     //<editor-fold defaultstate="collapsed" desc="Private validation / data preparation methods">
@@ -282,7 +282,7 @@ class BBCache {
             `service`           varchar(100)    NOT NULL,
             `object_type`       int(4)          unsigned NULL DEFAULT NULL,
             `object_id`         varchar(100)    NULL DEFAULT NULL,
-            `result`            text            NOT NULL,
+            `result`            longtext        NOT NULL,
             `expires`           datetime        NOT NULL,
             PRIMARY KEY         (`id`),
             UNIQUE KEY          (`service`,`object_type`,`object_id`),
