@@ -203,8 +203,8 @@
  * 
  * @package BinaryBeast
  * 
- * @version 3.1.4
- * @date    2013-05-24
+ * @version 3.1.5
+ * @date    2013-06-05
  * @since   2013-02-10
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -249,7 +249,7 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.1.4';
+    const API_VERSION = '3.1.5';
 
     //<editor-fold defaultstate="collapsed" desc="Private Properties">
     /**
@@ -889,7 +889,6 @@ class BinaryBeast {
      * @return object
      */
     public function set_error($error = null, $class = null, $error_title = null, $warning = false, $fatal = false) {
-
         //Convert arrays into objects
         if(is_array($error)) $error = (object)$error;
 
@@ -1253,7 +1252,7 @@ class BinaryBeast {
      * @return BBModel|boolean
      * - <b>False</b> if the $model name is invalid
      */
-    private function get_model($model, $data = null) {
+    public function get_model($model, $data = null) {
         /**
          * load_library was not able to find the file for this class, so we return false
          * Note: We don't have to worry about setting an error, load_library does that for us
