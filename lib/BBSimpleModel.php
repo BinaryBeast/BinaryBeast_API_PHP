@@ -21,8 +21,8 @@
  * @package     BinaryBeast
  * @subpackage  Library
  * 
- * @version 3.0.3
- * @date    2013-05-14
+ * @version 3.0.4
+ * @date    2013-06-05
  * @since   2013-02-08
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -235,7 +235,7 @@ class BBSimpleModel {
         //Add instantiated modals of each element into a new output array
         $out = array();
         foreach($list as $object) {
-            $out[] = new $class($this->bb, $object);
+            $out[] = $this->bb->get_model($class, $object);
         }
 
         return $out;
@@ -293,13 +293,40 @@ class BBSimpleModel {
     }
 
     /**
+     * Filters the provided list if model objects,
+     *  returning only the ones that have a matching $key => $value pair
+     *
+     * @since 2013-06-04
+     *
+     * @param BBModel[]
+     * @param string $key
+     * @param mixed $value
+     * @return BBModel[]
+     */
+    public function filter_list($list, $key, $value) {
+        //Init result array
+        $filtered = array();
+
+        foreach($list as $object) {
+            if($object->{$key} == $value) {
+                $filtered[] = $object;
+            }
+        }
+
+        //QAPLA!
+        return $filtered;
+    }
+
+    /**
      * Clears all cache stored for any services defined
      *  in this class, that contain the word 'LIST'
      */
     public function clear_list_cache() {
-		if( !is_null($svc = $this->get_cache_setting('ttl_list')) ) {
-			$this->clear_object_service_cache($svc);
-		}
+        if( !is_null($ttl = $this->get_cache_setting('ttl_list')) ) {
+            if( !is_null($svc = $this->get_service('list')) ) {
+                $this->clear_object_service_cache($svc);
+            }
+        }
     }
     /**
      * Clear specific services associated with this cache_typ
@@ -344,14 +371,33 @@ class BBSimpleModel {
      *  to get the class name of class implementations, as
      *  long as they overload this method
      *
+     * @param mixed $object
+     * Optionally define the object to evaluate
+     * Defaults to $this
+     *
+     * @param boolean $extension_base
+     * <b>Default:</b> false
+     * If this object is a custom model extension, pass
+     *  true to return the base model class name
+     *
      * @ignore
      * @since 2013-05-14
      * @return string
      */
-    protected function get_class_name() {
-        return get_class($this);
+    protected function get_class_name($object = null, $extension_base = false) {
+        if(is_null($object)) $object = $this;
+
+        $class = get_class($object);
+
+        //Extension base not requested, return now
+        if(!$extension_base) return $class;
+
+        //Simply look at the configuration
+        if( ($key = array_search($class, $this->bb->config->models_extensions)) !== false) {
+            return $key;
+        }
+
+        //Return as is
+        return $class;
     }
 }
-
-
-?>
