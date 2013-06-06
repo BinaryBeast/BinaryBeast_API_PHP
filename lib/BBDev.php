@@ -6,8 +6,8 @@
  * @package     BinaryBeast
  * @subpackage  Library
  *
- * @version 1.0.1
- * @date    2013-06-05
+ * @version 1.0.2
+ * @date    2013-06-06
  * @since   2013-05-14
  * @author  Brandon Simmons <brandon@binarybeast.com>
  */
@@ -85,7 +85,9 @@ class BBDev {
                 BinaryBeast
                 Styling for debug output
             -->
-            <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+            <script>
+                window.jQuery || document.write('<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"><\/script>');
+            </script>
             <script>
                 /**
                  * Show / Hide trace debug details
