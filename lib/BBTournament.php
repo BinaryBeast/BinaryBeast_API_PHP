@@ -1875,7 +1875,11 @@ class BBTournament extends BBModel {
          *  BBModel::get_child for that
          */
         if(!is_null($id)) {
-            return $this->get_child($id, $this->teams);
+            //Try $teams, then $freewins
+            if( is_null($team = $this->get_child($id, $this->teams)) ) {
+                $team = $this->get_child($id, $this->freewins);
+            }
+            return $team;
         }
 
         //We can't add new players to an active-tournament
