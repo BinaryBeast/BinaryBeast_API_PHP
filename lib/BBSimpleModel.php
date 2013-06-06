@@ -49,6 +49,11 @@ class BBSimpleModel {
      */
     const SERVICE_LOAD      = null;
     /**
+     * API Service name for listing loading objects
+     * @var string
+     */
+    const SERVICE_LIST      = null;
+    /**
      * API Service name for creating a new object
      * @var string
      */
