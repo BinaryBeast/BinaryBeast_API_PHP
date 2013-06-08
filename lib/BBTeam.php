@@ -189,8 +189,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.6
- * @date    2013-06-05
+ * @version 3.0.7
+ * @date    2013-06-07
  * @since   2012-09-17
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -433,7 +433,7 @@ class BBTeam extends BBModel {
             return false;
         }
 
-        //If bracket position was adjusted manually, reset opponents / cache etc 
+        //If bracket position was adjusted manually, reset opponents / cache etc
         if($reset_opponents) {
             $this->tournament->clear_id_cache();
             $this->reset_opponents();
@@ -711,6 +711,16 @@ class BBTeam extends BBModel {
         return $this->last_match;
 	}
 
-}
+    /**
+     * Overloads the list-clearing method so we can
+     *  specify clear tournament-object cache
+     *
+     * {@inheritdoc}
+     */
+    public function clear_list_cache() {
+        if(!is_null($this->tournament)) {
+            $this->tournament->clear_id_cache( BBTournament::SERVICE_LOAD_TEAMS );
+        }
+    }
 
-?>
+}
