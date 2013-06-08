@@ -1,3 +1,7 @@
+## BinaryBeast API PHP Library 3.1.6 (2013-06-07)
+* Restructured the way BBTeam stores and filters BBTeam arrays to resolve bugs caused by stale cached results
+* Adds `$tournament->freewins` and `$tournament->freewins()` for returning freewin team objects
+
 ## BinaryBeast API PHP Library 3.1.5 (2013-06-06)
 * `result` table for api cache is now created as longtext
 * `BBDev` now extracts data before dumping objects (to avoid fatal serialization errors)
@@ -9,7 +13,6 @@
 * `$team->notes` now automatically automatically encoded and decoded as json\
 *  `$tournament->teams()` now returns FreeWins if you set the 3rd parameter (`$freewins`) to `true`
 *  Adds `BBSimpleModel::SERVICE_LIST` for consistency
-*  
 
 ## BinaryBeast API PHP Library 3.1.4 (2013-06-03)
 * $tournament->hidden is now automatically automatically encoded and decoded as json

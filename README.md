@@ -1,5 +1,5 @@
 # BinaryBeast API PHP Library
-#### Version 3.1.5 (2013-06-06)
+#### Version 3.1.6 (2013-06-07)
 
 ----------
 
@@ -144,6 +144,10 @@ Coming soon
 
 
 ## Recent Changes
+
+### Version 3.1.6 (2013-06-07)
+* Restructured the way BBTeam stores and filters BBTeam arrays to resolve bugs caused by stale cached results
+* Adds `$tournament->freewins` and `$tournament->freewins()` for returning freewin team objects
 
 ### Version 3.1.5 (2013-06-06)
 * `result` table for api cache is now created as longtext
