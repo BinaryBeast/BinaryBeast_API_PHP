@@ -172,6 +172,9 @@ class BBRound extends BBModel {
 
 		//Success!
         if($result->result == BinaryBeast::RESULT_SUCCESS) {
+            //Clear cache
+            $this->clear_list_cache();
+
             $this->sync_changes();
             return true;
         }
@@ -190,6 +193,16 @@ class BBRound extends BBModel {
     public function is_new() {
         return false;
     }
-}
 
-?>
+    /**
+     * Overloads the list-clearing method so we can
+     *  specify clear tournament-object cache
+     *
+     * {@inheritdoc}
+     */
+    public function clear_list_cache() {
+        if(!is_null($this->tournament)) {
+            $this->tournament->clear_id_cache( BBTournament::SERVICE_LOAD_ROUNDS);
+        }
+    }
+}
