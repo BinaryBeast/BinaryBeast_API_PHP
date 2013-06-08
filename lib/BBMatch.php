@@ -427,7 +427,6 @@ class BBMatch extends BBModel {
 
     /**
      * BBRound format for this match's round
-     * @todo rename this to round_format and add $round, which will be a simple integer telling us which round the match is actually in
      * @var BBRound
      */
     private $round_format;
