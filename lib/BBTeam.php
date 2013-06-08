@@ -325,7 +325,7 @@ class BBTeam extends BBModel {
 
         //If not already being tracked, flag ourselves in the new tournament
         if($add_to_parent) {
-            if(is_array($teams = &$this->tournament->teams())) {
+            if(is_array($teams = &$this->tournament->teams(false, null, true))) {
                 if(!in_array($this, $teams)) {
                     $this->tournament->add_team($this);
                 }
