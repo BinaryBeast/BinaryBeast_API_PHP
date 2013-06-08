@@ -160,7 +160,7 @@ class BBTournamentTest extends BBTest {
     }
     /**
      * Test first to make sure teams() by default doesn't return freewins,
-     *  and that it DOES if we specifically ask for them
+     *  and that it DOES if we specifically ask for them.
      */
     public function test_teams_freewins() {
         $this->get_tournament_ready();
@@ -200,8 +200,6 @@ class BBTournamentTest extends BBTest {
         foreach($this->object->freewins as $freewin) {
             $this->assertEquals('FreeWin', $freewin->display_name);
         }
-
-        var_dump(['tour::filtered' => $this->object->filtered_teams]);
     }
     /**
      * Test teams() and request ID values only
@@ -314,6 +312,7 @@ class BBTournamentTest extends BBTest {
     }
     /**
      * Test deleting teams to make sure they are removed from the tournament correctly afterwards
+     * @group fail
      */
     public function test_remove_teams() {
         $this->get_tournament_inactive();

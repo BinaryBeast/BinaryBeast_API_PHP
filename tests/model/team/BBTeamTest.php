@@ -365,6 +365,8 @@ class BBTeamTest extends BBTest {
 
     /**
      * Tests setting the race value for multiple teams at once
+     * @todo debug this
+     * @fail
      */
     public function test_set_race_id_batch() {
         $teams = array($this->object);
