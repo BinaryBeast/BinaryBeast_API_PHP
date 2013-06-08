@@ -225,8 +225,9 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.0.3
- * @date    2013-04-26
+ * @version 3.0.4
+ * @date    2013-06-07
+ * @since   2013-02-02
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -534,6 +535,26 @@ class BBMatchGame extends BBModel {
     public function is_draw() {
         return $this->winner() === false;
     }
-}
 
-?>
+    /**
+     * These objects aren't cached directly, so we pass
+     *  attempts to clear object cache directly to the parent match
+     * {@inheritdoc}
+     */
+    public function clear_list_cache() {
+        if(!is_null($this->match)) {
+            $this->match->clear_id_cache();
+        }
+    }
+
+    /**
+     * These objects aren't cached directly, so we pass
+     *  attempts to clear object cache directly to the parent match
+     * {@inheritdoc}
+     */
+    public function clear_id_cache($svc = null) {
+        if(!is_null($this->match)) {
+            $this->match->clear_id_cache($svc);
+        }
+    }
+}
