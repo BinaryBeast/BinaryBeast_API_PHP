@@ -264,11 +264,20 @@ class BBCache {
     //<editor-fold defaultstate="collapsed" desc="SQL / Schema / Data manipulation methods">
     /**
      * Check to see if our $table exists in the database
+     * @todo implement migrations or schema version check etc
      * @ignore
      * @return boolean
      */
     private function check_table() {
-        return $this->db->query("SELECT COUNT(*) FROM {$this->config->cache_db_table}") !== false;
+        //Table exist?
+        if($this->db->query("SELECT COUNT(*) FROM {$this->config->cache_db_table}")) {
+            //Update "result" column type to longtext
+            return $this->db->exec("
+                ALTER TABLE {$this->config->cache_db_table}
+                CHANGE `result` `result` longtext NOT NULL
+            ") !== false;
+        }
+        return false;
     }
     /**
      * Attempt to create the table
