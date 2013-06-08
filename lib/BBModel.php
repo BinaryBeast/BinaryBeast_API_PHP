@@ -301,7 +301,7 @@ abstract class BBModel extends BBSimpleModel {
          * 
          * The one exception is we need to make sure we haven't been flagged for a reload first
          */
-        if(isset($this->data[$name]) && !$this->reload) {
+        if(array_key_exists($name, $this->data)) {
             return $this->data[$name];
         }
 
