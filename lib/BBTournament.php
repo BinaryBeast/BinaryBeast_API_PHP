@@ -1072,14 +1072,14 @@ class BBTournament extends BBModel {
 
             //Results not filtered yet
             if(empty($this->filtered_teams[$filter_key])) {
+                $this->filtered_teams[$filter_key] = array();
+
                 //Loop through the full list, stored in $teams
                 foreach($this->teams as &$team) {
                     //Filter out freewins
                     if(!$freewins) {
-                        //FreeWins / Byes
-                        $lower = strtolower($team->display_name);
-
                         //This is a freewin, skip to the next iteration
+                        $lower = strtolower($team->display_name);
                         if($lower == 'freewin' || $lower == 'bye') {
                             continue;
                         }
@@ -1096,6 +1096,7 @@ class BBTournament extends BBModel {
             }
 
             //Success!
+            if($ids) var_dump(array('key' => $filter_key, 'filtered_teams' => $this->filtered_teams, 'result' => $this->filtered_teams[$filter_key]));
             return $this->filtered_teams[$filter_key];
         }
 
