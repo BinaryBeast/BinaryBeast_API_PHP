@@ -144,9 +144,6 @@
  * Coming soon...
  *
  *
- * @todo Debug failed callback tests
- * 
- * 
  * @property BBTournament $tournament
  * <b>Alias for {@link BinaryBeast::tournament()}</b><br />
  *  A new {@link BBTournamament} object<br />
@@ -203,8 +200,8 @@
  * 
  * @package BinaryBeast
  * 
- * @version 3.1.5
- * @date    2013-06-05
+ * @version 3.1.6
+ * @date    2013-06-07
  * @since   2013-02-10
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -249,7 +246,7 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.1.5';
+    const API_VERSION = '3.1.6';
 
     //<editor-fold defaultstate="collapsed" desc="Private Properties">
     /**
@@ -998,17 +995,23 @@ class BinaryBeast {
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_POSTFIELDS, $args);
 
-        //Execute, and return a parsed result
-        $result = curl_exec($curl);
-
         //Enable for debugging
-        //curl_setopt($curl, CURLOPT_VERBOSE, true);
-
-        //SSL Verification failed
-        if (!$result) {
-            $this->set_error(array('error_message' => 'cURL call failed', 'curl_error' => curl_error($curl), 'curl_code' => curl_errno($curl)));
-            return json_encode((object)array('result' => false, 'error' => $this->last_error));
+        if($this->dev_mode) {
+            curl_setopt($curl, CURLOPT_VERBOSE, true);
         }
+
+        //Execute, and return a parsed result
+        $result      = curl_exec($curl);
+        $curl_info   = curl_getinfo($curl);
+
+        //Failed
+        if(!$result) {
+            $this->set_error(array('error_message' => 'cURL call failed', 'curl_error' => curl_error($curl), 'curl_code' => curl_errno($curl), 'args' => $args, 'curl_info' => $curl_info));
+            $result = json_encode((object)array('result' => false, 'error' => $this->last_error));
+        }
+
+        //Close and return
+        curl_close($curl);
 
         //Success!
         return $result;
