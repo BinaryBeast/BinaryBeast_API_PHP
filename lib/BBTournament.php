@@ -1070,28 +1070,26 @@ class BBTournament extends BBModel {
             //Generate a filter key, so we filter the results and still return by reference
             $filter_key = 'teams' . ($ids?'_ids':'') . ($freewins?'_freewins':'');
 
-            //Results not filtered yet
-            if(empty($this->filtered_teams[$filter_key])) {
-                $this->filtered_teams[$filter_key] = array();
+            //Populate the filter
+            $this->filtered_teams[$filter_key] = array();
 
-                //Loop through the full list, stored in $teams
-                foreach($this->teams as &$team) {
-                    //Filter out freewins
-                    if(!$freewins) {
-                        //This is a freewin, skip to the next iteration
-                        $lower = strtolower($team->display_name);
-                        if($lower == 'freewin' || $lower == 'bye') {
-                            continue;
-                        }
+            //Loop through the full list, stored in $teams
+            foreach($this->teams as &$team) {
+                //Filter out freewins
+                if(!$freewins) {
+                    //This is a freewin, skip to the next iteration
+                    $lower = strtolower($team->display_name);
+                    if($lower == 'freewin' || $lower == 'bye') {
+                        continue;
                     }
+                }
 
-                    //id only
-                    if($ids) {
-                        $this->filtered_teams[$filter_key][] = $team->id;
-                    }
-                    else {
-                        $this->filtered_teams[$filter_key][] = &$team;
-                    }
+                //id only
+                if($ids) {
+                    $this->filtered_teams[$filter_key][] = $team->id;
+                }
+                else {
+                    $this->filtered_teams[$filter_key][] = &$team;
                 }
             }
 
@@ -1172,16 +1170,14 @@ class BBTournament extends BBModel {
 
         //Generate a filter key, so we filter the results and still return by reference
         $filter_key = 'freewins';
+        $this->filtered_teams[$filter_key] = array();
 
-        //Results not filtered yet
-        if(empty($this->filtered_teams[$filter_key])) {
-            //Loop through the raw list
-            foreach($teams as &$team) {
-                //Populate the filtered results if the name matches
-                $lower = strtolower($team->display_name);
-                if($lower == 'freewin' || $lower == 'bye') {
-                    $this->filtered_teams[$filter_key][] = &$team;
-                }
+        //Loop through the raw list and populate the filter
+        foreach($teams as &$team) {
+            //Populate the filtered results if the name matches
+            $lower = strtolower($team->display_name);
+            if($lower == 'freewin' || $lower == 'bye') {
+                $this->filtered_teams[$filter_key][] = &$team;
             }
         }
 
@@ -1205,15 +1201,13 @@ class BBTournament extends BBModel {
 
         //Generate a filter key, so we filter the results and still return by reference
         $filter_key = 'status_' . $status . ($ids?'_ids':'') . ($freewins?'_freewins':'');
+        $this->filtered_teams[$filter_key] = array();
 
-        //Results not filtered yet
-        if(empty($this->filtered_teams[$filter_key])) {
-            //Loop through the raw list
-            foreach($teams as &$team) {
-                //Populate the filtered results with teams that match the provided $status
-                if($team->status == $status || is_null($status)) {
-                    $this->filtered_teams[$filter_key][] = &$team;
-                }
+        //Loop through the raw list and populate the filtered array
+        foreach($teams as &$team) {
+            //Populate the filtered results with teams that match the provided $status
+            if($team->status == $status || is_null($status)) {
+                $this->filtered_teams[$filter_key][] = &$team;
             }
         }
 
