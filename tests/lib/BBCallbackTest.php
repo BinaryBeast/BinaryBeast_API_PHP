@@ -65,7 +65,7 @@ class BBCallbackTest extends BBTest {
 	 * @covers BBCallback::load_list
 	 */
 	public function test_list_event() {
-        //Get a fresh touranment, so we know it starts with 0 callbacks
+        //Get a fresh tournament, so we know it starts with 0 callbacks
         $this->get_tournament_inactive();
 
 		$this->assertID($id = $this->object->register(BBCallback::EVENT_TOURNAMENT_CHANGED, $this->tournament->id, 'http://binarybeast.com/callback/test/' . uniqid()));
@@ -141,7 +141,6 @@ class BBCallbackTest extends BBTest {
 
     /**
      * Test the on_create tournament callback
-     * @group new
      */
     public function test_tournament_on_create() {
         $id = $this->tournament->on_create('http://binarybeast.com/callback/test');

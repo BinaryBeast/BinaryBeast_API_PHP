@@ -159,6 +159,51 @@ class BBTournamentTest extends BBTest {
         foreach($this->object->teams() as $team) $this->assertInstanceOf('BBTeam', $team);
     }
     /**
+     * Test first to make sure teams() by default doesn't return freewins,
+     *  and that it DOES if we specifically ask for them
+     */
+    public function test_teams_freewins() {
+        $this->get_tournament_ready();
+
+        //Add a few teams to make it uneven
+        for($x = 0; $x < 3; $x++) {
+            $team = $this->object->team();
+            $team->display_name = 'Last minute participant!!';
+            $team->confirm();
+        }
+        $this->object->save();
+
+        //We should have 8 BBTeams
+        $this->assertChildrenArray($this->object->teams(), 'BBTeam');
+        $this->assertArraySize($this->object->teams(), 11);
+
+        //Start the tournament!
+        $this->assertSave($this->object->start());
+
+        //Teams() should return the original 11
+        $this->assertArraySize($this->object->teams(), 11);
+
+        //It should return 16 if we set $freewins true
+        $this->assertArraySize($this->object->teams(false, null, true), 16);
+
+        //Freewins should return 5
+        $this->assertChildrenArray($this->object->freewins(), 'BBTeam');
+        $this->assertArraySize($this->object->freewins(), 5);
+
+        //Confirmed should return 8 and 16 with/without freewins
+        $this->assertChildrenArray($this->object->confirmed_teams(false, false), 'BBTeam');
+        $this->assertChildrenArray($this->object->confirmed_teams(false, true), 'BBTeam');
+        $this->assertArraySize($this->object->confirmed_teams(), 11);
+        $this->assertArraySize($this->object->confirmed_teams(false, true), 16);
+
+        //Should all be labeled freewin
+        foreach($this->object->freewins as $freewin) {
+            $this->assertEquals('FreeWin', $freewin->display_name);
+        }
+
+        var_dump(['tour::filtered' => $this->object->filtered_teams]);
+    }
+    /**
      * Test teams() and request ID values only
      * @covers BBTournament::teams()
      */

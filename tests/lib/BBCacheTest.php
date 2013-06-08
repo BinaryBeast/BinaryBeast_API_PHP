@@ -1,7 +1,8 @@
 <?php
 
 /**
- * Test local mysql caching 
+ * Test local mysql caching
+ * @group clear_all_cache
  * @group cache
  * @group library
  * @group all
@@ -15,19 +16,17 @@ class BBCacheTest extends BBTest {
         $this->object = &$this->bb;
     }
 
-    /**
-     *
-     */
     public function test_list_tournaments() {
         $result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
-        var_dump($result);
-        var_dump($this->bb->error_history);
         $this->assertServiceListSuccessful($result, 'list');
         //
         $result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
         $this->assertServiceListSuccessful($result, 'list');
         $this->assertServiceLoadedFromCache($result);
     }
+
+    /**
+     */
     public function test_clear_svc() {
         $result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
         $this->assertServiceListSuccessful($result, 'list');
@@ -37,6 +36,8 @@ class BBCacheTest extends BBTest {
         $result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);
         $this->assertServiceNotLoadedFromCache($result);
     }
+    /**
+     */
     public function test_clear_type() {
         //Cache a tour list - with tournament cache type
         $list_result = $this->bb->call('Tourney.TourneyList.Creator', null, 2, BBCache::TYPE_TOURNAMENT);

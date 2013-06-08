@@ -386,6 +386,45 @@ class BBTeamTest extends BBTest {
             $this->assertEquals(7, $team->race_id);
         }
     }
+
+    /**
+     * Test to insure that a team is removed from cached results
+     *  after being deleted / updated
+     */
+    public function test_cache() {
+        $this->assertID( $id = $this->object->save() );
+        var_dump('***** ID ' . $id . ' ******');
+        $tournament = $this->object->tournament();
+
+        $this->assertArrayContains($tournament->teams(), $this->object);
+        $this->assertArrayContains($tournament->confirmed_teams(), $this->object);
+
+        //Update
+        $this->object->display_name = ($name = uniqid());
+        $this->object->save();
+
+        //Test BBTeam::load()
+        $this->AssertTeamValueExternally($this->object, 'display_name', $name);
+
+        //Fetch a fresh tournament and check
+        $fresh_tournament = $this->bb->tournament($tournament->id);
+        $fresh = $fresh_tournament->team($id);
+
+        $this->assertEquals($name, $fresh->display_name);
+
+        //Delete!
+        $this->object->delete();
+
+        //Test BBTeam::load()
+        $fresh = $this->bb->team($id);
+        $this->assertFalse($fresh->load());
+
+        //Test BinaryBeast::teams()
+        $fresh_tournament = $this->bb->tournament($tournament->id);
+        var_dump(['teams()' => array('tour' => $tournament->teams(true), 'fresh' => $fresh_tournament->teams(true))]);
+        $this->assertArrayNotContains($tournament->teams(true), $id);
+        $this->assertArrayNotContains($fresh_tournament->teams(true), $id);
+    }
 }
 
 ?>
