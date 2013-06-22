@@ -742,8 +742,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.1.2
- * @date    2013-06-07
+ * @version 3.1.3
+ * @date    2013-06-21
  * @since   2012-09-17
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -1412,20 +1412,32 @@ class BBTournament extends BBModel {
         //return_data => 2 asks BinaryBeast to include a full tourney_info dump in its response
         $args = array('return_data' => 2);
 
-        //Remember which teams to give out the new team_ids to
-        $team_ids = array();
+        /**
+         * Teams to insert
+         * @var BBTeam[]
+         */
+        $new_teams = array();
+
+        /**
+         * Raw team data for new teams
+         * @var array[]
+         */
+        $teams_data = array();
 
         //If any teams have been added, include them too - the API can handle it
         if(!$settings_only) {
-            $changed_teams = $this->get_changed_children('BBTeam');
-            $teams = array();
-            if(sizeof($changed_teams) > 0) {
-                foreach($changed_teams as &$team) {
-                    $teams[] = $team->data;
-                    $team_ids = &$team;
+            /** @var BBTeam[] $new_teams */
+            $new_teams = $this->get_changed_children('BBTeam');
+
+            //Extract data arrays for each new team
+            if( !empty($new_teams) ) {
+                foreach($new_teams as &$team) {
+                    $teams_data[] = $team->data;
                 }
+
+                //Add the new teams to the API arguments
+                $args['teams'] = $teams_data;
             }
-            if(sizeof($teams) > 0) $args['teams'] = $teams;
         }
 
         //Let BBModel handle it from here - but ask for the api response to be returned instead of a generic boolean
@@ -1445,28 +1457,21 @@ class BBTournament extends BBModel {
         $this->import_values($result);
         $this->set_id($result->tourney_id);
 
-        //Use the api's returned array of teams to update to give each of our new teams its team_id
-        if(!$settings_only) {
-            if(isset($result->teams)) {
-                if(is_array($result->teams)) {
-                    if(sizeof($result->teams) > 0) {
-                        $this->iterating = true;
-                        /*
-                        foreach($result->teams as $x => $team) {
-                            $this->teams[$x]->import_values($team);
-                            $this->teams[$x]->set_id($team->tourney_team_id);
-                        }
-                        */
+        /**
+         * Update new teams with their new ids
+         */
+        if(!empty($new_teams)) {
+            if(!empty($result->teams)) {
+                /**
+                 * Iterate through each "changed" team (they will all be new, since this is a new tournament),
+                 *  and apply the new tourney_team_id
+                 */
+                foreach($new_teams as $x => &$team) {
+                    //apply the entire "data" array as if it were an import
+                    $team->import_values( $teams_data[$x] );
 
-                        foreach($result->teams as $x => $team_data) {
-                            $team = &$team_ids[$x];
-
-                            $team->import_values($team_data);
-                            $team->set_id($team_data);
-                        }
-
-                        $this->iterating = false;
-                    }
+                    //Apply the new team id
+                    $team->set_id( $result->teams[$x] );
                 }
             }
 
@@ -1634,11 +1639,15 @@ class BBTournament extends BBModel {
             $team->set_id( $result->team_ids[$x] );
         }
 
+        //Set the iteration flag, which prevents BBTeam::sync_changes from flagging the tournament as changed
+        $this->iterating = true;
+
         /**
          * Synchronize team changes
          */
-		$this->iterating = true;
         foreach($teams as &$team) {
+            /** @var BBTeam $team */
+
             //Flag a reload if the race changed
             $flag_reload = array_key_exists('race', $team->get_changed_values());
 
@@ -1650,9 +1659,9 @@ class BBTournament extends BBModel {
                 $team->flag_reload();
             }
         }
-		$this->iterating = false;
 
-        //Clear the list of teams with changes
+        //Clear the list of teams with changes, and reset the iteration flag
+        $this->iterating = false;
         $this->reset_changed_children('BBTeam');
 
         //Success!
