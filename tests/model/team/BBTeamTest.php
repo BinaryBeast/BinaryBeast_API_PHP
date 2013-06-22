@@ -395,7 +395,6 @@ class BBTeamTest extends BBTest {
      */
     public function test_cache() {
         $this->assertID( $id = $this->object->save() );
-        var_dump('***** ID ' . $id . ' ******');
         $tournament = $this->object->tournament();
 
         $this->assertArrayContains($tournament->teams(), $this->object);
@@ -423,7 +422,6 @@ class BBTeamTest extends BBTest {
 
         //Test BinaryBeast::teams()
         $fresh_tournament = $this->bb->tournament($tournament->id);
-        var_dump(['teams()' => array('tour' => $tournament->teams(true), 'fresh' => $fresh_tournament->teams(true))]);
         $this->assertArrayNotContains($tournament->teams(true), $id);
         $this->assertArrayNotContains($fresh_tournament->teams(true), $id);
     }

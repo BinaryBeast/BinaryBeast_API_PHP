@@ -312,7 +312,6 @@ class BBTournamentTest extends BBTest {
     }
     /**
      * Test deleting teams to make sure they are removed from the tournament correctly afterwards
-     * @group fail
      */
     public function test_remove_teams() {
         $this->get_tournament_inactive();
