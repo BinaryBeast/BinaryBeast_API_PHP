@@ -145,6 +145,10 @@ Coming soon
 
 ## Recent Changes
 
+### Version 3.1.7 (2013-06-19)
+* Fixes a bug in BBTournament that was causing fatal PHP errors after saving a new tournament with teams already added
+
+
 ### Version 3.1.6 (2013-06-07)
 * Restructured the way BBTeam stores and filters BBTeam arrays to resolve bugs caused by stale cached results
 * Adds `$tournament->freewins` and `$tournament->freewins()` for returning freewin team objects
