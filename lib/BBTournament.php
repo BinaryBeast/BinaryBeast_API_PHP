@@ -742,8 +742,8 @@
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.1.3
- * @date    2013-06-21
+ * @version 3.1.4
+ * @date    2013-07-01
  * @since   2012-09-17
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -797,7 +797,11 @@ class BBTournament extends BBModel {
      * @var string
      */
     const SERVICE_LIST_OPEN_MATCHES         = 'Tourney.TourneyLoad.OpenMatches';
-    //
+    /**
+     * API svc name for loading / streaming a list of played matches
+     * @var string
+     */
+    const SERVICE_STREAM_MATCHES         = 'Tourney.TourneyMatch.Stream';
     /**
      * API svc name for loading a single match
      * @var string
@@ -2212,6 +2216,77 @@ class BBTournament extends BBModel {
         //Success!
         return $this->open_matches;
     }
+
+    /**
+     * Returns a list of played matches using the
+     *  tournament stream service
+     *
+     * @since 2013-07-01
+     *
+     * @param boolean $freewins
+     * <b>Default:</b> false
+     * Set true to include matches against freewins
+     *
+     * @param boolean $stream
+     * <b>Default:</b> false
+     * If set to true, BinaryBeast remembers the last match
+     *  streamed to you, and only sends matches reported since that
+     *  last match each time you call this
+     *
+     * In other words each time you call this with $stream, you will only
+     *  get match results you have not seen yet
+     *
+     * @return BBMatch[]|null
+     */
+    public function played_matches($freewins = false, $stream = false) {
+        //Derp
+        if(is_null($this->id)) {
+            return null;
+        }
+
+        //Compile arguments
+        $args = array(
+            'tourney_id'    => $this->id,
+            'games'         => true,
+            'freewins'      => $freewins == true,
+            'all'           => $stream == false
+        );
+
+        //Disable cache for streaming
+        if($stream) {
+            $cache_ttl      = null;
+            $cache_type     = null;
+            $cache_id       = null;
+        }
+
+        //Standard caching for non-stream results
+        else {
+            $cache_ttl  = self::CACHE_TTL_LIST;
+            $cache_type = self::CACHE_OBJECT_TYPE;
+            $cache_id   = $this->id;
+        }
+
+        //GOGOGO!
+        $result = $this->call(self::SERVICE_STREAM_MATCHES, $args, $cache_ttl, $cache_type, $cache_id);
+        if(!$result) return $this->bb->ref(false);
+
+        //Init the output
+        $matches = array();
+
+        //Cast each match into BBMatch, and call init() so it knows which tournament it belongs to
+        foreach($result->matches as $match_data) {
+            //Instantiate and initialize
+            $match = $this->bb->match($match_data);
+            $match->init($this);
+
+            //queue it up!
+            $matches[] = $match;
+        }
+
+        //Success!
+        return $matches;
+    }
+
 	/**
      * Create a new match, or validate an existing one<br /><br />
      *
