@@ -1,5 +1,5 @@
 # BinaryBeast API PHP Library
-#### Version 3.1.6 (2013-06-07)
+#### Version 3.1.8 (2013-07-01)
 
 ----------
 
@@ -144,6 +144,12 @@ Coming soon
 
 
 ## Recent Changes
+
+### Version 3.1.8 (2013-07-01)
+* Adds `$tournament->played_matches($freewins = false, $stream = false)`
+	* Returns array of recently reported [BBMatch](lib/BBMatch.php) objects
+		* Set `$stream = true` and it will only return each match result once 
+
 
 ### Version 3.1.7 (2013-06-19)
 * Fixes a bug in BBTournament that was causing fatal PHP errors after saving a new tournament with teams already added

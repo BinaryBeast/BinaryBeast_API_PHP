@@ -200,8 +200,8 @@
  * 
  * @package BinaryBeast
  * 
- * @version 3.1.7
- * @date    2013-06-21
+ * @version 3.1.8
+ * @date    2013-07-01
  * @since   2013-02-10
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -246,7 +246,7 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.1.7';
+    const API_VERSION = '3.1.8';
 
     //<editor-fold defaultstate="collapsed" desc="Private Properties">
     /**
