@@ -772,6 +772,43 @@ class BBTournamentTest extends BBTest {
 
         var_dump(['Tournaments Cleaned' => $count]);
     }
-}
 
-?>
+    /**
+     * Test non-streaming played matches
+     *
+     * @covers BBTournament::played_matches
+     */
+    public function test_played_matches() {
+        //Tournament with freewin matches
+        $this->get_tournament_ready();
+
+        //Add players so it's no longer an even power of 2
+        for($x = 0; $x < 4; $x++) {
+            $team = $this->tournament->team();
+            $team->confirm();
+
+            $team->display_name = 'Extra player ' . ($x + 1);
+        }
+
+        //Insert new players and start
+        $this->assertSave($this->tournament->save());
+        $this->assertSave($this->tournament->start());
+
+        //Should be empty
+        $this->assertArraySize($this->tournament->played_matches(), 0);
+
+        //Should have a few if we request freewins
+        $this->assertTrue( count($this->tournament->played_matches(true)) > 0);
+
+        //Report a win
+        $match = $this->tournament->open_matches[0];
+        $match->set_winner($match->team());
+        $this->assertSave( $match->report() );
+
+        //Now played should should have 1
+        $this->assertArraySize($this->tournament->played_matches(), 1);
+
+        //Should be 0 for streaming
+        $this->assertArraySize($this->tournament->played_matches(false, true), 0);
+    }
+}
