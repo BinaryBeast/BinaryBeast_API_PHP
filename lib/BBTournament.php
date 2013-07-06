@@ -690,7 +690,10 @@
  * <b>Strongly recommended</b><br />
  * If set, players are required to provide this password before allowed to join<br />
  * Use {@link BBTournament::generate_player_password()}
- * 
+ *
+ * @property BBMapObject[] $map_pool
+ * Array of approved maps in the map pool
+ *
  * @property BBTeam[] $teams
  * <b>Alias for {@link BBTournament::teams()}</b><br />
  * An array of teams in this tournament
@@ -736,14 +739,15 @@
  * The data object containing group rounds matches and results
  *
  * @todo consider allowing developers to set values for any custom properties, and save them in $notes
+ * @todo consider allowing developers to set values for any custom properties, and save them in $notes
  *
  * @todo Instead of flagging reloads when the race is changed, import the new values (may require update to the svc itself)
  *
  * @package BinaryBeast
  * @subpackage Model
  * 
- * @version 3.1.4
- * @date    2013-07-01
+ * @version 3.1.5
+ * @date    2013-07-05
  * @since   2012-09-17
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -844,6 +848,11 @@ class BBTournament extends BBModel {
      * @var string
      */
     const SERVICE_LOAD_GROUPS               = 'Tourney.TourneyDraw.Groups';
+    /**
+     * API svc name used to remove a map from the map_pool
+     * @var string
+     */
+    const SERVICE_REMOVE_MAP               = 'Tourney.TourneyMapPool.Delete';
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="Local Cache Settings">
@@ -968,6 +977,12 @@ class BBTournament extends BBModel {
      * @var BBGroupsObject
      */
     private $groups;
+
+    /**
+     * Map pool objects
+     * @var BBMapObject[]
+     */
+    private $map_pool;
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="BBModel implementations">
@@ -992,6 +1007,7 @@ class BBTournament extends BBModel {
         'description'       => '',
         'hidden'            => null,
         'player_password'   => null,
+        'map_pool'          => array()
     );
     protected $read_only = array('status', 'tourney_id');
     protected $id_property = 'tourney_id';
@@ -1307,7 +1323,7 @@ class BBTournament extends BBModel {
         if(!is_null($this->rounds)) return $this->rounds;
 
         //New tournaments must be saved before we can start saving child data
-        if(is_null($this->tourney_id)) {
+        if(is_null($this->id)) {
             return $this->bb->ref(
                 $this->set_error('Please execute save() before manipulating rounds or teams')
             );
@@ -1387,6 +1403,9 @@ class BBTournament extends BBModel {
                 $this->new_data['hidden'] = json_encode($hidden);
             }
         }
+
+        //Send only map_id values for the map pool
+        $this->new_data['map_pool'] = $this->map_ids();
 
         //If saving a new tournament, pass control to save_new
         if(is_null($this->id)) {
@@ -2872,5 +2891,139 @@ class BBTournament extends BBModel {
 
         //Success!
         return $result->count;
+    }
+
+    /**
+     * Add a map to the map pool
+     *
+     * @since 2013-07-05
+     *
+     * @param int|BBMapObject $map
+     * Must be either the map_id integer, or the map object
+     *
+     * @return BBMapObject|boolean
+     * - returns the map details if valid
+     * - returns false if map_id invalid
+     */
+    public function add_map($map) {
+        //Extract the map_id
+        if( ($map_id = $this->get_map_id($map)) === false) {
+            return false;
+        }
+
+        //Load the existing pool
+        $pool = $this->__get('map_pool');
+
+        //Make sure it hasn't been added yet
+        foreach($pool as $pool_map) {
+            //Already added, simply return the existing map
+            if($pool_map->map_id == $map_id) {
+                return $pool_map;
+            }
+        }
+
+        //Load the map object, complain if invalid
+        if( is_null($map = $this->bb->map->load($map_id)) ) {
+            return $this->set_error('Invalid map_id');
+        }
+
+        //Add and flag changes
+        $pool[] = $map;
+        $this->set_new_data('map_pool', $pool);
+
+        //Success!
+        return $map;
+    }
+
+    /**
+     * Remove a map from the map pool
+     *
+     * @since 2013-07-05
+     *
+     * @param int|object $map
+     * Must be either the map_id integer, or the map object
+     *
+     * @return boolean
+     */
+    public function remove_map($map) {
+        //Extract the map_id
+        if( ($map_id = $this->get_map_id($map)) === false) {
+            return false;
+        }
+
+        //Find the map within the pool
+        $pool = $this->__get('map_pool');
+
+        //Find the map
+        foreach($pool as $x => $pool_map) {
+            //Found it!
+            if($pool_map->map_id == $map_id) {
+
+                //Remove locally
+                unset( $pool[$x] );
+                $pool = array_values($pool);
+                $this->set_current_data('map_pool', $pool);
+
+                //Remove remotely
+                $result = $this->bb->call(self::SERVICE_REMOVE_MAP, array('id' => $pool_map->id));
+                if($result->result == 200) {
+                    //Clear cache
+                    $this->clear_id_cache();
+
+                    //Success!
+                    return true;
+                }
+
+                //Fail
+                return $this->set_error('Removed locally but unable to remove from BinaryBeast');
+            }
+        }
+
+        //Not part of the pool
+        return $this->set_error('Map not found in the current map_pool');
+    }
+
+    /**
+     * Returns an array of the map_ids for each map in $map_pool
+     *
+     * @since 2013-07-05
+     *
+     * @return int[]
+     */
+    public function map_ids() {
+        $pool = $this->__get('map_pool');
+        $ids = array();
+
+        foreach($pool as $map) {
+            $ids[] = $map->map_id;
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Used by add_map and remove_map to
+     *  allow providing either map objects or map_ids in a DRY manner
+     *
+     * @since 2013-07-05
+     *
+     * @param int|BBMapObject $map
+     *
+     * @return int|boolean
+     */
+    private function get_map_id($map) {
+        //Given a map_id
+        if(is_numeric($map)) {
+            return $map;
+        }
+        //Extract the id
+        else if(is_object($map)) {
+            if(!empty($map->map_id)) {
+                return $map->map_id;
+            }
+        }
+
+        //Invalid
+        return $this->set_error('Invalid value for $map, must be either a map_id integer, or a map object containing the map_id');
     }
 }
