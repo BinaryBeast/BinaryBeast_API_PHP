@@ -1,4 +1,13 @@
 
+## BinaryBeast API PHP Library 3.1.9 (2013-07-06)
+* Adds `BBMap::Load()`
+	* Allows loading a map by map_id
+* Adds support for the new tournament map_pool services
+	* `$tournament->map_pool` to fetch the map pool
+	* `$tournament->add_map()` to add a map
+	* `$tournament->remove_map()` to remove a map    
+
+	 
 ## BinaryBeast API PHP Library 3.1.8 (2013-07-01)
 * Adds `$tournament->played_matches($freewins = false, $stream = false)`
 	* Returns array of recently reported [BBMatch](lib/BBMatch.php) objects
