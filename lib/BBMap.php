@@ -77,8 +77,9 @@
  * @subpackage SimpleModel
  * 
  * 
- * @version 3.0.2
- * @date    2013-04-13
+ * @version 3.0.3
+ * @date    2013-07-05
+ * @since   2013-02-08
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
  * @license http://www.gnu.org/licenses/gpl.html
@@ -90,6 +91,11 @@ class BBMap extends BBSimpleModel {
      */
     const SERVICE_LIST      = 'Game.GameMap.LoadList';
     /**
+     * Service name for loading a single map
+     * @var string
+     */
+    const SERVICE_LOAD      = 'Game.GameMap.Load';
+    /**
      * Service name for searching searching for game maps
      * @var string
      */
@@ -97,6 +103,7 @@ class BBMap extends BBSimpleModel {
 
     const CACHE_OBJECT_TYPE      = BBCache::TYPE_MAP;
     const CACHE_TTL_LIST         = 1440;
+    const CACHE_TTL_LOAD         = 1440;
 
     /**
      * Returns a full list of all maps available within the given $game_code
@@ -136,6 +143,28 @@ class BBMap extends BBSimpleModel {
             'filter' => $filter),
         'list');
     }
-}
 
-?>
+    /**
+     * Load map details
+     *
+     * @since 2013-07-05
+     *
+     * @param int $map_id
+     *
+     * @return BBMapObject|null
+     * - false if the map_id is invalid
+     */
+    public function load($map_id) {
+        $result = $this->call(self::SERVICE_LOAD, array('map_id' => $map_id),
+            self::CACHE_TTL_LOAD, self::CACHE_OBJECT_TYPE, $map_id
+        );
+
+        //Invalid map_id
+        if($result->result != 200) {
+            return null;
+        }
+
+        //Success!
+        return $result->info;
+    }
+}
