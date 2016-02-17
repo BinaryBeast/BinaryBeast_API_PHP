@@ -200,8 +200,8 @@
  *
  * @package BinaryBeast
  *
- * @version 3.2.0
- * @date    2016-02-16
+ * @version 3.2.1
+ * @date    2016-02-17
  * @since   2013-02-10
  * @author  Brandon Simmons <contact@binarybeast.com>
  * @license http://www.opensource.org/licenses/mit-license.php
@@ -246,7 +246,7 @@ class BinaryBeast {
      * Simple constant that contains the library version
      * @var string
      */
-    const API_VERSION = '3.2.0';
+    const API_VERSION = '3.2.1';
 
     //<editor-fold defaultstate="collapsed" desc="Private Properties">
     /**
@@ -987,6 +987,7 @@ class BinaryBeast {
         $curl = curl_init();
 
         $curl_config = [
+            CURLOPT_URL                 => self::$url,
             CURLOPT_SSL_VERIFYHOST      => $this->verify_ssl ? 2 : 0,
             CURLOPT_SSL_VERIFYPEER      => $this->verify_ssl,
             CURLOPT_SSLVERSION          => CURL_SSLVERSION_TLSv1_2,
@@ -1001,6 +1002,7 @@ class BinaryBeast {
         }
 
         //Execute, and return a parsed result
+        curl_setopt_array($curl, $curl_config);
         $result      = curl_exec($curl);
         $curl_info   = curl_getinfo($curl);
 
@@ -1011,7 +1013,6 @@ class BinaryBeast {
         }
 
         //Close and return
-        curl_setopt_array($curl, $curl_config);
         curl_close($curl);
 
         //Success!

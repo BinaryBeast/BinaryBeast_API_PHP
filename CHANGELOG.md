@@ -1,4 +1,7 @@
-# Veresion 3.2.0 (2016-02-16)
+# Version 3.2.1 (2016-02-16)
+- Fixes a very silly mistake from the previous patch in which I set the curl options AFTER executing the request
+
+# Version 3.2.0 (2016-02-16)
 - Forces curl to use TLSv1.2 for cURL calls
 
 # BinaryBeast API PHP Library 3.1.9 (2013-07-06)
